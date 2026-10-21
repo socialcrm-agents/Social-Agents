@@ -1,0 +1,109 @@
+---
+name: editor-video
+description: "Editor automático de vídeos curtos (Reels/TikTok/Shorts/anúncios 9:16) em português: recebe vídeos brutos, escolhe as melhores tomadas, remove pausas, gaguejos e frases quebradas, gera legendas animadas, faz zooms e cortes dinâmicos, põe palavras atrás da pessoa quando há rosto no quadro, insere B-roll e gráficos, aplica um de três estilos (Editorial Premium, Reels Viral, Anúncio de Alta Conversão), exporta MP4 e re-renderiza a partir de correções por texto. Use com /editor-video ou frases como 'edita esse vídeo', 'transforma em reels', 'corta as pausas', 'faz um anúncio com esse vídeo', 'muda a legenda e renderiza de novo'."
+---
+
+# /editor-video
+
+Vídeo bruto entra, MP4 editado sai. O usuário não abre editor: assiste, escreve o que quer mudar, e cada rodada
+é uma nova versão (`renders/vN_<estilo>.mp4`) com histórico em `versions/`.
+
+`SK` = pasta desta skill (onde está este SKILL.md). `PY` = `python3` (no Windows, `python` ou `py -3`).
+Todos os scripts ficam em `SK/scripts/` e recebem a pasta do projeto como primeiro argumento.
+
+## 0. Pré-requisitos (uma vez por máquina)
+
+```bash
+PY SK/scripts/setup.py              # STATUS de ffmpeg, Python, pacotes e modelos
+PY -m pip install -r SK/requirements.txt
+PY SK/scripts/setup.py --models     # ~680 MB: Parakeet (transcrição) + MediaPipe (rosto/recorte)
+```
+Só siga quando imprimir `READY`. Cada linha `MISSING` traz o comando de correção para o sistema do usuário.
+Detalhes em `SK/references/dependencias.md`.
+
+## 1. Intake
+
+- Clipes: os arquivos que o usuário indicar (vários clipes = várias tomadas do mesmo roteiro, na ordem de gravação).
+- B-roll: vídeos/imagens do próprio usuário (gravação de tela, produto, prints). Nunca baixe mídia de terceiros
+  sem licença. Sem B-roll, o estilo usa só gráficos e zooms.
+- Estilo: pergunte só se o usuário não disse. Sem resposta: `reels_viral` para orgânico, `anuncio_conversao` se
+  ele falar em anúncio/tráfego/venda, `editorial_premium` para marca pessoal/autoridade.
+- Projeto: uma pasta nova por vídeo (ex.: `~/video-edits/<slug>`).
+
+```bash
+PY SK/scripts/run.py new <projeto> --clips <bruto1.mp4> [<bruto2.mp4> ...] --style <estilo> \
+   [--broll <arquivos ou pasta>] [--hook "texto do gancho"] [--cta "chamada final"]
+PY SK/scripts/transcribe.py <projeto>     # transcript.txt + transcript.json (tempo por palavra)
+```
+
+## 2. Leia a transcrição e decida como editor (este é o seu trabalho, não do script)
+
+Leia `transcript.txt` inteiro. Depois:
+```bash
+PY SK/scripts/analyze.py <projeto>        # escolhe tomadas e corta pausas -> qa/takes.md, edl.json
+```
+Leia `qa/takes.md` e corrija o que a regra automática não pega, com `edit.py --no-render`:
+- **Começo fraco** ("É isso", "Então...", "Oi gente"): `--cut "É isso."`. O primeiro segundo tem que ser o gancho.
+- **Tomada ruim que sobrou** ou trecho fora do assunto: `--cut "trecho exato falado"`.
+- **Corte errado** (a regra tirou algo que importa): `--restore "trecho"`.
+- **Palavras que o ASR errou** (nomes, marcas, gírias): `--fix "errado=certo"`.
+- **Gancho** (faixa dos 3 primeiros segundos em Viral/Anúncio): escreva um, curto, TIRADO DO QUE A PESSOA DIZ.
+  Nunca prometa resultado, número ou prova que não esteja no vídeo. `--hook "..."`.
+- **CTA**: use o que o usuário pediu; se não pediu, deixe o padrão do estilo e mencione na entrega.
+- **Título** (lower third do Editorial): `--title "..."`.
+
+Mostre ao usuário uma tabela curta: o que foi cortado, o gancho, o CTA, onde entra B-roll. Não espere
+aprovação para o primeiro render, a não ser que ele tenha pedido.
+
+## 3. Renderize
+
+```bash
+PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v1_<estilo>.mp4
+```
+- `plan.py` gera `timeline.json` (planos, zoom, legendas, palavras atrás, B-roll, gráficos, SFX). Você pode
+  editar esse arquivo à mão e rodar só `PY SK/scripts/render.py <projeto>` para casos que os comandos não cobrem.
+- O render imprime quantas palavras ficaram ATRÁS da pessoa e quantas foram para a FRENTE: atrás só acontece com
+  rosto detectado e cabeça estável; sem pessoa (tela, mão, produto), a palavra vira título animado na frente.
+- Render final ~2x a duração do vídeo em CPU de 4 núcleos. `--draft` em `render.py` é mais rápido.
+
+## 4. Confira antes de entregar (obrigatório)
+
+1. Abra `qa/vN_<estilo>_cortes.jpg` (um quadro por plano) e olhe: legenda legível, nada cortado nas bordas,
+   gráfico não cobre rosto, B-roll certo.
+2. Extraia 3-4 quadros nos momentos de gancho, B-roll e CTA (`ffmpeg -ss T -i render -frames:v 1 x.jpg`) e olhe.
+3. `versions/vN/qa.json`: duração, loudness (alvo -14 LUFS no Viral/Anúncio, -16 no Editorial).
+4. Achou problema? Corrija e renderize de novo antes de mostrar. Só entregue o que você viu.
+
+Antes/depois para o usuário:
+```bash
+PY SK/scripts/compare.py <bruto.mp4> <projeto>/renders/vN_<estilo>.mp4 <projeto>/renders/antes_depois.mp4
+```
+
+## 5. Correções por texto (loop de revisão)
+
+O usuário escreve em linguagem natural. Traduza para operações do `edit.py` (lista completa em
+`SK/references/revisoes.md`) e passe o pedido original em `--note` (fica no `versions/changelog.md`):
+
+```bash
+PY SK/scripts/edit.py <projeto> --note "tira o oi do começo e deixa a legenda maior" \
+   --cut "Oi gente" --caption-size +15%
+```
+Cada `edit.py` grava a mudança em `project.json` (vale para todas as versões seguintes, inclusive se trocar de
+estilo) e renderiza a próxima versão. Pedido ambíguo: faça a leitura mais provável e diga qual foi.
+Pedido que nenhuma operação cobre: edite `timeline.json` e rode `render.py`; se for recorrente, proponha
+uma nova operação.
+
+## 6. Entrega
+
+Envie o MP4 final (e o antes/depois). Diga em poucas linhas: duração bruto -> editado, o que foi cortado,
+estilo, gancho/CTA usados, o que ficou atrás da pessoa, e qualquer decisão que precise do usuário.
+
+## Regras fixas
+
+1. Zona segura 9:16: nada importante acima de y=220 nem abaixo de y=1470 (interface do Reels/TikTok).
+2. Texto nunca cobre o rosto. Palavra atrás da pessoa só com rosto detectado e cabeça estável.
+3. Legenda diz exatamente o que foi falado (corrija o ASR com `--fix`). Gancho e CTA não inventam promessa.
+4. Originais nunca são alterados: o projeto só lê os clipes.
+5. Música e B-roll só do usuário ou com licença comercial clara. Os efeitos sonoros da skill são sintetizados
+   (sem licença de terceiros).
+6. Mostre só o que você verificou nos quadros do render final.

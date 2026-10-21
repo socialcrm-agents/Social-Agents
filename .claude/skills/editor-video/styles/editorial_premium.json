@@ -1,0 +1,72 @@
+{
+  "name": "editorial_premium",
+  "label": "Editorial Premium",
+  "description": "Ritmo calmo e respirado, cor de cinema, legendas elegantes em frase curta com palavra-chave em serifa itálica, zoom lento contínuo, B-roll em cartão com moldura.",
+  "cuts": {
+    "max_gap": 0.32,
+    "pad_in": 0.08,
+    "pad_out": 0.16,
+    "min_pause_keep": 0.0
+  },
+  "zoom": {
+    "mode": "push",
+    "base": 1.0,
+    "push": 0.05,
+    "punch": 1.12,
+    "punch_every": 3
+  },
+  "grade": "eq=contrast=1.05:saturation=0.85:gamma=1.06:brightness=0.02,colorbalance=rs=0.03:bs=0.04:rh=0.04:bh=-0.03,curves=preset=medium_contrast,vignette=angle=PI/6",
+  "captions": {
+    "words_per_page": 5,
+    "max_chars": 26,
+    "case": "sentence",
+    "font": "Poppins",
+    "bold": 1,
+    "size": 66,
+    "color": "#F4EFE6",
+    "outline": 0,
+    "outline_color": "#000000",
+    "shadow": 3,
+    "box": false,
+    "emph_font": "DM Serif Display",
+    "emph_italic": true,
+    "emph_size": 84,
+    "emph_color": "#E8C98B",
+    "highlight": "none",
+    "y": 1360,
+    "animation": "fade"
+  },
+  "behind": {
+    "enabled": true,
+    "font": "DM Serif Display",
+    "italic": true,
+    "size": 250,
+    "color": "#F4EFE6",
+    "alpha": "20",
+    "max": 3,
+    "case": "title"
+  },
+  "broll": {
+    "mode": "card",
+    "max_dur": 3.0,
+    "min_gap": 5.0
+  },
+  "graphics": {
+    "lower_third": true,
+    "chapter_numbers": true,
+    "hook_banner": false,
+    "progress_bar": false,
+    "cta": true,
+    "accent": "#E8C98B",
+    "panel": "#111111",
+    "text": "#F4EFE6"
+  },
+  "sfx": {
+    "whoosh": 0.0,
+    "pop": 0.0,
+    "riser": 0.25
+  },
+  "audio": {
+    "lufs": -16
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "name": "reels_viral",
+  "label": "Reels Viral",
+  "description": "Corte seco sem respiro, punch-ins alternados a cada frase, legenda gigante 2-3 palavras com palavra ativa em amarelo e pop, palavras atrás da pessoa, B-roll tela cheia rápido, whoosh e pop.",
+  "cuts": {
+    "max_gap": 0.16,
+    "pad_in": 0.04,
+    "pad_out": 0.07,
+    "min_pause_keep": 0.0
+  },
+  "zoom": {
+    "mode": "alternate",
+    "base": 1.0,
+    "push": 0.0,
+    "punch": 1.28,
+    "punch_every": 2
+  },
+  "grade": "eq=contrast=1.12:saturation=1.28:brightness=0.015,unsharp=5:5:0.6",
+  "captions": {
+    "words_per_page": 3,
+    "max_chars": 16,
+    "case": "upper",
+    "font": "Anton",
+    "bold": 0,
+    "size": 118,
+    "color": "#FFFFFF",
+    "outline": 7,
+    "outline_color": "#000000",
+    "shadow": 2,
+    "box": false,
+    "emph_font": "Anton",
+    "emph_italic": false,
+    "emph_size": 132,
+    "emph_color": "#FFE600",
+    "highlight": "#FFE600",
+    "y": 1190,
+    "animation": "pop"
+  },
+  "behind": {
+    "enabled": true,
+    "font": "Anton",
+    "italic": false,
+    "size": 300,
+    "color": "#FFFFFF",
+    "alpha": "00",
+    "max": 6,
+    "case": "upper"
+  },
+  "broll": {
+    "mode": "full",
+    "max_dur": 2.2,
+    "min_gap": 3.5
+  },
+  "graphics": {
+    "lower_third": false,
+    "chapter_numbers": false,
+    "hook_banner": true,
+    "progress_bar": false,
+    "cta": true,
+    "accent": "#FFE600",
+    "panel": "#000000",
+    "text": "#FFFFFF"
+  },
+  "sfx": {
+    "whoosh": 0.55,
+    "pop": 0.45,
+    "riser": 0.0
+  },
+  "audio": {
+    "lufs": -14
+  }
+}
