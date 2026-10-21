@@ -1,6 +1,6 @@
 ---
 name: editor-video
-description: "Editor automático de vídeos curtos (Reels/TikTok/Shorts/anúncios 9:16) em português: recebe vídeos brutos, escolhe as melhores tomadas, remove pausas, gaguejos e frases quebradas, gera legendas animadas, faz zooms e cortes dinâmicos, põe palavras atrás da pessoa quando há rosto no quadro, insere B-roll e gráficos, aplica um de três estilos (Editorial Premium, Reels Viral, Anúncio de Alta Conversão), exporta MP4 e re-renderiza a partir de correções por texto. Use com /editor-video ou frases como 'edita esse vídeo', 'transforma em reels', 'corta as pausas', 'faz um anúncio com esse vídeo', 'muda a legenda e renderiza de novo'."
+description: "Editor automático de vídeo com IA em português (Reels/TikTok/Shorts 9:16, YouTube/aula/podcast 16:9, feed 1:1): recebe vídeos brutos, escolhe as melhores tomadas, remove pausas e erros, gera legendas animadas, faz zooms e cortes dinâmicos, põe palavras e objetos 3D atrás da pessoa, insere B-roll, ícones e motion graphics (moldura 3D com explicação, camadas de vidro, estúdio 3D no lugar do fundo, logo 3D que segue a mão, mapa, infográfico, documentário, ou qualquer animação escrita sob medida em HTML/Three.js), aplica estilos (Editorial Premium, Reels Viral, Anúncio de Alta Conversão), exporta MP4 e re-renderiza a partir de correções por texto. Use com /editor-video ou frases como 'edita esse vídeo', 'corta as pausas', 'anima isso na tela', 'coloca em 3D', 'me coloca numa moldura', 'troca meu fundo', 'faz um anúncio com esse vídeo', 'muda e renderiza de novo'."
 ---
 
 # /editor-video
@@ -16,7 +16,8 @@ Todos os scripts ficam em `SK/scripts/` e recebem a pasta do projeto como primei
 ```bash
 PY SK/scripts/setup.py              # STATUS de ffmpeg, Python, pacotes e modelos
 PY -m pip install -r SK/requirements.txt
-PY SK/scripts/setup.py --models     # ~680 MB: Parakeet (transcrição) + MediaPipe (rosto/recorte)
+PY SK/scripts/setup.py --models     # ~690 MB: Parakeet (transcrição) + MediaPipe (rosto/recorte/mão)
+npm install -g playwright && npx playwright install chromium   # motion graphics (HTML -> vídeo)
 ```
 Só siga quando imprimir `READY`. Cada linha `MISSING` traz o comando de correção para o sistema do usuário.
 Detalhes em `SK/references/dependencias.md`.
@@ -28,10 +29,11 @@ Detalhes em `SK/references/dependencias.md`.
   sem licença. Sem B-roll, o estilo usa só gráficos e zooms.
 - Estilo: pergunte só se o usuário não disse. Sem resposta: `reels_viral` para orgânico, `anuncio_conversao` se
   ele falar em anúncio/tráfego/venda, `editorial_premium` para marca pessoal/autoridade.
+- Formato: `9:16` (padrão: Reels/TikTok/Shorts), `16:9` (YouTube, aula, podcast, vídeo longo), `1:1`/`4:5` (feed).
 - Projeto: uma pasta nova por vídeo (ex.: `~/video-edits/<slug>`).
 
 ```bash
-PY SK/scripts/run.py new <projeto> --clips <bruto1.mp4> [<bruto2.mp4> ...] --style <estilo> \
+PY SK/scripts/run.py new <projeto> --clips <bruto1.mp4> [<bruto2.mp4> ...] --style <estilo> [--format 16:9] \
    [--broll <arquivos ou pasta>] [--hook "texto do gancho"] [--cta "chamada final"]
 PY SK/scripts/transcribe.py <projeto>     # transcript.txt + transcript.json (tempo por palavra)
 ```
@@ -54,6 +56,21 @@ Leia `qa/takes.md` e corrija o que a regra automática não pega, com `edit.py -
 
 Mostre ao usuário uma tabela curta: o que foi cortado, o gancho, o CTA, onde entra B-roll. Não espere
 aprovação para o primeiro render, a não ser que ele tenha pedido.
+
+## 2b. Motion graphics (o "anima o que você quiser ver na tela")
+
+Leia `SK/references/motion.md`. Para cada momento do roteiro que pede visual (explicação de passos, números,
+lugar, produto, comparação), proponha uma animação e peça com `edit.py --motion`:
+- explicação em passos/itens -> `moldura` (pessoa na moldura 3D + itens surgindo no tempo da fala)
+- revelar "como é feito" / bastidores -> `camadas`
+- trocar o fundo por cenário -> `estudio3d`
+- logo/palavra em 3D na mão, flutuando ou atrás da pessoa -> `objeto3d` (`follow: "hand"`, `layer: "behind"`)
+- números (preço, metragem, resultado) -> `infografico`; endereço/distância -> `mapa`; foto/print com marcações -> `documentario`
+- qualquer outra coisa (anatomia, receita animada, planeta abrindo, gráfico): escreva uma composição própria
+  seguindo o contrato de `motion.md`, renderize um trecho e olhe os quadros antes de usar.
+Ritmo: no máximo uma animação de tela cheia a cada ~6-8 s num Reels; num vídeo longo, use nos pontos-chave.
+Ícones em palavras-chave entram sozinhos no Viral/Anúncio (`--icons off` desliga).
+Não invente números, endereços ou dados: só o que a pessoa disse ou o usuário forneceu.
 
 ## 3. Renderize
 
@@ -98,6 +115,20 @@ uma nova operação.
 Envie o MP4 final (e o antes/depois). Diga em poucas linhas: duração bruto -> editado, o que foi cortado,
 estilo, gancho/CTA usados, o que ficou atrás da pessoa, e qualquer decisão que precise do usuário.
 
+## Outras ferramentas (quando ajudam)
+
+Local primeiro (gratuito, privado, sem limite). Use conectores/skills quando o pedido exigir o que o local não faz:
+- **Imagens para B-roll** (produto, cenário, ilustração): skills `nano-banana`, `flux`, `ideogram`, `image-prompt`;
+  depois `edit.py --add-broll` ou `documentario`.
+- **Vídeo gerado por IA** para B-roll: skills `veo-3`, `kling`, `runway`, `luma`.
+- **Voz/narração e música licenciada**: skills `ai-voiceover` (ElevenLabs), `ai-music-and-sound`, `suno`; música entra com `--music`.
+- **Descript** (conector): se o usuário já edita lá, exporte o MP4 final para um projeto Descript, ou use o
+  Underlord para revisão colaborativa.
+- **HyperFrames by HeyGen** (conector): render na nuvem de composições HTML quando o usuário quiser um projeto
+  compartilhável no HeyGen (do Claude Code local, a skill local é o caminho).
+- **Canva** (conector): capas, thumbnails e artes estáticas do mesmo vídeo.
+- Publicação/agendamento: Metricool / Blog2Social / Meta (conectores), sempre com aprovação do usuário.
+
 ## Regras fixas
 
 1. Zona segura 9:16: nada importante acima de y=220 nem abaixo de y=1470 (interface do Reels/TikTok).
@@ -105,5 +136,6 @@ estilo, gancho/CTA usados, o que ficou atrás da pessoa, e qualquer decisão que
 3. Legenda diz exatamente o que foi falado (corrija o ASR com `--fix`). Gancho e CTA não inventam promessa.
 4. Originais nunca são alterados: o projeto só lê os clipes.
 5. Música e B-roll só do usuário ou com licença comercial clara. Os efeitos sonoros da skill são sintetizados
-   (sem licença de terceiros).
+   (sem licença de terceiros). Logos de marcas de terceiros (ChatGPT, Claude etc.) só com o arquivo e o direito
+   de uso fornecidos pelo usuário; a skill não inclui logos de marcas.
 6. Mostre só o que você verificou nos quadros do render final.

@@ -19,6 +19,14 @@ MODELS_DIR = Path(os.environ.get("EDITOR_VIDEO_MODELS", Path.home() / ".cache" /
 W, H, FPS = 1080, 1920, 30
 # Zona segura do Reels/TikTok: nada importante acima de 220px nem abaixo de 1470px.
 SAFE_TOP, SAFE_BOTTOM, SAFE_SIDE = 220, 1470, 60
+FORMATS = {"9:16": (1080, 1920), "16:9": (1920, 1080), "1:1": (1080, 1080), "4:5": (1080, 1350)}
+
+
+def safe_zone(w: int, h: int) -> tuple[int, int, int]:
+    """(topo, base, lateral) seguros. Vertical: interface do Reels/TikTok. Horizontal: margem de TV/YouTube."""
+    if h > w:
+        return int(h * 0.115), int(h * 0.765), 60
+    return int(h * 0.07), int(h * 0.92), int(w * 0.05)
 
 
 class EditorError(RuntimeError):

@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from common import EditorError, load_json, load_style, log, main_guard, norm, project_paths, save_json
+from common import FORMATS, EditorError, load_json, load_style, log, main_guard, norm, project_paths, save_json
 
 STOP = set("""a o as os um uma uns umas de do da dos das em no na nos nas num numa para pra pro por com sem que se
 e ou mas como quando onde eu tu ele ela nos vos eles elas voce voces te me lhe isso isto aquilo esse essa este esta
@@ -24,6 +24,26 @@ rapida simples facil segredo erro erros mecanismo estrutura eficiente irresistiv
 automatico teoria prova garantia hoje nunca sempre ninguem tempo metodo estrategia cliente clientes faturamento
 milhoes mil reais real digital escala viral perigo atencao urgente gratuito bonus desconto""".split())
 VISUAL_CUES = {"olhada", "olha", "veja", "vendo", "mostrando", "mostrar", "aqui", "tela", "sistema", "exemplo", "repara"}
+# ícones automáticos (Lucide) para palavras faladas; o Claude pode pedir outros com --motion
+ICON_WORDS = {
+    "dinheiro": "banknote", "lucro": "trending-up", "vendas": "trending-up", "venda": "shopping-cart", "vender": "shopping-cart",
+    "tempo": "clock", "rapido": "zap", "rapida": "zap", "sistema": "cpu", "produto": "package", "produtos": "package",
+    "ia": "bot", "inteligencia": "brain", "celular": "smartphone", "casa": "house", "imovel": "building-2",
+    "apartamento": "building-2", "metro": "train-front", "medico": "stethoscope", "saude": "heart-pulse", "ideia": "lightbulb",
+    "erro": "circle-x", "erros": "circle-x", "resultado": "chart-line", "resultados": "chart-line", "clientes": "users",
+    "cliente": "users", "mensagem": "message-circle", "whatsapp": "message-circle", "instagram": "instagram",
+    "video": "video", "aula": "graduation-cap", "curso": "graduation-cap", "conteudo": "file-video", "perguntas": "circle-help",
+    "questoes": "circle-help", "escolhas": "list-checks", "oferta": "tag", "promessa": "handshake", "nicho": "target",
+    "simples": "sparkles", "segredo": "lock", "gratis": "gift", "agenda": "calendar", "preco": "dollar-sign",
+    "desconto": "percent", "garantia": "shield-check", "estrutura": "layers", "mecanismo": "cog", "eficiente": "rocket",
+}
+# padrões de cada template: camada e se usa os quadros reais da pessoa
+MOTION_DEFAULTS = {
+    "moldura": {"layer": "full", "needs_video": True}, "camadas": {"layer": "full", "needs_video": True},
+    "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
+    "mapa": {"layer": "front"}, "infografico": {"layer": "front"}, "documentario": {"layer": "full"},
+    "icone": {"layer": "front"},
+}
 DEFAULT_CTA = {"reels_viral": "SEGUE PRA VER MAIS", "anuncio_conversao": "CLIQUE EM SAIBA MAIS", "editorial_premium": "Link na bio"}
 
 
@@ -74,6 +94,88 @@ def shots(segments, words, style) -> list[dict]:
     return out
 
 
+def find_word(words: list[dict], phrase: str, after: float = 0.0) -> dict | None:
+    """Primeira ocorrência do trecho falado (1+ palavras) a partir de `after` segundos."""
+    target = [n for n in (norm(x) for x in phrase.split()) if n]
+    seq = [norm(w["w"]) for w in words]
+    for i in range(len(seq) - len(target) + 1):
+        if words[i]["t0"] >= after - 0.05 and seq[i:i + len(target)] == target:
+            return words[i]
+    return None
+
+
+def resolve_cues(obj, words: list[dict], t0: float, t1: float):
+    """Troca valores "at": "palavra" (e chaves *_at) pelo tempo relativo ao início do clipe."""
+    if isinstance(obj, list):
+        return [resolve_cues(x, words, t0, t1) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    out = {}
+    for k, v in obj.items():
+        if (k == "at" or k.endswith("_at")) and isinstance(v, str):
+            hit = find_word(words, v, t0)
+            out[k] = round(min(max(hit["t0"] - t0, 0), t1 - t0), 3) if hit and hit["t0"] < t1 else 0.5
+        else:
+            out[k] = resolve_cues(v, words, t0, t1)
+    return out
+
+
+def resolve_overlaps(items: list[dict]) -> list[dict]:
+    """Animações de tela cheia têm prioridade: a anterior termina quando a próxima começa, e as de camada
+    (front/behind) são cortadas para fora das janelas de tela cheia."""
+    full = [m for m in items if m.get("layer") == "full"]
+    for a, b in zip(full, full[1:]):
+        if a["t1"] > b["t0"]:
+            a["t1"] = b["t0"]
+    full = [m for m in full if m["t1"] - m["t0"] >= 1.0]
+    out = list(full)
+    for m in (m for m in items if m.get("layer") != "full"):
+        for f in full:
+            if m["t0"] < f["t1"] and m["t1"] > f["t0"]:
+                if m["t0"] >= f["t0"]:
+                    m["t0"] = f["t1"]
+                else:
+                    m["t1"] = f["t0"]
+        if m["t1"] - m["t0"] >= 1.0:
+            out.append(m)
+    return sorted(out, key=lambda m: m["t0"])
+
+
+def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: list[tuple]) -> list[dict]:
+    out = []
+    for n, req in enumerate(ov.get("motion", []), 1):
+        if n in set(ov.get("motion_remove", [])):
+            continue
+        hit = find_word(words, req["at"]) if isinstance(req.get("at"), str) else None
+        if isinstance(req.get("at"), str) and not hit:
+            log(f"   aviso: motion {n} ({req.get('template')}): trecho '{req['at']}' não foi falado no corte final; ignorado")
+            continue
+        t0 = round(max((hit["t0"] - 0.1) if hit else float(req.get("at", 0)), 0), 3)
+        end = find_word(words, req["until"], t0) if req.get("until") else None
+        t1 = round(min((end["t1"] + 0.2) if end else t0 + float(req.get("dur", 3.0)), total), 3)
+        if t1 - t0 < 0.5:
+            continue
+        item = {**MOTION_DEFAULTS.get(req.get("template", ""), {}), **{k: v for k, v in req.items() if k not in ("at", "until", "dur")}}
+        item.update(t0=t0, t1=t1, params=resolve_cues(req.get("params", {}), words, t0, t1))
+        if item["params"].get("follow") == "hand":
+            item["hand"] = True
+        out.append(item)
+    out = resolve_overlaps(sorted(out, key=lambda m: m["t0"]))
+    if style["graphics"].get("icons") and ov.get("icons", True):
+        last = -9.0
+        for w in words:
+            name = ICON_WORDS.get(norm(w["w"]))
+            t0 = w["t0"] - 0.05
+            if not name or t0 - last < 4.5 or any(a - 1.0 < t0 < b + 0.2 for a, b in busy) \
+                    or any(m["t0"] - 0.5 < t0 < m["t1"] + 0.5 for m in out):
+                continue
+            out.append({"template": "icone", "layer": "front", "t0": round(t0, 3), "t1": round(min(t0 + 1.6, total), 3),
+                        "params": {"icon": name, "label": w["w"].strip(".,!?:;"), "at": 0.0,
+                                   "color": style["graphics"]["accent"], "y": 470}, "auto": True})
+            last = t0
+    return sorted(out, key=lambda m: m["t0"])
+
+
 def main() -> None:
     project = Path(sys.argv[1])
     paths = project_paths(project)
@@ -86,7 +188,17 @@ def main() -> None:
     ov = proj.get("overrides", {})
     words_src = tr["words"]
     clips = {c["id"]: c for c in proj["clips"]}
-    cap = {**style["captions"], **ov.get("caption", {})}
+    fw, fh = FORMATS[proj.get("format", "9:16")]
+    landscape = fw > fh
+    cap = dict(style["captions"])
+    if fw != 1080 or fh != 1920:
+        # estilos são desenhados em 1080x1920: escala tamanhos e posições para o formato do projeto
+        k = 0.72 if landscape else fh / 1920
+        cap.update(size=int(cap["size"] * k), emph_size=int(cap["emph_size"] * k),
+                   y=int(fh * (0.9 if landscape else cap["y"] / 1920)))
+        if landscape:
+            cap.update(words_per_page=cap["words_per_page"] + 2, max_chars=int(cap["max_chars"] * 1.8))
+    cap.update(ov.get("caption", {}))
     zcfg = {**style["zoom"], **ov.get("zoom", {})}
 
     # 1) planos com tempo na timeline final + zoom
@@ -158,7 +270,9 @@ def main() -> None:
     # 5) palavras atrás da pessoa (fora da janela do gancho e do CTA)
     gfx_hook_end = 2.9 if style["graphics"]["hook_banner"] else (4.3 if style["graphics"]["lower_third"] else 0.3)
     cta_start = max(total - 3.2, 0)
-    bcfg = style["behind"]
+    bcfg = dict(style["behind"])
+    if landscape:
+        bcfg["size"] = int(bcfg["size"] * 0.6)
     behind = []
     enabled = bcfg["enabled"] if ov.get("behind_enabled") is None else ov["behind_enabled"]
     removed = {norm(x) for x in ov.get("behind_remove", [])}
@@ -241,7 +355,15 @@ def main() -> None:
     if g["cta"]:
         graphics.append({"type": "cta", "text": ov.get("cta") or DEFAULT_CTA[style["name"]], "t0": round(cta_start, 3), "t1": total})
 
-    # 8) efeitos sonoros (sutis, abaixo da voz)
+    # 8) motion graphics: pedidos do usuário/Claude + ícones automáticos
+    busy = [(0.0, gfx_hook_end), (cta_start, total)] + [(b["t0"] - 0.3, b["t1"] + 0.3) for b in behind] \
+        + [(b["t0"], b["t1"]) for b in broll if b["mode"] != "full"]
+    motion = plan_motion(words, ov, style, total, busy)
+    # palavra gigante não aparece por cima de animação de tela cheia
+    fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
+    behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]
+
+    # 9) efeitos sonoros (sutis, abaixo da voz)
     s = style["sfx"]
     sfx = []
     if s["whoosh"]:
@@ -252,17 +374,22 @@ def main() -> None:
         sfx += [{"type": "pop", "t": b["t0"], "gain": s["pop"]} for b in behind]
     if s["riser"] and g["cta"]:
         sfx.append({"type": "riser", "t": max(cta_start - 1.2, 0), "gain": s["riser"]})
+    if s["whoosh"]:
+        sfx += [{"type": "whoosh", "t": max(m["t0"] - 0.1, 0), "gain": s["whoosh"] * 0.8} for m in motion
+                if m.get("layer") == "full"]
+    if s["pop"]:
+        sfx += [{"type": "pop", "t": m["t0"] + 0.05, "gain": s["pop"] * 0.8} for m in motion if m.get("template") == "icone"]
     sfx.sort(key=lambda x: x["t"])
 
     save_json(paths["timeline"], {
-        "style": style["name"], "w": 1080, "h": 1920, "fps": 30, "duration": total,
+        "style": style["name"], "w": fw, "h": fh, "fps": 30, "duration": total, "format": proj.get("format", "9:16"),
         "shots": plan_shots, "words": words, "captions": {"cfg": cap, "pages": cap_pages},
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
         "sfx": sfx, "grade": style["grade"], "audio": style["audio"],
-        "music": ov.get("music"),
+        "music": ov.get("music"), "motion": motion,
     })
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "
-        f"{len(behind)} atrás da pessoa | {len(broll)} B-roll | {len(graphics)} gráficos | {len(sfx)} SFX")
+        f"{len(behind)} atrás da pessoa | {len(broll)} B-roll | {len(graphics)} gráficos | {len(motion)} motion | {len(sfx)} SFX")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- INFOGRÁFICO DE NÚMEROS (layer: front): cartões de vidro com números que contam até o valor no tempo
+     em que cada um é falado (ex.: "18 andares", "72 m²", "R$ 1,1 mi").
+     params: stats: [{value: 72, decimals: 0, prefix: "", suffix: " m²", label: "área", icon (Lucide), at (s)}],
+             accent, y (topo do bloco em px, default 300), align ("centro"|"esquerda") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #list { position: absolute; display: flex; flex-direction: column; gap: 26px; }
+  .stat { display: flex; align-items: center; gap: 28px; padding: 24px 48px 24px 26px; min-width: 640px;
+          background: rgba(12,12,18,.78) !important; color: #fff; }
+  .ic { width: 110px; height: 110px; border-radius: 30px; display: grid; place-items: center; color: #111; flex: 0 0 auto; }
+  .ic .icon { width: 64px; height: 64px; }
+  .num { font-family: 'Anton'; font-size: 100px; line-height: 1; letter-spacing: 1px; white-space: nowrap; }
+  .lab { font-weight: 800; font-size: 34px; opacity: .85; text-transform: uppercase; letter-spacing: 2px; }
+</style></head>
+<body><div id="list"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, D = motion.duration;
+const accent = p.accent || '#22E06B';
+const list = document.getElementById('list');
+list.style.top = (p.y ?? 300) + 'px';
+if ((p.align || 'centro') === 'centro') { list.style.left = '50%'; list.style.transform = 'translateX(-50%)'; }
+else list.style.left = '60px';
+const fmt = (v, d) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const stats = (p.stats || []).map((s, i) => {
+  const el = document.createElement('div'); el.className = 'stat glass';
+  el.innerHTML = `<div class="ic" style="background:${accent}"><div class="icon"></div></div>
+    <div><div class="num"></div><div class="lab">${s.label || ''}</div></div>`;
+  list.appendChild(el);
+  motion.waitFor(motion.icon(s.icon || 'sparkles').then((x) => { el.querySelector('.icon').innerHTML = x; }));
+  return { el, num: el.querySelector('.num'), s, at: s.at ?? 0.2 + i * 0.7 };
+});
+motion.onFrame((t) => {
+  for (const { el, num, s, at } of stats) {
+    const k = motion.inOut(t, at, D, 0.5, 0.3, 'outBack');
+    el.style.opacity = Math.min(1, k * 1.5);
+    el.style.transform = `translateY(${(1 - k) * 50}px) scale(${0.9 + 0.1 * k})`;
+    const kc = motion.prog(t, at, 0.9, 'outExpo');
+    num.textContent = `${s.prefix || ''}${fmt((s.value || 0) * kc, s.decimals || 0)}${s.suffix || ''}`;
+  }
+});
+</script></body></html>

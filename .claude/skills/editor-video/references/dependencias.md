@@ -10,6 +10,9 @@
 | Modelo Parakeet TDT 0.6B v3 int8 (~640 MB) | transcrição pt-BR com tempo por token | `setup.py --models` (GitHub releases do sherpa-onnx) | CC-BY-4.0 (NVIDIA): uso comercial ok com atribuição |
 | MediaPipe blaze_face + selfie_segmenter (~0,5 MB) | rosto e máscara | `setup.py --models` | Apache-2.0 |
 | Fontes Anton, Poppins, DM Serif Display | legendas e gráficos | já incluídas em `assets/fonts` | SIL OFL 1.1 |
+| Node.js ≥ 18 + Playwright + Chromium | motion graphics (HTML/CSS 3D/Three.js -> vídeo) | `npm install -g playwright && npx playwright install chromium` | MIT / Apache-2.0 / BSD |
+| three.js 0.180, opentype.js, ícones Lucide | 3D, texto 3D com acento, ~1.900 ícones | já incluídos em `assets/motion/vendor` | MIT / MIT / ISC |
+| MediaPipe hand_landmarker (~7 MB) | objeto 3D seguindo a mão | `setup.py --models` | Apache-2.0 |
 
 Opcional: `faster-whisper` (`EDITOR_VIDEO_ASR=whisper`, modelo via `EDITOR_VIDEO_WHISPER`, padrão `small`).
 Baixa modelos do HuggingFace; use quando a rede permitir e para comparar precisão.
@@ -17,4 +20,5 @@ Baixa modelos do HuggingFace; use quando a rede permitir e para comparar precis�
 Variáveis: `EDITOR_VIDEO_MODELS` muda a pasta dos modelos (padrão `~/.cache/editor-video/models`).
 
 Hardware de referência (teste real): 4 vCPU x86, 15 GB RAM, sem GPU.
-Transcrição ~0,15x o tempo real; render final ~2,2x o tempo real (48 s de vídeo ≈ 110 s).
+Transcrição ~0,15x o tempo real; render final ~2,2x o tempo real (48 s de vídeo ≈ 110 s), mais o tempo dos
+motion graphics: CSS/SVG 10-25 quadros/s, Three.js 2-7 quadros/s (com cache por clipe).

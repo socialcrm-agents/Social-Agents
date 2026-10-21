@@ -1,0 +1,68 @@
+<!doctype html>
+<!-- CAMADAS DE VIDRO 3D (layer: full, needs_video: true)
+     A cena gira de lado e se separa em camadas de vidro: fundo, elementos gráficos e a pessoa, cada uma com
+     rótulo. Depois gira de volta e junta tudo. Os quadros continuam em movimento (não é foto congelada).
+     params: graphic (texto grande da camada de elementos), icon (Lucide, opcional),
+             labels: {fundo, elementos, voce}, accent, open (s até abrir, default 0.15), close_at (s, default fim-1.1) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #bg { inset: 0; background: radial-gradient(110% 70% at 50% 40%, #1b1f2a 0%, #07080b 75%); }
+  #scene { inset: 0; perspective: 2200px; perspective-origin: 50% 45%; }
+  #stack { inset: 0; transform-style: preserve-3d; }
+  .layer { position: absolute; inset: 0; transform-style: preserve-3d; border-radius: 0; overflow: hidden; }
+  .layer img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .pane { position: absolute; inset: 0; border: 3px solid rgba(255,255,255,0); background: rgba(255,255,255,0); }
+  .chip { position: absolute; left: 50%; top: -110px; transform: translateX(-50%); padding: 14px 34px; border-radius: 999px;
+          font-weight: 800; font-size: 40px; letter-spacing: 2px; color: #111; white-space: nowrap; }
+  #gfx { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; padding-top: 18%; gap: 30px; }
+  #gtext { font-family: 'Anton'; font-size: 230px; line-height: .95; text-align: center; text-transform: uppercase;
+           text-shadow: 0 10px 40px rgba(0,0,0,.5); padding: 0 60px; }
+  #gicon { width: 170px; height: 170px; border-radius: 44px; display: grid; place-items: center; color: #111; }
+  #gicon .icon { width: 96px; height: 96px; }
+</style></head>
+<body>
+<div id="bg" class="abs"></div>
+<div id="scene" class="abs"><div id="stack" class="abs">
+  <div class="layer" id="L0"><img id="imgBg"><div class="pane"></div><div class="chip"></div></div>
+  <div class="layer" id="L1"><div id="gfx" class="abs" style="inset:0"><div id="gicon"><div class="icon"></div></div><div id="gtext"></div></div><div class="pane"></div><div class="chip"></div></div>
+  <div class="layer" id="L2"><img id="imgCut"><div class="pane"></div><div class="chip"></div></div>
+</div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration, W = motion.w;
+const accent = p.accent || '#FFE600';
+const labels = Object.assign({ fundo: 'FUNDO', elementos: 'ELEMENTOS', voce: 'VOCÊ' }, p.labels || {});
+const L = [0, 1, 2].map((i) => document.getElementById('L' + i));
+[labels.fundo, labels.elementos, labels.voce].forEach((txt, i) => {
+  const c = L[i].querySelector('.chip'); c.textContent = txt; c.style.background = accent;
+});
+document.getElementById('gtext').textContent = p.graphic || '';
+const gi = document.getElementById('gicon');
+if (p.icon) { gi.style.background = accent; motion.waitFor(motion.icon(p.icon).then((s) => { gi.querySelector('.icon').innerHTML = s; })); }
+else gi.style.display = 'none';
+const imgBg = document.getElementById('imgBg'), imgCut = document.getElementById('imgCut');
+const open = p.open ?? 0.15, closeAt = p.close_at ?? Math.max(D - 1.1, open + 1.2);
+
+motion.onFrame(async (t) => {
+  await Promise.all([motion.setFrame(imgBg, motion.params.video.bg ? 'bg' : 'plate', t), motion.setFrame(imgCut, 'cut', t)]);
+  const kOpen = motion.prog(t, open, 0.9, 'inOutCubic');
+  const kClose = motion.prog(t, closeAt, 0.9, 'inOutCubic');
+  const k = kOpen * (1 - kClose);                       // 0 = cena normal, 1 = camadas separadas
+  const orbit = Math.sin((t - open) * 0.9) * 6 * k;      // leve movimento enquanto aberto
+  const scale = 1 - 0.38 * k;
+  document.getElementById('stack').style.transform =
+    `translateX(${-150 * k}px) translateZ(${-320 * k}px) rotateX(${10 * k}deg) rotateY(${(48 + orbit) * k}deg) scale(${scale})`;
+  const gap = 440 * k;
+  L.forEach((el, i) => {
+    el.style.transform = `translateZ(${(i - 1) * gap}px)`;
+    const pane = el.querySelector('.pane');
+    pane.style.borderColor = `rgba(255,255,255,${0.75 * k})`;
+    pane.style.background = `rgba(255,255,255,${(i === 0 ? 0.04 : 0.09) * k})`;
+    pane.style.borderRadius = `${40 * k}px`;
+    el.style.borderRadius = `${40 * k}px`;
+    el.querySelector('.chip').style.opacity = motion.prog(t, open + 0.7 + i * 0.15, 0.3) * (1 - kClose);
+  });
+  // elementos gráficos só aparecem quando a cena abre (e somem ao fechar)
+  document.getElementById('gfx').style.opacity = motion.inOut(t, open + 0.3, closeAt + 0.6, 0.4, 0.5);
+});
+</script></body></html>

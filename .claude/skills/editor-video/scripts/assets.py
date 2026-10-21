@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from common import FONTS_DIR, SAFE_BOTTOM, SAFE_SIDE, SAFE_TOP, H, W, ffmpeg
+from common import FONTS_DIR, SAFE_BOTTOM, SAFE_SIDE, SAFE_TOP, H, W, ffmpeg, safe_zone
 
 FONT_FILES = {
     ("Anton", False): "Anton-Regular.ttf",
@@ -21,6 +21,13 @@ FONT_FILES = {
     ("DM Serif Display", True): "DMSerifDisplay-Italic.ttf",
 }
 WIDTH_FACTOR = {"Anton": 0.47, "Poppins": 0.66, "DM Serif Display": 0.52}
+
+
+def set_format(w: int, h: int) -> None:
+    """Ajusta tamanho do quadro e zona segura (o render chama antes de gerar legendas e gráficos)."""
+    global W, H, SAFE_TOP, SAFE_BOTTOM, SAFE_SIDE
+    W, H = w, h
+    SAFE_TOP, SAFE_BOTTOM, SAFE_SIDE = safe_zone(w, h)
 
 
 def ass_color(hex_rgb: str, alpha: str = "00") -> str:
@@ -55,6 +62,8 @@ def caption_y(tl: dict, t: float) -> int:
     """Base da legenda no instante t: posição do estilo, mas sempre abaixo do queixo do plano atual."""
     c = tl["captions"]["cfg"]
     base = min(c["y"], SAFE_BOTTOM)
+    if any(m["t0"] <= t < m["t1"] for m in tl.get("motion", []) if m.get("layer") == "full"):
+        return base  # animação de tela cheia: não há rosto para desviar
     shot = next((s for s in tl["shots"] if s["t0"] <= t < s["t1"]), None)
     chin = shot.get("chin") if shot else None
     if not chin:
@@ -82,7 +91,7 @@ def captions_ass(tl: dict, out: Path, extra_front: list[dict] | None = None) -> 
     italic = "\\i1" if c.get("emph_italic") else ""
     emph_open = f"{{\\fn{c['emph_font']}\\fs{c['emph_size']}\\c{ass_color(c['emph_color'])}{italic}}}"
     base_close = f"{{\\fn{c['font']}\\fs{c['size']}\\c{ass_color(c['color'])}\\i0}}"
-    max_line = c["max_chars"] if c["font"] == "Anton" else 18
+    max_line = c["max_chars"] if c["font"] == "Anton" or W > H else 18
 
     def page_text(idx: list[int], active: int | None) -> str:
         tokens = []
@@ -113,9 +122,9 @@ def captions_ass(tl: dict, out: Path, extra_front: list[dict] | None = None) -> 
     for page in tl["captions"]["pages"]:
         idx = page["words"]
         y = y_at(page["t0"])
-        pos = "" if c["animation"] == "slide" else f"\\pos(540,{y})"
+        pos = "" if c["animation"] == "slide" else f"\\pos({W // 2},{y})"
         intro = {"pop": "\\fscx88\\fscy88\\t(0,110,\\fscx100\\fscy100)", "fade": "\\fad(160,0)",
-                 "slide": f"\\move(540,{y + 26},540,{y},0,140)"}.get(c["animation"], "")
+                 "slide": f"\\move({W // 2},{y + 26},{W // 2},{y},0,140)"}.get(c["animation"], "")
         if hl == "none":
             lines.append(f"Dialogue: 0,{ts(page['t0'])},{ts(page['t1'])},Cap,,0,0,0,,"
                          f"{{\\an2{pos}{intro}}}{page_text(idx, None)}")
@@ -127,13 +136,13 @@ def captions_ass(tl: dict, out: Path, extra_front: list[dict] | None = None) -> 
                 continue
             p = pos if k else (pos + intro if c["animation"] != "slide" else intro)
             if k and c["animation"] == "slide":
-                p = f"\\pos(540,{y})"
+                p = f"\\pos({W // 2},{y})"
             lines.append(f"Dialogue: 0,{ts(t0)},{ts(t1)},Cap,,0,0,0,,{{\\an2{p}}}{page_text(idx, i)}")
 
     y = base_y
     for b in extra_front or []:
         lines.append(f"Dialogue: 1,{ts(b['t0'])},{ts(b['t1'])},Kin,,0,0,0,,"
-                     f"{{\\an8\\pos(540,{SAFE_TOP + 140})\\fad(120,200)\\fscx85\\fscy85\\t(0,160,\\fscx100\\fscy100)}}"
+                     f"{{\\an8\\pos({W // 2},{SAFE_TOP + 140})\\fad(120,200)\\fscx85\\fscy85\\t(0,160,\\fscx100\\fscy100)}}"
                      f"{esc(b['text'])}")
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -152,7 +161,7 @@ def behind_ass(tl: dict, items: list[dict], out: Path) -> None:
         y = int(max(SAFE_TOP, top - size * 0.84))  # a cabeça cobre só a base das letras
         color = f"\\c{ass_color(b['color'])}" if b.get("color") else ""
         lines.append(f"Dialogue: 0,{ts(b['t0'])},{ts(b['t1'])},Bh,,0,0,0,,"
-                     f"{{\\an8\\pos(540,{y})\\fs{size}{color}\\fad(140,220)\\fscx90\\fscy90\\t(0,220,\\fscx100\\fscy100)}}{text}")
+                     f"{{\\an8\\pos({W // 2},{y})\\fs{size}{color}\\fad(140,220)\\fscx90\\fscy90\\t(0,220,\\fscx100\\fscy100)}}{text}")
     out.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -210,7 +219,7 @@ def graphic_png(kind: str, text: str, style: str, g: dict, out: Path, top: bool 
         if style == "editorial_premium":
             font = _font("DM Serif Display", 78, italic=True)
             tw = d.textlength(text, font=font)
-            y = SAFE_TOP + 60 if top else 1000
+            y = SAFE_TOP + 60 if top else int(H * 0.52)
             d.text(((W - tw) / 2, y), text, font=font, fill=_rgb(fg))
             d.line(((W - 160) / 2, y + 112, (W + 160) / 2, y + 112), fill=_rgb(accent), width=4)
         else:
@@ -218,7 +227,7 @@ def graphic_png(kind: str, text: str, style: str, g: dict, out: Path, top: bool 
             label = text.upper()
             tw = d.textlength(label, font=font)
             bw, bh = tw + 170, 130
-            x0, y0 = (W - bw) / 2, (SAFE_TOP + 60 if top else 1320)
+            x0, y0 = (W - bw) / 2, (int(H * 0.6) if W > H else SAFE_TOP + 60 if top else SAFE_BOTTOM - 150)
             _shadow(img, (x0, y0 + 10, x0 + bw, y0 + bh + 10), bh // 2)
             d.rounded_rectangle((x0, y0, x0 + bw, y0 + bh), radius=bh // 2, fill=_rgb(accent))
             ink = (0, 0, 0, 255) if style == "reels_viral" else (255, 255, 255, 255)
@@ -228,7 +237,7 @@ def graphic_png(kind: str, text: str, style: str, g: dict, out: Path, top: bool 
     elif kind == "lower_third":
         font = _font("DM Serif Display", 60, italic=True)
         lines = _wrap(d, text, font, 760)[:2]
-        y0 = 980
+        y0 = int(H * (0.51 if H > W else 0.66))
         x0 = SAFE_SIDE + 20
         h = 78 * len(lines) + 40
         d.rectangle((x0, y0, x0 + 8, y0 + h), fill=_rgb(accent))

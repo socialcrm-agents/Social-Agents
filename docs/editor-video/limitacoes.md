@@ -13,7 +13,9 @@
 | 7. B-roll, imagens, animações | ✅ | B-roll do usuário em tela cheia (slide), cartão com moldura (fade + subida) ou tela dividida; gráficos gerados: gancho, CTA, lower third, número de capítulo, barra de progresso. |
 | 8. Estilos diferentes | ✅ 3 estilos | `styles/*.json` (cor, ritmo de corte, zoom, legenda, gráficos, SFX, loudness). Estilo novo = novo JSON. |
 | 9. Exportar MP4 | ✅ | 1080x1920, 30 fps, H.264 High + AAC 48 kHz, `+faststart`, loudness -14/-16 LUFS. |
-| 10. Correções por texto e re-render | ✅ | `edit.py` (18 operações) + `--note`; overrides persistentes; `versions/` + `changelog.md`. |
+| 10. Correções por texto e re-render | ✅ | `edit.py` (22 operações) + `--note`; overrides persistentes; `versions/` + `changelog.md`. |
+| Motion graphics (moldura 3D, camadas, estúdio 3D, objeto 3D/mão, mapa, infográfico, documentário, ícones) | ✅ | `references/motion.md`; render HTML -> vídeo no Chromium |
+| Vídeo longo horizontal (aula, podcast, YouTube) | ✅ | `--format 16:9` (também 1:1 e 4:5) |
 
 ## Limitações reais
 
@@ -42,6 +44,19 @@
   amplia o defeito.
 - Gráficos são PNG animados com fade/slide (sem motion design complexo tipo After Effects). Para animações de UI
   elaboradas, a evolução natural é um módulo HTML -> vídeo (HyperFrames, Apache-2.0).
+
+**Motion graphics (HTML/3D)**
+- Render em CPU: animações CSS/SVG a 10-25 quadros/s, Three.js (estúdio 3D, objeto 3D) a 2-7 quadros/s. Um Reels
+  de 25 s com 5 animações levou ~3,5 min aqui; há cache por clipe.
+- Recorte da pessoa é o MediaPipe selfie (rápido, não perfeito): cabelo fino e bordas podem ficar serrilhados;
+  na camada "fundo" de `camadas` a área da pessoa vira desfoque (não há fundo limpo real).
+- `estudio3d` troca o fundo por um cenário sintético; não reconstrói o ambiente real.
+- Rastreio de mão: validado em detecção; com mão em movimento rápido pode atrasar (suavização) ou perder a mão
+  (o objeto fica parado onde estava).
+- Mapa é ilustrativo (não usa cartografia real; tiles exigem licença). Para lugar real, use um print autorizado
+  com `documentario`.
+- Composições sob medida (anatomia, planeta abrindo) dependem do Claude escrever um bom HTML/Three.js e de
+  modelos 3D licenciados para realismo.
 
 **Claude Code**
 - O Claude não "assiste" ao vídeo: ele lê transcrição, JSONs e olha quadros extraídos (contact sheet). A QA

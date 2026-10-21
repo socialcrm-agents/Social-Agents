@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Renderiza timeline.json em MP4 1080x1920 (H.264 + AAC), criando uma nova versão.
+"""Renderiza timeline.json em MP4 (1080x1920, 1920x1080 ou 1080x1080; H.264 + AAC), criando uma nova versão.
 
 Etapas: rastreio de rosto -> planos com zoom animado -> A-roll contínuo -> máscara da
 pessoa (se houver palavras atrás) -> legendas/gráficos/SFX -> um único grafo ffmpeg
@@ -10,6 +10,7 @@ Uso: render.py <projeto> [--draft]   (--draft: preset rápido para revisar)
 
 from __future__ import annotations
 
+import json
 import shutil
 import statistics
 import subprocess
@@ -37,7 +38,7 @@ def face_for_shots(tl: dict, work: Path) -> bool:
             tracks[sh["clip"]] = load_json(cache) if cache.exists() else None
             if tracks[sh["clip"]] is None:
                 try:
-                    tracks[sh["clip"]] = face_track(sh["src"])
+                    tracks[sh["clip"]] = face_track(sh["src"], aspect=W / H)
                 except EditorError as exc:
                     log(f"   (sem rastreio de rosto: {exc})")
                     tracks[sh["clip"]] = []
@@ -62,6 +63,14 @@ def face_for_shots(tl: dict, work: Path) -> bool:
 
 
 def render_shots(tl: dict, work: Path, preset: str) -> Path:
+    """Monta o A-roll contínuo (cortes + zoom). Reaproveita se os planos não mudaram desde o último render."""
+    import hashlib
+    key = hashlib.sha1(json.dumps([tl["shots"], W, H, FPS], sort_keys=True).encode()).hexdigest()[:12]
+    aroll = work / "aroll.mkv"
+    stamp = work / "aroll.key"
+    if aroll.exists() and stamp.exists() and stamp.read_text() == key:
+        log("   A-roll reaproveitado (planos iguais)")
+        return aroll
     d = work / "shots"
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True)
@@ -80,8 +89,10 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
         files.append(out.with_suffix(".mkv"))
     lst = d / "list.txt"
     lst.write_text("".join(f"file '{f.name}'\n" for f in files), encoding="utf-8")
-    aroll = work / "aroll.mkv"
     ffmpeg(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(aroll)])
+    stamp.write_text(key)
+    (work / "mask.mp4").unlink(missing_ok=True)
+    (work / "mask_stats.json").unlink(missing_ok=True)
     return aroll
 
 
@@ -91,8 +102,9 @@ def fit_behind(tl: dict, behind: list[dict]) -> tuple[list[dict], list[dict]]:
     Reduz a fonte quando falta espaço; se mesmo assim não couber (cabeça encostada no topo),
     a palavra vai para a frente.
     """
+    import assets
     from assets import WIDTH_FACTOR
-    from common import SAFE_SIDE, SAFE_TOP
+    SAFE_SIDE, SAFE_TOP = assets.SAFE_SIDE, assets.SAFE_TOP
     k = tl["behind_cfg"]
     ok, moved = [], []
     for b in behind:
@@ -133,7 +145,7 @@ def place_behind(tl: dict, stats: list[dict] | None) -> tuple[list[dict], list[d
     """Separa as palavras que dá para pôr atrás da pessoa das que vão na frente."""
     behind, front = [], []
     for b in tl["behind"]:
-        if not stats:
+        if not stats or not any(s["face"] for s in stats):
             front.append(b)
             continue
         win = stats[int(b["t0"] * FPS): int(b["t1"] * FPS)]
@@ -149,7 +161,9 @@ def place_behind(tl: dict, stats: list[dict] | None) -> tuple[list[dict], list[d
 
 
 def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: list, front: list,
-            out: Path, preset: str) -> None:
+            out: Path, preset: str, motion_clips: list | None = None) -> None:
+    motion_clips = motion_clips or []
+    m_behind = [(m, p) for m, p in motion_clips if m.get("layer") == "behind" and mask]
     work = project / "work"
     gdir = work / "gfx"
     shutil.rmtree(gdir, ignore_errors=True)
@@ -163,9 +177,14 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
     inputs: list[str] = ["-i", str(aroll)]
     n_in = 1
     mask_idx = None
-    if behind and mask:
+    if (behind or m_behind) and mask:
         inputs += ["-i", str(mask)]
         mask_idx, n_in = n_in, n_in + 1
+    motion_idx = []
+    for m, p in motion_clips:
+        inputs += ["-i", str(p)]
+        motion_idx.append((n_in, m))
+        n_in += 1
     broll_idx = []
     for b in tl["broll"]:
         dur = b["t1"] - b["t0"]
@@ -180,7 +199,9 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         if g["type"] == "progress":
             continue
         png = gdir / f"{k:02d}_{g['type']}.png"
-        cta_top = g["type"] == "cta" and max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > 1250
+        import assets
+        cta_top = g["type"] == "cta" and \
+            max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > assets.SAFE_BOTTOM - 220
         graphic_png(g["type"], g["text"], tl["style"], tl["graphics_cfg"], png, top=cta_top)
         inputs += ["-loop", "1", "-t", f"{g['t1'] - g['t0']:.3f}", "-i", str(png)]
         gfx.append((n_in, g))
@@ -200,12 +221,21 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
     n_copies = 1 + (1 if mask_idx is not None else 0) + len(splits)
     f.append(f"[0:v]{tl['grade']},format=yuv420p,split={n_copies}" + "".join(f"[a{i}]" for i in range(n_copies)))
     cur, copy = "a0", 1
+    def motion_in(idx: int, m: dict, lbl: str) -> None:
+        f.append(f"[{idx}:v]fps={FPS},format=rgba,setpts=PTS-STARTPTS+{m['t0']:.3f}/TB[{lbl}]")
+
     if mask_idx is not None:
-        f.append(f"[{cur}]ass=behind.ass:fontsdir=fonts[bt]")
+        f.append(f"[{cur}]ass=behind.ass:fontsdir=fonts[bt0]" if behind else f"[{cur}]null[bt0]")
+        bcur = "bt0"
+        for k, (idx, m) in enumerate((i, m) for i, m in motion_idx if m.get("layer") == "behind"):
+            motion_in(idx, m, f"mb{k}")
+            f.append(f"[{bcur}][mb{k}]overlay=0:0:eof_action=pass:enable='between(t,{m['t0']:.3f},{m['t1']:.3f})'[bt{k + 1}]")
+            bcur = f"bt{k + 1}"
         f.append(f"[{mask_idx}:v]format=gray,scale={W}:{H}[mk]")
         f.append(f"[a{copy}][mk]alphamerge[fg]")
-        en = "+".join(f"between(t,{b['t0']:.3f},{b['t1']:.3f})" for b in behind)
-        f.append(f"[bt][fg]overlay=0:0:enable='{en}'[vb]")
+        wins = [(b["t0"], b["t1"]) for b in behind] + [(m["t0"], m["t1"]) for m, _ in m_behind]
+        en = "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in wins)
+        f.append(f"[{bcur}][fg]overlay=0:0:enable='{en}'[vb]")
         cur, copy = "vb", copy + 1
 
     for k, (b, idx) in enumerate(zip(tl["broll"], broll_idx)):
@@ -218,21 +248,32 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
             x = f"'if(lt(t-{t0:.3f},0.16),{W}*(1-(t-{t0:.3f})/0.16),0)'"
             f.append(f"[{cur}][{lbl}]overlay=x={x}:y=0:eof_action=pass:enable='between(t,{t0:.3f},{t1:.3f})'[v{lbl}]")
         elif b["mode"] == "card":
-            f.append(f"[{idx}:v]fps={FPS},scale=620:880:force_original_aspect_ratio=increase,crop=620:880,"
-                     f"pad=640:900:10:10:color=0xF4EFE6,format=rgba,"
+            cw, chh = (620, 880) if H > W else (int(W * 0.5) // 2 * 2, int(H * 0.62) // 2 * 2)
+            f.append(f"[{idx}:v]fps={FPS},scale={cw}:{chh}:force_original_aspect_ratio=increase,crop={cw}:{chh},"
+                     f"pad={cw + 20}:{chh + 20}:10:10:color=0xF4EFE6,format=rgba,"
                      f"fade=t=in:st=0:d=0.3:alpha=1,fade=t=out:st={max(dur - 0.3, 0):.3f}:d=0.3:alpha=1,"
                      f"setpts=PTS-STARTPTS+{t0:.3f}/TB[{lbl}]")
-            y = f"'250+40*max(0,1-(t-{t0:.3f})/0.35)'"
+            y = f"'{int(H * 0.13)}+40*max(0,1-(t-{t0:.3f})/0.35)'"
             f.append(f"[{cur}][{lbl}]overlay=x=(W-w)/2:y={y}:eof_action=pass:enable='between(t,{t0:.3f},{t1:.3f})'[v{lbl}]")
-        else:  # split: B-roll em cima, pessoa embaixo
+        elif H > W:  # split vertical: B-roll em cima, pessoa embaixo
             f.append(f"[{idx}:v]fps={FPS},scale={W}:{H // 2}:force_original_aspect_ratio=increase,crop={W}:{H // 2},"
                      f"setsar=1,format=yuv420p,setpts=PTS-STARTPTS+{t0:.3f}/TB[{lbl}t]")
             f.append(f"[a{copy}]crop={W}:{H // 2}:0:{int(H * 0.18)},pad={W}:{H}:0:{H // 2},"
                      f"drawbox=x=0:y={H // 2 - 4}:w={W}:h=8:color=0x22E06B:t=fill[{lbl}l]")
+        else:  # split horizontal: B-roll à esquerda, pessoa à direita
+            f.append(f"[{idx}:v]fps={FPS},scale={W // 2}:{H}:force_original_aspect_ratio=increase,crop={W // 2}:{H},"
+                     f"setsar=1,format=yuv420p,setpts=PTS-STARTPTS+{t0:.3f}/TB[{lbl}t]")
+            f.append(f"[a{copy}]crop={W // 2}:{H}:{W // 4}:0,pad={W}:{H}:{W // 2}:0,"
+                     f"drawbox=x={W // 2 - 4}:y=0:w=8:h={H}:color=0x22E06B:t=fill[{lbl}l]")
             copy += 1
             f.append(f"[{lbl}l][{lbl}t]overlay=0:0:eof_action=pass[{lbl}]")
             f.append(f"[{cur}][{lbl}]overlay=0:0:enable='between(t,{t0:.3f},{t1:.3f})'[v{lbl}]")
         cur = f"v{lbl}"
+
+    for k, (idx, m) in enumerate((i, m) for i, m in motion_idx if m.get("layer") in ("front", "full")):
+        motion_in(idx, m, f"mf{k}")
+        f.append(f"[{cur}][mf{k}]overlay=0:0:eof_action=pass:enable='between(t,{m['t0']:.3f},{m['t1']:.3f})'[vm{k}]")
+        cur = f"vm{k}"
 
     if any(g["type"] == "progress" for g in tl["graphics"]):
         color = tl["graphics_cfg"]["accent"].lstrip("#")
@@ -301,16 +342,34 @@ def main() -> None:
     tl = load_json(paths["timeline"])
     if not tl:
         raise EditorError("timeline.json não encontrado. Rode plan.py.")
+    global W, H, FPS
+    W, H, FPS = tl.get("w", 1080), tl.get("h", 1920), tl.get("fps", 30)
+    import assets
+    assets.set_format(W, H)
     t_start = time.time()
     work = paths["work"]
     has_face = face_for_shots(tl, work)
     log(f"   rosto detectado: {'sim' if has_face else 'não'}")
     aroll = render_shots(tl, work, "veryfast")
     mask, stats = None, None
-    if tl["behind"] and has_face:
+    motions = tl.get("motion", [])
+    needs_mask = any(m.get("needs_video") or m.get("layer") == "behind" for m in motions)
+    if (tl["behind"] and has_face) or needs_mask:
         from vision import person_mask
         mask = work / "mask.mp4"
-        stats = person_mask(aroll, mask)
+        cache = work / "mask_stats.json"
+        if mask.exists() and cache.exists():
+            stats = load_json(cache)
+            log("   máscara reaproveitada")
+        else:
+            stats = person_mask(aroll, mask, W, H, FPS)
+            save_json(cache, stats)
+    clips = []
+    if motions:
+        from motion import hand_track, render_clip
+        hands = hand_track(aroll, FPS, W, H) if any(m.get("hand") for m in motions) else None
+        for m in motions:
+            clips.append((m, render_clip(m, project, aroll, mask, tl, hands)))
     behind, front = place_behind(tl, stats)
     behind, moved = fit_behind(tl, behind)
     front += moved
@@ -327,7 +386,7 @@ def main() -> None:
     name = f"v{v}_{tl['style']}"
     out = paths["renders"] / f"{name}.mp4"
     paths["renders"].mkdir(parents=True, exist_ok=True)
-    compose(tl, project, aroll, mask, behind, front, out, preset)
+    compose(tl, project, aroll, mask, behind, front, out, preset, clips)
     vdir = paths["versions"] / f"v{v}"
     vdir.mkdir(parents=True, exist_ok=True)
     save_json(vdir / "timeline.json", tl)

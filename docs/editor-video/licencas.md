@@ -28,6 +28,19 @@ Do tenfoldmarc, só com autorização por escrito do autor.
 | numpy (BSD-3), Pillow (MIT-CMU/HPND) | permissivas | Sim | Atribuição se redistribuído |
 | SFX (whoosh, pop, riser) | Sintetizados pelo nosso código | Livre | Nenhuma |
 | faster-whisper (opcional) | MIT; modelos Whisper da OpenAI MIT | Sim | Atribuição |
+| three.js 0.180 (+ addons TTFLoader, TextGeometry, RoomEnvironment) | MIT | Sim | Manter `vendor/three/LICENSE` |
+| opentype.js 1.3.4 | MIT | Sim | Manter `vendor/LICENSE-opentype.txt` |
+| Ícones Lucide 0.544 | ISC (partes de Feather, MIT) | Sim | Manter `vendor/lucide/LICENSE` |
+| Playwright (Node) + Chromium | Apache-2.0 / BSD e outras | Sim, usados como ferramenta local (não embutidos) | Nenhuma enquanto o usuário instala; se embutir, incluir avisos |
+| MediaPipe hand_landmarker | Apache-2.0 | Sim | Atribuição se redistribuído |
+
+Motion graphics: não usamos GSAP (licença própria da Webflow, com restrições), Remotion (paga para empresas com
+mais de 3 pessoas) nem HyperFrames localmente. As animações usam um runtime próprio (`assets/motion/lib/runtime.js`)
+e um renderizador próprio (`scripts/motion_render.mjs`).
+
+**Logos de marcas** (ChatGPT, Claude, Instagram...): marcas registradas. Os anúncios de referência usam logos de
+terceiros; a skill não inclui nenhuma. Em anúncio pago, usar logo de outra empresa pode sugerir parceria e violar
+as diretrizes da marca e as políticas da Meta. Use só com autorização, ou em contexto editorial/comparativo.
 
 Não usamos: HyperFrames (Apache-2.0, ok, mas evitamos depender de Chrome/Node), GSAP, Remotion (licença paga
 para empresas com mais de 3 pessoas), sons do Pixabay (a licença proíbe redistribuir o arquivo isolado) nem Apify.

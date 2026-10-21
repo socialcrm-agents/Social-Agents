@@ -65,3 +65,46 @@ Bugs que esse teste encontrou e que foram corrigidos antes da entrega:
 Um talking head real de 30-90 s com 2-3 regravações de alguma frase. Envie direto na sessão (anexo) ou rode a
 skill no Claude Code local, apontando para a pasta do Drive sincronizada. Isso exercita o que este material não
 cobriu: escolha entre tomadas repetidas, corte de pausas longas e palavras atrás da cabeça com movimento real.
+
+---
+
+# Rodada 2: motion graphics no nível dos anúncios do ME.IA
+
+## Seu vídeo (Reels Viral v5)
+
+Pedido convertido em operações (as animações foram escolhidas pelo Claude a partir da fala):
+```
+edit.py proj --note "motion graphics: moldura 3D explicando o sistema e documentário no print do app" \
+  --motion @motion.json   # moldura em "São questões"..."essa construção" com 3 itens no tempo da fala;
+                          # documentário no print do app em "numa teoria", marcação em "mecanismo"
+```
+Resultado: 48,2 s, 5 animações (moldura, documentário e 3 ícones automáticos em "questões", "conteúdo" e "aula"),
+render de 172 s. A moldura usa a própria gravação de tela dentro do quadro 3D.
+
+## Demonstração técnica com pessoa (todos os efeitos)
+
+Mesma imagem de teste do MediaPipe (Apache-2.0), animada em 9:16 com a sua narração (25 s):
+camadas de vidro, moldura 3D com explicação, "IA" em 3D atrás da cabeça, estúdio 3D no lugar do fundo,
+documentário e logo 3D (arquivo de teste nosso, não marca de terceiros) seguindo a mão.
+
+| Clipe | Quadros | Tempo de render |
+|---|---|---|
+| camadas (CSS 3D) | 94 | 13 s |
+| moldura (CSS 3D) | 170 | 9 s |
+| objeto 3D (Three.js) | 66 | 15 s |
+| estúdio 3D (Three.js) | 108 | 55 s |
+| documentário | 102 | 4 s |
+
+Bugs encontrados e corrigidos nesta rodada:
+- render de CSS 3D a 0,76 s/quadro -> 15 quadros/s (raster por CPU em várias abas, `--disable-gpu` sem WebGL);
+- borda clara no recorte da pessoa (erosão da máscara antes do alfa);
+- estúdio 3D escuro e letreiro cortado (luzes físicas recalibradas, câmera e letreiro reposicionados);
+- legenda desviando de um rosto que não está na tela durante animação de tela cheia;
+- animações de tela cheia sobrepostas (agora a anterior termina quando a próxima começa);
+- 16:9: CTA em cima do rosto e número branco em cartão claro (CTA na altura do corpo, cartões escuros).
+
+## Formato 16:9
+
+Teste de 10 s no estilo Anúncio com infográfico: legenda em caixa no rodapé, infográfico à esquerda, CTA na
+altura do corpo, barra de progresso. Fonte vertical recortada para horizontal (só teste; para YouTube grave na
+horizontal).

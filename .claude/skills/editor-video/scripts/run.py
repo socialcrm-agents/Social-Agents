@@ -66,12 +66,12 @@ def cmd_new(a) -> None:
               **({} if p.suffix.lower() in IMAGE_EXT else {"duration": probe(p)["duration"]})}
              for n, p in enumerate(collect(a.broll, VIDEO_EXT | IMAGE_EXT), 1)]
     save_json(paths["project"], {
-        "style": a.style, "clips": clips, "broll": broll, "version": 0,
+        "style": a.style, "format": a.format, "clips": clips, "broll": broll, "version": 0,
         "overrides": {"word_fixes": {}, "cuts": [], "restores": [], "behind_add": [], "behind_remove": [],
                       "emphasis_add": [], "broll_at": [], "broll_remove": [], "caption": {}, "zoom": {},
                       "hook": a.hook, "cta": a.cta, "behind_enabled": None, "notes": []},
     })
-    log(f"Projeto criado: {project} ({len(clips)} clipe(s), {len(broll)} B-roll, estilo {a.style})")
+    log(f"Projeto criado: {project} ({len(clips)} clipe(s), {len(broll)} B-roll, estilo {a.style}, formato {a.format})")
 
 
 def cmd_all(a) -> None:
@@ -109,6 +109,8 @@ def main() -> None:
     n.add_argument("--style", default="reels_viral")
     n.add_argument("--hook", default=None)
     n.add_argument("--cta", default=None)
+    n.add_argument("--format", default="9:16", choices=["9:16", "16:9", "1:1", "4:5"],
+                   help="9:16 Reels/TikTok/Shorts, 16:9 YouTube/aula/podcast, 1:1 ou 4:5 feed")
     n.add_argument("--force", action="store_true")
     for name in ("all", "plan", "render"):
         sub.add_parser(name).add_argument("project")

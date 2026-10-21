@@ -59,7 +59,8 @@
     "cta": true,
     "accent": "#E8C98B",
     "panel": "#111111",
-    "text": "#F4EFE6"
+    "text": "#F4EFE6",
+    "icons": false
   },
   "sfx": {
     "whoosh": 0.0,

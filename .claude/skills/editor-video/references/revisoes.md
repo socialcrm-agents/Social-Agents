@@ -23,6 +23,15 @@ Várias operações podem ir no mesmo comando (uma versão nova por rodada).
 | "sobe a legenda" | `--caption-y 1100` (base da legenda em px; máx 1470) |
 | "menos zoom", "sem zoom", "zoom mais agressivo" | `--zoom suave` / `--zoom off` / `--zoom forte` |
 | "coloca essa música baixinha" | `--music trilha.mp3:0.10` (ducking automático sob a voz) |
+| "me coloca numa moldura e explica X do lado" | `--motion '{"template":"moldura","at":"trecho","until":"trecho","params":{"title":"...","items":[...]}}'` |
+| "separa em camadas de vidro" | `--motion '{"template":"camadas","at":"trecho","dur":4,"params":{"graphic":"..."}}'` |
+| "troca meu fundo por um estúdio 3D" | `--motion '{"template":"estudio3d","at":"trecho","dur":5,"params":{"wall_text":"..."}}'` |
+| "coloca minha logo em 3D na minha mão" / "joga pra trás de mim" | `--motion '{"template":"objeto3d","at":"trecho","dur":3,"params":{"image":"logo.png","follow":"hand"}}'` / `"layer":"behind"` |
+| "anima os números", "mostra no mapa" | templates `infografico` / `mapa` (ver `motion.md`) |
+| "anima X" (qualquer coisa sem template) | composição própria em `work/motion/custom/*.html` + `--motion '{"page":"/work/motion/custom/x.html",...}'` |
+| "tira a segunda animação" | `--motion-remove 2` |
+| "sem ícones" | `--icons off` |
+| "faz a versão horizontal pro YouTube" | `--format 16:9` (ou crie outro projeto com `--format 16:9`) |
 | "só ajusta, não renderiza ainda" | `--no-render` |
 | "quero ver rápido" | `--draft` (render mais rápido, qualidade menor) |
 

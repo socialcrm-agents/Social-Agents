@@ -33,6 +33,8 @@ MP_MODELS = {
                                      "blaze_face_short_range/float16/latest/blaze_face_short_range.tflite",
     "selfie_segmenter.tflite": "https://storage.googleapis.com/mediapipe-models/image_segmenter/"
                                "selfie_segmenter/float16/latest/selfie_segmenter.tflite",
+    "hand_landmarker.task": "https://storage.googleapis.com/mediapipe-models/hand_landmarker/"
+                            "hand_landmarker/float16/latest/hand_landmarker.task",
 }
 
 
@@ -111,9 +113,27 @@ def check_models(fetch: bool) -> bool:
     return ok
 
 
+def check_motion() -> bool:
+    """Motion graphics: Node 18+ e Playwright com Chromium (renderizam as composições HTML)."""
+    node = shutil.which("node")
+    if not node:
+        print("STATUS node MISSING -> https://nodejs.org (LTS) ou brew/apt/winget install nodejs")
+        return False
+    root = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True).stdout.strip() if shutil.which("npm") else ""
+    probe = subprocess.run(["node", "-e", "const path=require('path');for (const p of ['playwright','playwright-core',"
+                            "'/opt/node-tools/node_modules/playwright', path.join(process.argv[1],'playwright')])"
+                            "{try{require(p);process.exit(0)}catch{}};process.exit(1)", root],
+                           capture_output=True, text=True)
+    if probe.returncode != 0:
+        print("STATUS playwright MISSING -> npm install -g playwright && npx playwright install chromium")
+        return False
+    print("STATUS motion (node + playwright) OK")
+    return True
+
+
 def main() -> None:
     install, fetch = "--install" in sys.argv, "--models" in sys.argv
-    results = [check_ffmpeg(), check_python(install), check_models(fetch)]
+    results = [check_ffmpeg(), check_python(install), check_models(fetch), check_motion()]
     print("READY" if all(results) else "NOT READY (veja as linhas STATUS acima)")
 
 

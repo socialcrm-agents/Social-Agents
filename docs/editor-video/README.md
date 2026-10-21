@@ -7,7 +7,8 @@ repositório e peça "edita esse vídeo no estilo Reels Viral" ou use `/editor-v
 bruto.mp4 ─► transcribe (Parakeet, pt-BR, tempo por palavra)
           ─► analyze   (tomadas, pausas, gaguejos, frase cortada) ─► qa/takes.md   ◄── Claude revisa
           ─► plan      (estilo + correções) ─► timeline.json                       ◄── Claude pode editar
-          ─► render    (rosto, zoom, máscara, cor, B-roll, gráficos, legendas, áudio) ─► renders/vN.mp4
+          ─► motion    (HTML/CSS 3D/Three.js -> vídeo no Chromium: moldura, camadas, estúdio 3D, objeto 3D...)
+          ─► render    (rosto, zoom, máscara, cor, B-roll, motion, gráficos, legendas, áudio) ─► renders/vN.mp4
           ─► edit.py   (correção por texto) ─► próxima versão, com changelog
 ```
 
@@ -17,6 +18,8 @@ bruto.mp4 ─► transcribe (Parakeet, pt-BR, tempo por palavra)
 | [licencas.md](licencas.md) | Licenças das referências e de cada dependência, checklist para vender |
 | [limitacoes.md](limitacoes.md) | O que funciona no Claude Code e o que não funciona |
 | [teste-real.md](teste-real.md) | Teste com vídeo real: antes/depois, números, o que foi corrigido |
+| [comparativo-me-ia.md](comparativo-me-ia.md) | O que os anúncios do ME.IA mostram vs. o que a Skill faz |
+| [../../.claude/skills/editor-video/references/motion.md](../../.claude/skills/editor-video/references/motion.md) | Templates de motion e como criar animações sob medida |
 | [../../.claude/skills/editor-video/references/dependencias.md](../../.claude/skills/editor-video/references/dependencias.md) | Instalação |
 | [../../.claude/skills/editor-video/references/revisoes.md](../../.claude/skills/editor-video/references/revisoes.md) | Pedidos em português -> comandos |
 

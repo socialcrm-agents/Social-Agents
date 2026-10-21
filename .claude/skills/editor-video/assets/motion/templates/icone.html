@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- Ícone que "pula" na tela quando a palavra é dita, com rótulo opcional.
+     params: icon (nome Lucide), label, color, x, y (centro em px), size, at (cue em s) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #wrap { transform-origin: center; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  #badge { border-radius: 50%; display: grid; place-items: center; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
+  #badge .icon { color: #111; }
+  #label { font-weight: 800; font-size: 54px; text-transform: uppercase; text-shadow: 0 4px 16px rgba(0,0,0,.6); }
+</style></head>
+<body><div id="wrap" class="abs"><div id="badge"><div class="icon" id="ic"></div></div><div id="label"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params;
+const size = p.size || 190, color = p.color || '#FFE600';
+const wrap = document.getElementById('wrap'), badge = document.getElementById('badge');
+badge.style.cssText = `width:${size}px;height:${size}px;background:${color}`;
+const ic = document.getElementById('ic'); ic.style.cssText = `width:${size * .55}px;height:${size * .55}px`;
+document.getElementById('label').textContent = p.label || '';
+motion.waitFor(motion.icon(p.icon || 'sparkles').then((svg) => { ic.innerHTML = svg; }));
+const at = p.at || 0;
+motion.onFrame((t) => {
+  const k = motion.prog(t, at, 0.45, 'outBack');
+  const out = motion.prog(t, motion.duration - 0.3, 0.3, 'inQuad');
+  const s = Math.max(k * (1 - out), 0.0001);
+  const r = (1 - motion.prog(t, at, 0.6, 'outElastic')) * -25;
+  wrap.style.left = `${(p.x ?? motion.w / 2) - 300}px`; wrap.style.width = '600px';
+  wrap.style.top = `${(p.y ?? 520) - size / 2}px`;
+  wrap.style.transform = `scale(${s}) rotate(${r}deg)`;
+  wrap.style.opacity = s < 0.01 ? 0 : 1;
+});
+</script></body></html>

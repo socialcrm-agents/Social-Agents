@@ -26,12 +26,18 @@ Operações:
   --caption-y N                  posição vertical da base da legenda (px, máx 1470)
   --zoom off|on|suave|forte      intensidade dos zooms
   --music ARQUIVO[:volume]       trilha (com ducking automático sob a voz)
+  --format 9:16|16:9|1:1|4:5     formato de saída (Reels/Shorts, YouTube/aula, feed)
+  --motion JSON|@arquivo.json    animação: {"template": "moldura", "at": "trecho falado", "dur": 5, "params": {...}}
+                                 (lista em references/motion.md; "at" dentro de params aceita palavra falada)
+  --motion-remove N              remove a N-ésima animação pedida
+  --icons on|off                 ícones automáticos nas palavras-chave
 """
 
 from __future__ import annotations
 
 import argparse
 import datetime
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -62,6 +68,10 @@ def main() -> None:
     ap.add_argument("--caption-y", type=int)
     ap.add_argument("--zoom", choices=["off", "on", "suave", "forte"])
     ap.add_argument("--music")
+    ap.add_argument("--format", choices=["9:16", "16:9", "1:1", "4:5"])
+    ap.add_argument("--motion", action="append", default=[])
+    ap.add_argument("--motion-remove", action="append", type=int, default=[])
+    ap.add_argument("--icons", choices=["on", "off"])
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
@@ -146,6 +156,24 @@ def main() -> None:
         ov["music"] = {"path": str(Path(path).expanduser().resolve()), "volume": float(vol or 0.12)}
         done.append(f"trilha {Path(path).name}")
 
+    if a.format:
+        proj["format"] = a.format
+        done.append(f"formato {a.format}")
+    for spec in a.motion:
+        text = Path(spec[1:]).read_text(encoding="utf-8") if spec.startswith("@") else spec
+        try:
+            reqs = json.loads(text)
+        except json.JSONDecodeError as exc:
+            raise EditorError(f"--motion não é JSON válido: {exc}") from exc
+        for req in reqs if isinstance(reqs, list) else [reqs]:
+            if "template" not in req and "page" not in req:
+                raise EditorError("--motion precisa de 'template' (ou 'page' para composição própria)")
+            ov.setdefault("motion", []).append(req)
+            done.append(f"motion {req.get('template') or req.get('page')} em '{req.get('at')}'")
+    add("motion_remove", a.motion_remove, "remover motion nº")
+    if a.icons:
+        ov["icons"] = a.icons == "on"
+        done.append(f"ícones automáticos: {a.icons}")
     if not done and not a.note:
         raise EditorError("Nenhuma operação informada. Veja edit.py --help.")
     ov.setdefault("notes", []).append({"when": datetime.datetime.now().isoformat(timespec="seconds"),
