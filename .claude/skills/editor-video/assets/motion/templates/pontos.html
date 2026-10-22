@@ -1,0 +1,77 @@
+<!doctype html>
+<!-- NUVEM DE PONTOS (layer: full, needs_video): a pessoa vira uma nuvem de pontos lilás (amostrada do recorte, com
+     brilho e leve profundidade), uma faixa de varredura passa e um contador de pontos sobe ("25.416 pontos").
+     Foto -> pontos -> foto. O fundo escurece (cenário sem a pessoa).
+     params: titulo ("NUVEM DE PONTOS"), passo (px entre pontos, padrão 6), cor ("#C9B2FF"), accent, giro (graus de
+             parallax, padrão 10), topo (true: faixa de status) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  body { background: #07040f; font-family: 'Poppins'; }
+  #plate, #bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  canvas { position: absolute; inset: 0; }
+  #chip { position: absolute; left: 70px; top: 240px; padding: 14px 22px; border-radius: 10px; background: rgba(14,10,26,.82);
+          border: 2px solid rgba(201,178,255,.55); color: #fff; }
+  .mono { font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  #band { position: absolute; left: 0; right: 0; height: 140px;
+          background: linear-gradient(180deg, rgba(183,148,255,0), rgba(183,148,255,.45) 85%, rgba(255,255,255,.9)); }
+</style></head>
+<body><img id="bg"><img id="plate"><canvas id="cv" width="1080" height="1920"></canvas><div id="band"></div>
+<div id="chip"><div class="mono" style="font-size:18px;opacity:.75" id="tit"></div>
+  <div style="display:flex;align-items:baseline;gap:12px;margin-top:6px"><b id="num" style="font-size:58px;font-weight:900"></b>
+  <span style="font-size:26px;opacity:.8">pontos</span></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const step = p.passo || 7, cor = p.cor || '#C9B2FF', giro = p.giro ?? 10;
+const plate = document.getElementById('plate'), bg = document.getElementById('bg');
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+document.getElementById('tit').textContent = p.titulo || 'NUVEM DE PONTOS';
+const off = document.createElement('canvas'); off.width = Math.ceil(W / step); off.height = Math.ceil(H / step);
+const octx = off.getContext('2d', { willReadFrequently: true });
+const [cr, cg, cb] = [1, 3, 5].map((i) => parseInt(cor.slice(i, i + 2), 16));
+const fmtN = (n) => Math.round(n).toLocaleString('pt-BR');
+let maxPts = 1;
+motion.onFrame(async (t) => {
+  await motion.setFrame(plate, 'plate', t);
+  const v = p.video || {};
+  if (v.bg) await motion.setFrame(bg, 'bg', t);
+  const cut = await motion.frame(v.cut ? 'cut' : 'plate', t);
+  // fases: 0..0,45 s foto -> pontos; meio pontos; último 0,45 s volta para a foto
+  const kin = motion.prog(t, 0.05, 0.45, 'inOutCubic'), kout = motion.prog(t, D - 0.5, 0.45, 'inOutCubic');
+  const k = kin * (1 - kout);
+  plate.style.opacity = 1 - k;
+  bg.style.opacity = v.bg ? 1 : 0;
+  bg.style.filter = `brightness(${1 - 0.72 * k}) saturate(${1 - 0.5 * k}) hue-rotate(${-20 * k}deg)`;
+  // amostra o recorte em baixa resolução: cada pixel vira um ponto
+  octx.clearRect(0, 0, off.width, off.height);
+  if (cut) octx.drawImage(cut, 0, 0, off.width, off.height);
+  const data = octx.getImageData(0, 0, off.width, off.height).data;
+  ctx.clearRect(0, 0, W, H);
+  const ang = (giro * Math.PI / 180) * Math.sin(t * 1.4);   // leve parallax (profundidade pelo brilho)
+  let count = 0;
+  const reveal = motion.prog(t, 0.05, 0.8, 'outCubic');      // a nuvem se forma de cima para baixo
+  for (let y = 0; y < off.height; y++) {
+    if (y / off.height > reveal * 1.05) break;
+    for (let x = 0; x < off.width; x++) {
+      const o = (y * off.width + x) * 4, a = data[o + 3];
+      if (a < 110) continue;
+      const lum = (data[o] * 0.3 + data[o + 1] * 0.59 + data[o + 2] * 0.11) / 255;
+      const depth = (lum - 0.5) * 2;
+      const px = x * step + depth * ang * 60, py = y * step;
+      const r = 1.8 + lum * 2.6;
+      ctx.fillStyle = `rgba(${cr},${cg},${cb},${(0.6 + 0.4 * lum) * k})`;
+      ctx.fillRect(px - r / 2, py - r / 2, r, r);
+      count++;
+    }
+  }
+  maxPts = Math.max(maxPts, count);
+  // contador sobe até o total real de pontos da nuvem
+  const kc = motion.prog(t, 0.2, Math.max(D * 0.55, 0.6), 'outCubic');
+  document.getElementById('num').textContent = fmtN(maxPts * kc);
+  const chip = document.getElementById('chip');
+  chip.style.opacity = motion.inOut(t, 0.15, D - 0.1, 0.3, 0.3);
+  // faixa de varredura descendo uma vez
+  const s = motion.prog(t, 0.1, 1.1, 'inOutCubic'), band = document.getElementById('band');
+  band.style.top = (-140 + (H * 0.7) * s) + 'px'; band.style.opacity = s > 0 && s < 1 ? 0.9 * k : 0;
+});
+</script></body></html>

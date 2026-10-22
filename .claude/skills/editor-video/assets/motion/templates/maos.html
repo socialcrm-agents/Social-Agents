@@ -1,0 +1,106 @@
+<!doctype html>
+<!-- RASTREIO DAS MÃOS (layer: front): esqueleto das mãos (21 pontos + conexões) desenhado sobre o vídeo, etiqueta
+     presa à ponta do indicador ("TEXTO"), chip "MÃO · 21 PONTOS · x y" e um cubo 3D wireframe girando sobre a
+     palma da outra mão. Os pontos vêm do editor (MediaPipe) quadro a quadro.
+     params: maos (o editor preenche), etiqueta ("TEXTO"), cubo (true), info (true), accent ("#B794FF"),
+             accent2 ("#FF6FD8"), topo (true: faixa "EDITANDO AO VIVO" / "RASTREIO DE MOVIMENTO") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  body { font-family: 'Poppins'; }
+  canvas { position: absolute; inset: 0; }
+  .chip { position: absolute; padding: 8px 14px; border-radius: 8px; background: rgba(14,10,26,.82);
+          border: 2px solid rgba(201,178,255,.55); color: #fff; white-space: nowrap; }
+  .mono { font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  #lab { position: absolute; padding: 6px 18px; border: 3px solid #fff; border-radius: 6px; background: rgba(14,10,26,.35);
+         font-weight: 900; font-size: 58px; color: #fff; letter-spacing: 1px; text-shadow: 0 0 16px rgba(201,178,255,.9); }
+  #labtag { position: absolute; font-weight: 700; font-size: 18px; letter-spacing: 3px; color: #fff; }
+  #bar { position: absolute; left: 70px; right: 150px; top: 230px; display: flex; justify-content: space-between; }
+</style></head>
+<body><canvas id="cv" width="1080" height="1920"></canvas>
+<div id="labtag" class="mono"></div><div id="lab"></div><div id="info" class="chip"></div>
+<div id="bar"><div class="chip mono" id="esq" style="position:relative;font-size:20px"></div>
+  <div class="chip mono" id="dir" style="position:relative;font-size:20px"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration, fps = motion.fps;
+const a1 = p.accent || '#B794FF', a2 = p.accent2 || '#FF6FD8';
+const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const maos = p.maos || [];
+const BONES = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],
+  [9, 13], [13, 14], [14, 15], [15, 16], [13, 17], [17, 18], [18, 19], [19, 20], [0, 17]];
+const lab = document.getElementById('lab'), tag = document.getElementById('labtag'), info = document.getElementById('info');
+lab.textContent = p.etiqueta ?? 'TEXTO';
+tag.textContent = '■ OBJ 01 — MÃO D';
+if (!p.etiqueta && p.etiqueta !== undefined) lab.style.display = 'none';
+document.getElementById('bar').style.display = p.topo === false ? 'none' : 'flex';
+document.getElementById('esq').innerHTML = '<span style="color:#ff4d6d">●</span> EDITANDO AO VIVO';
+document.getElementById('dir').textContent = '08 RASTREIO DE MOVIMENTO';
+// última posição conhecida (a detecção pode falhar alguns quadros)
+const handsAt = (i) => { for (let k = Math.min(i, maos.length - 1); k >= Math.max(0, i - 8); k--) if (maos[k] && maos[k].length) return maos[k]; return []; };
+const CUBE = [[-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1], [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]];
+const EDGES = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
+function cube(cx, cy, s, t, alpha) {
+  const ay = t * 1.6, ax = 0.55 + Math.sin(t * 0.9) * 0.25;
+  const P = CUBE.map(([x, y, z]) => {
+    let X = x * Math.cos(ay) + z * Math.sin(ay), Z = -x * Math.sin(ay) + z * Math.cos(ay);
+    let Y = y * Math.cos(ax) - Z * Math.sin(ax); Z = y * Math.sin(ax) + Z * Math.cos(ax);
+    const f = 4 / (4 + Z);
+    return [cx + X * s * f, cy + Y * s * f];
+  });
+  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(155,107,255,.18)';
+  ctx.beginPath(); [4, 5, 6, 7].forEach((i, n) => (n ? ctx.lineTo : ctx.moveTo).call(ctx, ...P[i])); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.shadowColor = a1; ctx.shadowBlur = 14;
+  for (const [a, b] of EDGES) { ctx.beginPath(); ctx.moveTo(...P[a]); ctx.lineTo(...P[b]); ctx.stroke(); }
+  ctx.restore();
+}
+motion.onFrame((t) => {
+  const i = Math.round(t * fps), hands = handsAt(i);
+  const k = motion.inOut(t, 0, D, 0.3, 0.25);
+  ctx.clearRect(0, 0, W, H);
+  hands.forEach((pts, hi) => {
+    const P = pts.map(([x, y]) => [x * W, y * H]);
+    const col = hi ? a2 : a1;
+    ctx.save(); ctx.globalAlpha = k;
+    ctx.strokeStyle = col; ctx.lineWidth = 4; ctx.lineCap = 'round'; ctx.shadowColor = col; ctx.shadowBlur = 16;
+    for (const [a, b] of BONES) { ctx.beginPath(); ctx.moveTo(...P[a]); ctx.lineTo(...P[b]); ctx.stroke(); }
+    ctx.shadowBlur = 0;
+    P.forEach(([x, y], n) => {
+      const tip = [4, 8, 12, 16, 20].includes(n);
+      ctx.beginPath(); ctx.arc(x, y, tip ? 9 : 6, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = col; ctx.stroke();
+    });
+    // anel pulsando na ponta do indicador
+    const [ix, iy] = P[8], ring = 18 + 6 * Math.sin(t * 8);
+    ctx.beginPath(); ctx.arc(ix, iy, ring, 0, Math.PI * 2); ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+    ctx.restore();
+  });
+  // etiqueta presa ao indicador da 1ª mão, chip de info na 2ª (ou na mesma), cubo na palma da outra mão
+  const h0 = hands[0], h1 = hands[1] || null;
+  const kl = motion.inOut(t, 0.35, D, 0.3, 0.25, 'outBack');
+  if (h0) {
+    const [ix, iy] = [h0[8][0] * W, h0[8][1] * H];
+    const lx = Math.min(Math.max(ix - 300, 70), W - 150 - lab.offsetWidth), ly = Math.max(iy - 190, 320);
+    Object.assign(lab.style, { left: lx + 'px', top: ly + 'px', opacity: kl, transform: `scale(${0.8 + 0.2 * kl})` });
+    Object.assign(tag.style, { left: lx + 'px', top: (ly - 30) + 'px', opacity: kl });
+    ctx.save(); ctx.globalAlpha = kl; ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.setLineDash([6, 8]); ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(lx + lab.offsetWidth / 2, ly + lab.offsetHeight); ctx.lineTo(ix, iy); ctx.stroke(); ctx.restore();
+    const hi = h1 || h0, w0 = hi[0];
+    Object.assign(info.style, { left: Math.min(w0[0] * W + 40, W - 150 - 260) + 'px', top: Math.min(Math.max(w0[1] * H - 260, 320), 1080) + 'px',  // fora da faixa da legenda
+      opacity: p.info === false ? 0 : motion.inOut(t, 0.55, D, 0.3, 0.25) });
+    info.innerHTML = `<div class="mono" style="font-size:16px;opacity:.75">■ MÃO ${h1 ? 'E' : 'D'} · 0,99</div>`
+      + `<div style="font-weight:800;font-size:26px">21 PONTOS</div><div class="mono" style="font-size:15px;opacity:.7">`
+      + `X ${String(Math.round(w0[0] * W)).padStart(4, '0')} &nbsp;Y ${String(Math.round(w0[1] * H)).padStart(4, '0')}</div>`;
+    if (p.cubo !== false) {
+      const c = h1 || h0, palm = c[9], wr = c[0];
+      // tamanho proporcional à mão, mas limitado (mão perto da câmera não vira um cubo gigante)
+      const size = Math.min(Math.max(Math.hypot((palm[0] - wr[0]) * W, (palm[1] - wr[1]) * H) * 0.45, 55), 105);
+      const kc = motion.inOut(t, 0.6, D, 0.4, 0.25, 'outBack');
+      const cx = Math.min(Math.max(palm[0] * W + (h1 ? 0 : 190), 80 + size * 1.6), W - 160 - size * 1.6);
+      const cy = Math.min(Math.max(palm[1] * H - size * 2.6, 340 + size * 1.6), H - 480 - size * 1.6);
+      cube(cx, cy, size * kc, t, kc);
+    }
+  } else { lab.style.opacity = 0; tag.style.opacity = 0; info.style.opacity = 0; }
+  document.getElementById('bar').style.opacity = k;
+});
+</script></body></html>

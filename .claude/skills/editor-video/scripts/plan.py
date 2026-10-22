@@ -42,16 +42,17 @@ ICON_WORDS = {
 MOTION_DEFAULTS = {
     "moldura": {"layer": "full", "needs_video": True}, "camadas": {"layer": "full", "needs_video": True},
     "quadrinho": {"layer": "full", "needs_video": True},
-    # zona "topo": ocupa o alto do quadro -> rosto desce no enquadramento e o CTA vai para baixo
+    # zona "topo": ocupa o alto do quadro -> a cena recua (desce) se a cabeça estiver alta e o CTA vai para baixo
+    # zona "barra": só uma barra fina no alto (HUD) -> o CTA vai para baixo, sem recuo
     "pergunta": {"layer": "front", "zona": "topo"}, "player": {"layer": "front", "zona": "topo"},
     "palavra": {"layer": "behind"},
     "visor": {"layer": "full", "needs_video": True}, "editor_ia": {"layer": "full", "needs_video": True},
     "dividida": {"layer": "full", "needs_video": True}, "empilha": {"layer": "front"},
     "etiqueta": {"layer": "front", "zona": "topo"},
     "manchete": {"layer": "front", "zona": "topo"}, "proibido": {"layer": "front", "zona": "topo"}, "comentario": {"layer": "front"},
-    "final": {"layer": "full"}, "hud": {"layer": "front"}, "pontos": {"layer": "full", "needs_video": True},
-    "recorte": {"layer": "full", "needs_video": True}, "maos": {"layer": "front", "hand": True},
-    "transcricao": {"layer": "full", "needs_video": True}, "tomadas": {"layer": "front"},
+    "final": {"layer": "full"}, "hud": {"layer": "front", "zona": "barra"}, "pontos": {"layer": "full", "needs_video": True},
+    "recorte": {"layer": "full", "needs_video": True}, "maos": {"layer": "front", "zona": "barra"},
+    "transcricao": {"layer": "full", "needs_video": True}, "tomadas": {"layer": "front", "zona": "topo"},
     "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
     "mapa": {"layer": "front"}, "infografico": {"layer": "front"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},
@@ -476,7 +477,7 @@ def main() -> None:
         "style": style["name"], "w": fw, "h": fh, "fps": 30, "duration": total, "format": proj.get("format", "9:16"),
         "shots": plan_shots, "words": words, "captions": {"cfg": cap, "pages": [
             pg for pg in cap_pages if not any(  # o card de pergunta já mostra o que está sendo dito
-                m["template"] in ("pergunta", "final") and m["params"].get("esconde_legenda", True)
+                m["template"] in ("pergunta", "final", "transcricao") and m["params"].get("esconde_legenda", True)
                 and m["t0"] - 0.05 <= (pg["t0"] + pg["t1"]) / 2 <= m["t1"] for m in motion if m.get("template"))]},
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
         "sfx": sfx, "grade": style["grade"], "audio": style["audio"],

@@ -120,3 +120,54 @@ Regras:
 | CSS/SVG (moldura, camadas, mapa, infográfico, documentário, ícone) | 10-25 quadros/s |
 | Three.js (estúdio 3D, objeto 3D) | 2-7 quadros/s |
 Clipes ficam em cache (`work/motion/clip_<hash>.mov`): só renderizam de novo se o HTML ou os params mudarem.
+
+
+## Recursos do concorrente (rodada 5)
+
+| `manchete` | front (zona topo; também serve como `behind`, sem caixa opaca) | Manchete de 1-3 linhas no alto, palavras entrando com desfoque no tempo da fala; última linha (ou palavras marcadas) em degradê; riscar com traço vermelho + glitch; rótulo pequeno acima, sub abaixo e ícone em círculo | `linhas` (texto ou `{text, at}`), `text`, `destaque[]`, `cores`, `riscar` (true ou lista), `riscar_at`, `cor_risco`, `rotulo`, `sub`, `icone`, `size`, `y` |
+| `proibido` | front | Fileira de ícones genéricos de programa (Lucide; nunca logos de marcas) que levam um X vermelho desenhado + tremida, ficando cinza | `icones[]` (3-5), `x_at`, `rotulo`, `y`, `accent`, `cor_x` |
+| `comentario` | front | Caixa de comentário estilo Instagram com a palavra-chave sendo digitada e botão de enviar pulsando; opcional notificação de direct deslizando depois | `texto`, `chamada` (palavra-chave em destaque), `placeholder`, `digitar_ate`, `dm: {nome, texto, app, selo, at}`, `accent`, `y` |
+| `final` | full | Tela final: rótulo ("COMENTA"), palavra-chave gigante em degradê, chevrons descendo e cartão de perfil (foto ou iniciais, nome, site) que sobe por cima da palavra | `rotulo`, `palavra`, `nome`, `site`, `foto`, `cores`, `perfil_at`, `fundo` |
+
+# Templates de visão computacional (fork B)
+
+Linhas para a tabela de templates em motion.md. Coordenadas por quadro vêm de `scripts/motion_dados_visao.py`
+(MediaPipe local, cache em `work/motion/visao_<hash>.json`); o template recebe tudo pronto em `params`.
+
+| template | camada | o que faz | params |
+|---|---|---|---|
+| `hud` | front | Colchetes e caixa que seguem o rosto quadro a quadro, chip "EDITOR NOME", "ROSTO 0,94", etiquetas OLHOS/BOCA ligadas aos pontos, varredura, faixa "VISÃO COMPUTACIONAL · QUADRO nnnn". `modo:"zoom"`: colchetes lilás + chip "ZOOM · ÂNCORA: ROSTO" com 1,00× → 1,38× | `rosto` (auto), `modo` (rosto\|zoom), `nome`, `rotulo`, `titulo`, `contador`, `numero`, `zoom_de`, `zoom_para`, `confianca`, `olhos`, `boca`, `topo`, `accent` |
+| `pontos` | full, needs_video | A pessoa vira nuvem de pontos lilás (amostrada do recorte, revelada de cima para baixo, leve parallax), fundo escurece, varredura e contador real de pontos ("31.567 pontos"). Foto → pontos → foto | `titulo`, `passo` (7), `cor`, `giro` (10) |
+| `recorte` | full, needs_video | 1ª parte: pessoa tingida com contorno brilhante, escala LONGE/FUNDO/VOCÊ/PERTO e rótulos. 2ª parte: as camadas VOCÊ e FUNDO se separam em 3D (placas de vidro) com "01 LIMITE DE VOCÊ", "02 LIMITE DO FUNDO", "DISTÂNCIA VOCÊ ⟷ FUNDO" | `separar` (true), `corte` (0.5), `cor`, `rotulos {voce, fundo}` |
+| `maos` | front | Esqueleto das mãos (21 pontos + ossos, brilho), etiqueta presa à ponta do indicador, chip "MÃO · 21 PONTOS · X Y", cubo 3D wireframe girando sobre a palma, faixa "EDITANDO AO VIVO" | `maos` (auto), `etiqueta` ("TEXTO"), `cubo`, `info`, `accent`, `accent2`, `topo` |
+
+Dados (`enriquecer`):
+- `hud` → `params.rosto`: por quadro `[x0,y0,x1,y1, olhoE_x,olhoE_y, olhoD_x,olhoD_y, boca_x,boca_y]` (0..1, suavizado, segura 6 quadros sem detecção).
+- `maos` → `params.maos`: por quadro lista de mãos, cada uma 21 `[x,y]` (HandLandmarker VIDEO, 540x960, confiança 0.3). Remove `params.hand`.
+
+Dicas de uso:
+- `maos` só funciona em trecho em que a mão aparece de verdade (mostrando produto); sem mão, nada é desenhado.
+- `hud` e `maos` têm faixa no alto (y≈230): use `topo:false` quando houver CTA subindo para o topo no mesmo trecho.
+- `pontos`/`recorte` dependem da qualidade da máscara selfie; 2–3 s é o ideal.
+
+# Novos motions (lote C): edição visual "ao vivo"
+
+Linhas para a tabela de templates de `motion.md`. Os dados reais vêm de `scripts/motion_dados_edicao.py` (gancho `motion_dados_*`, chamado por `motion.render_clip`).
+
+| template | camada | o que faz | params | dados automáticos |
+|---|---|---|---|---|
+| `transcricao` | full (needs_video) | Tela "EDITANDO AO VIVO": o vídeo num painel com cantoneiras. Um card conta "N erros e pausas" e em `virar_at` vira "N cortes" (−X s · duração Y s). Abaixo correm chips de palavras com mini onda; a palavra falada fica lilás com timecode, sob uma agulha fixa. Embaixo fica a onda do BRUTO com os cortes em vermelho (rótulos PAUSA x s / REPETIDO), que depois somem, e a duração vai do bruto à final. | `etapa` ("01 Transcrição"), `virar_at` (s; padrão 55%), `erros`, `cortes`, `selo`, `accent` (#A78BFA), `alerta` (#F43F5E) | `palavras` [{w,a,b}], `total_palavras`, `primeira`, `onda` (220 picos do A-roll), `bruto` {peaks, cuts[{a,b,m,s}], raw, final}, `erros` = descartadas + pausas, `cortes` = trechos removidos (vêm de edl.json) |
+| `tomadas` | front | De 2 a 3 cards de tomada (miniatura, "TOMADA n · 00:00:ss", frase entre aspas, mini onda). Um brilho compara os cards; em `escolha_at` a melhor cresce com borda verde e o selo "MELHOR TOMADA ✓", e as outras ficam cinza e são riscadas. | `itens` [{rotulo, frase, melhor, tempo, image}], `escolha_at` (s; padrão 55%), `selo`, `y` (padrão 370), `accent` | `image` = miniatura do bruto em `tempo` (ou do A-roll), `onda` = 40 picos do mesmo trecho |
+
+Uso típico (overrides.motion):
+
+```json
+{"template":"transcricao","at":"Esse chiclete está","dur":4.8,"params":{"etapa":"01 Transcrição"}}
+{"template":"tomadas","at":"Na promoção","dur":3.6,"params":{"itens":[{"rotulo":"Tomada 1","frase":"15 reais.","tempo":8.92},{"rotulo":"Tomada 2","frase":"Na promoção, 15 reais","tempo":10.44,"melhor":true}]}}
+```
+
+Notas:
+- `transcricao` reserva a faixa y≈1150, onde fica a legenda do editor. Os chips ficam em 1168+ e o bruto em 1362+.
+- `tomadas` fica no alto do quadro. Se o estilo tiver CTA no topo, convém marcá-lo com `"zona": "topo"` em plan.py para o planejador não sobrepor os dois.
+
+Regras de espaço: elementos de zona `topo` (pergunta, player, etiqueta, manchete, proibido, tomadas, palavra sem espaço) fazem a cena recuar quando a cabeça está alta; `barra` (hud, maos) só manda o CTA para baixo. Texto grande pedido tira as palavras automáticas atrás da pessoa do mesmo instante.

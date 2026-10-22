@@ -114,7 +114,7 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
 
 
 # quanto do alto do quadro (px, em 1920) cada elemento de topo precisa livre
-LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560, "proibido": 560}
+LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560, "proibido": 560, "tomadas": 700}
 
 
 def recuo_windows(motions: list[dict], stats: list | None) -> list[dict]:
@@ -292,7 +292,8 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
             continue
         png = gdir / f"{k:02d}_{g['type']}.png"
         import assets
-        top_busy = any(m.get("zona") == "topo" and m["t0"] < g["t1"] and m["t1"] > g["t0"] for m in tl.get("motion", []))
+        top_busy = any(m.get("zona") in ("topo", "barra") and m["t0"] < g["t1"] and m["t1"] > g["t0"]
+                       for m in tl.get("motion", []))
         cta_top = g["type"] == "cta" and not top_busy and \
             max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > assets.SAFE_BOTTOM - 220
         gcfg = {**tl["graphics_cfg"], "logo_position": g.get("position"), "logo_opacity": g.get("opacity", 0.85)}
