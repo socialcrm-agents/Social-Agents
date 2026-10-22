@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- ETIQUETA (layer: front, zona topo): selo pequeno no alto ("VSL · 100% IA", "AGORA NO SEU CONTEÚDO"), opcionalmente
+     com título grande embaixo ("MOTION LETTERING"). Entra deslizando e com leve brilho.
+     params: text, titulo (opcional), icone (Lucide, opcional), accent, y (topo, padrão 240) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #wrap { position: absolute; left: 0; right: 150px; display: flex; flex-direction: column; align-items: center; gap: 18px; }
+  #pill { display: flex; align-items: center; gap: 12px; padding: 14px 30px; border-radius: 999px; font-weight: 800;
+          font-size: 34px; letter-spacing: 3px; color: #fff; text-transform: uppercase; white-space: nowrap;
+          border: 2px solid rgba(255,255,255,.35); box-shadow: 0 14px 40px rgba(0,0,0,.4); }
+  #pill .ic { width: 38px; height: 38px; }
+  #pill .ic svg { width: 100%; height: 100%; stroke: currentColor; }
+  #tit { font-weight: 900; font-size: 92px; line-height: .98; color: #fff; text-align: center; text-transform: uppercase;
+         text-shadow: 0 8px 30px rgba(0,0,0,.55); }
+</style></head>
+<body><div id="wrap"><div id="pill"></div><div id="tit"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const wrap = document.getElementById('wrap'), pill = document.getElementById('pill'), tit = document.getElementById('tit');
+wrap.style.top = (p.y || 240) + 'px';
+pill.style.background = `linear-gradient(90deg, ${p.accent || '#7C5CFF'}, ${p.accent2 || '#B794FF'})`;
+pill.innerHTML = (p.icone ? '<div class="ic"></div>' : '') + `<span>${p.text || ''}</span>`;
+if (p.icone) motion.waitFor(motion.icon(p.icone).then((svg) => { pill.querySelector('.ic').innerHTML = svg; }));
+tit.innerHTML = (p.titulo || '').split(/\s+/).map((w) => `<span style="display:inline-block;margin:0 .12em">${w}</span>`).join(' ');
+const words = [...tit.querySelectorAll('span')];
+motion.onFrame((t) => {
+  const k = motion.inOut(t, 0, D, 0.3, 0.25, 'outBack');
+  pill.style.opacity = Math.min(1, k * 1.4);
+  pill.style.transform = `translateY(${(1 - k) * -30}px) scale(${0.9 + 0.1 * k})`;
+  words.forEach((w, i) => {
+    const q = motion.inOut(t, 0.25 + i * 0.12, D, 0.3, 0.25, 'outBack');
+    w.style.opacity = Math.min(1, q * 1.5);
+    w.style.transform = `translateY(${(1 - q) * 40}px)`;
+  });
+});
+</script></body></html>

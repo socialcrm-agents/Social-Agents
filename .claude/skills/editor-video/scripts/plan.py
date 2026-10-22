@@ -45,6 +45,9 @@ MOTION_DEFAULTS = {
     # zona "topo": ocupa o alto do quadro -> rosto desce no enquadramento e o CTA vai para baixo
     "pergunta": {"layer": "front", "zona": "topo"}, "player": {"layer": "front", "zona": "topo"},
     "palavra": {"layer": "behind"},
+    "visor": {"layer": "full", "needs_video": True}, "editor_ia": {"layer": "full", "needs_video": True},
+    "dividida": {"layer": "full", "needs_video": True}, "empilha": {"layer": "front"},
+    "etiqueta": {"layer": "front", "zona": "topo"},
     "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
     "mapa": {"layer": "front"}, "infografico": {"layer": "front"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},

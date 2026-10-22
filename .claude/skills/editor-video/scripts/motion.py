@@ -124,6 +124,8 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
         params.setdefault("head", head_position(work, t0, t1, w, h))
         if not params.get("items"):
             params["items"] = snapshots(aroll, tl, mdir, work, params.get("count", 6))
+    if tpl == "visor" and params.get("foco"):
+        params.setdefault("head", head_position(work, t0, t1, w, h))
     if tpl == "palavra" and "y" not in params:
         # palavra atrás da cabeça: a base das letras fica um pouco abaixo do topo da cabeça; sem espaço acima
         # da cabeça (rosto colado no topo), ela vem para a frente, no alto, em vez de sumir atrás da pessoa

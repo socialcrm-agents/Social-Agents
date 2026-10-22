@@ -1,35 +1,62 @@
 <!doctype html>
-<!-- PALAVRA EM DEGRADÊ (layer: behind por padrão): palavra gigante atrás da cabeça com degradê (ex.: branco ->
-     lilás), entrando com desfoque e escala; sai com fade. Para palavra simples sem degradê, o editor já faz
-     "palavras atrás" sozinho (behind). Use esta quando quiser o acabamento de anúncio premium.
-     params: text, cores: ["#FFFFFF", "#B794FF"], y (topo, fração da altura; padrão 0.11), size (px; padrão ajusta
-             à largura), font ("Poppins" 900 | "Anton") -->
+<!-- PALAVRA GIGANTE (layer: behind por padrão; cai para front se a cabeça encosta no topo): palavra em degradê atrás
+     da cabeça, entrando com desfoque ("SIM."). Modos de anúncio premium:
+       - rotulo: linha pequena espaçada acima ("UMA VSL DE" + "20–30 MIN"; "SEM ABRIR" + "NENHUM PROGRAMA")
+       - correr: true -> a palavra é maior que a tela e corre na horizontal (letreiro)
+       - contorno: true -> só o contorno (vazado); linhas: ["MÁQUINA DE", "EDIÇÃO"] -> 2 linhas correndo em sentidos opostos
+     params: text, rotulo, cores: [cima, baixo], y (topo, fração da altura; o editor calcula pela cabeça), size,
+             font ("Poppins" 900 | "Anton"), correr, contorno, linhas, sombra (false desliga) -->
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
 <style>
-  #w { position: absolute; left: 0; right: 0; text-align: center; line-height: .9; white-space: nowrap;
-       -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -2px; }
+  .ln { position: absolute; left: 0; white-space: nowrap; line-height: .9; letter-spacing: -2px; }
+  .fill { -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .outline { color: transparent; -webkit-text-stroke: 4px rgba(233,221,255,.9); }
+  #rot { position: absolute; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 34px;
+         letter-spacing: 12px; color: rgba(233,221,255,.92); text-transform: uppercase; }
 </style></head>
-<body><div id="w"><span id="t"></span></div>
+<body><div id="rot"></div>
 <script type="module">
 import motion from '/lib/runtime.js';
 const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
-const el = document.getElementById('w'), span = document.getElementById('t');
 const [c1, c2] = p.cores || ['#FFFFFF', '#B794FF'];
-span.textContent = p.text || 'SIM.';
-el.style.fontFamily = p.font || 'Poppins';
-el.style.fontWeight = p.font === 'Anton' ? 400 : 900;
-el.style.backgroundImage = `linear-gradient(180deg, ${c1} 15%, ${c2} 100%)`;
-// sombra suave: a palavra continua legível mesmo sobre fundo claro
-const shadow = p.sombra === false ? '' : 'drop-shadow(0 10px 30px rgba(0,0,0,.45)) ';
-let size = p.size || 400;
-el.style.fontSize = size + 'px';
-while (span.offsetWidth > W * 0.86 && size > 120)  // mede o texto, não a linha inteira
-  { size -= 10; el.style.fontSize = size + 'px'; }
-el.style.top = (H * (p.y ?? 0.11)) + 'px';
+const font = p.font || 'Poppins', weight = font === 'Anton' ? 400 : 900;
+const texts = p.linhas && p.linhas.length ? p.linhas : [p.text || 'SIM.'];
+const top = H * (p.y ?? 0.11);
+const correr = !!(p.correr || (p.linhas && p.linhas.length > 1));
+const shadow = p.sombra === false || p.contorno ? '' : 'drop-shadow(0 10px 30px rgba(0,0,0,.45)) ';
+const lines = texts.map((txt) => {
+  const el = document.createElement('div');
+  el.className = 'ln ' + (p.contorno ? 'outline' : 'fill');
+  el.textContent = txt;
+  Object.assign(el.style, { fontFamily: font, fontWeight: weight });
+  if (!p.contorno) el.style.backgroundImage = `linear-gradient(180deg, ${c1} 15%, ${c2} 100%)`;
+  document.body.appendChild(el);
+  return el;
+});
+// tamanho: parada cabe em 86% da largura; correndo, fica maior que a tela (efeito letreiro)
+let size = p.size || (correr ? 300 : 400);
+const fit = () => lines.forEach((l) => { l.style.fontSize = size + 'px'; });
+fit();
+if (!correr) while (Math.max(...lines.map((l) => l.offsetWidth)) > W * 0.86 && size > 120) { size -= 10; fit(); }
+const rot = document.getElementById('rot');
+rot.textContent = p.rotulo || '';
+rot.style.top = (top - 56) + 'px';
+lines.forEach((l, i) => { l.style.top = (top + i * size * 0.92) + 'px'; });
 motion.onFrame((t) => {
   const k = motion.inOut(t, 0, D, 0.32, 0.3, 'outCubic');
-  el.style.opacity = k;
-  el.style.filter = shadow + (k < 1 ? `blur(${(1 - k) * 14}px)` : '');
-  el.style.transform = `scale(${1.12 - 0.12 * k + 0.015 * Math.sin(t * 1.5)})`;
+  rot.style.opacity = motion.inOut(t, 0.05, D, 0.3, 0.25);
+  rot.style.transform = `translateY(${(1 - k) * 18}px)`;
+  lines.forEach((l, i) => {
+    const w = l.offsetWidth;
+    let x = (W - w) / 2;
+    if (correr) {
+      const dir = i % 2 ? -1 : 1, span = Math.max(w - W, W * 0.25) + W * 0.15;
+      x = (W - w) / 2 + dir * span * (0.5 - t / D) * 0.9;   // atravessa a tela devagar
+    }
+    l.style.left = x + 'px';
+    l.style.opacity = k;
+    l.style.filter = shadow + (k < 1 ? `blur(${(1 - k) * 14}px)` : '');
+    l.style.transform = correr ? '' : `scale(${1.12 - 0.12 * k + 0.015 * Math.sin(t * 1.5)})`;
+  });
 });
 </script></body></html>

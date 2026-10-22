@@ -1,0 +1,60 @@
+<!doctype html>
+<!-- VISOR DE CÂMERA (layer: full, needs_video): a imagem vira o visor de uma câmera — cantos de foco, "● REC" com
+     timecode e rótulo ("BRUTO · SEM EDIÇÃO"). Opcional: começa em preto e branco e ganha cor ("antes cru -> editado"),
+     etiqueta presa ao canto de foco ("APRESENTADOR").
+     params: rotulo ("BRUTO · SEM EDIÇÃO"), pb (true: começa P&B), cor_at (instante/palavra em que a cor volta),
+             etiqueta ("APRESENTADOR"), accent, foco (true: cantos se fecham no rosto; padrão quadro inteiro) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #plate { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .c { position: absolute; width: 90px; height: 90px; border-color: rgba(255,255,255,.9); border-style: solid; border-width: 0; }
+  #rec { position: absolute; left: 110px; top: 250px; display: flex; align-items: center; gap: 14px;
+         font-weight: 800; font-size: 34px; color: #fff; letter-spacing: 2px; }
+  #dot { width: 22px; height: 22px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 14px #ff3b3b; }
+  #tc { position: absolute; right: 190px; top: 250px; font-weight: 700; font-size: 32px; color: #fff; letter-spacing: 3px;
+        font-variant-numeric: tabular-nums; }
+  #rot { position: absolute; left: 110px; bottom: 470px; font-weight: 800; font-size: 28px; letter-spacing: 8px;
+         color: rgba(255,255,255,.85); text-transform: uppercase; }
+  #tag { position: absolute; padding: 6px 14px; font-weight: 800; font-size: 22px; letter-spacing: 3px; color: #fff;
+         border-radius: 6px; text-transform: uppercase; }
+  #vig { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%); }
+</style></head>
+<body><img id="plate"><div id="vig"></div>
+<div class="c" id="tl"></div><div class="c" id="tr"></div><div class="c" id="bl"></div><div class="c" id="br"></div>
+<div id="rec"><div id="dot"></div>REC</div><div id="tc"></div><div id="rot"></div><div id="tag"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration, fps = motion.fps;
+const img = document.getElementById('plate');
+const accent = p.accent || '#7C5CFF';
+const C = { tl: document.getElementById('tl'), tr: document.getElementById('tr'), bl: document.getElementById('bl'), br: document.getElementById('br') };
+C.tl.style.borderWidth = '6px 0 0 6px'; C.tr.style.borderWidth = '6px 6px 0 0';
+C.bl.style.borderWidth = '0 0 6px 6px'; C.br.style.borderWidth = '0 6px 6px 0';
+document.getElementById('rot').textContent = p.rotulo ?? 'BRUTO · SEM EDIÇÃO';
+const tag = document.getElementById('tag');
+if (p.etiqueta) { tag.textContent = p.etiqueta; tag.style.background = accent; } else tag.style.display = 'none';
+const corAt = typeof p.cor_at === 'number' ? p.cor_at : D * 0.6;
+// caixa do visor: quadro inteiro (zona segura) ou fechada no rosto
+const big = { x0: 70, y0: 220, x1: W - 150, y1: H - 450 };
+const face = p.head ? { x0: W * (p.head.x - 0.22), y0: H * (p.head.top - 0.02), x1: W * (p.head.x + 0.22), y1: H * (p.head.top + 0.3) } : null;
+motion.onFrame(async (t) => {
+  await motion.setFrame(img, 'plate', t);
+  const k = motion.inOut(t, 0, D, 0.3, 0.25);
+  const kc = p.pb ? motion.prog(t, corAt, 0.5, 'inOutCubic') : 1;
+  img.style.filter = `grayscale(${1 - kc}) contrast(${1 + 0.1 * (1 - kc)})`;
+  const kf = p.foco && face ? motion.prog(t, 0.2, 0.6, 'inOutCubic') : 0;
+  const b = { x0: motion.lerp(big.x0, face?.x0 ?? big.x0, kf), y0: motion.lerp(big.y0, face?.y0 ?? big.y0, kf),
+              x1: motion.lerp(big.x1, face?.x1 ?? big.x1, kf), y1: motion.lerp(big.y1, face?.y1 ?? big.y1, kf) };
+  const ins = (1 - k) * 40;
+  const put = (el, x, y) => { el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.opacity = k; };
+  put(C.tl, b.x0 - ins, b.y0 - ins); put(C.tr, b.x1 - 90 + ins, b.y0 - ins);
+  put(C.bl, b.x0 - ins, b.y1 - 90 + ins); put(C.br, b.x1 - 90 + ins, b.y1 - 90 + ins);
+  tag.style.left = (b.x0) + 'px'; tag.style.top = (b.y0 - 48) + 'px'; tag.style.opacity = k;
+  const showRec = 1 - kc * 0.999 > 0.01 || !p.pb;
+  for (const id of ['rec', 'tc', 'rot']) document.getElementById(id).style.opacity = k * (p.pb ? 1 - kc : 1);
+  document.getElementById('dot').style.opacity = Math.floor(t * 2) % 2 ? 0.25 : 1;
+  const f = Math.round(t * fps), s = Math.floor(f / fps);
+  document.getElementById('tc').textContent =
+    `00:00:${String(s).padStart(2, '0')}:${String(f % fps).padStart(2, '0')}`;
+});
+</script></body></html>

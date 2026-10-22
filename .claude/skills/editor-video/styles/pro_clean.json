@@ -30,11 +30,13 @@
     "box": false,
     "emph_font": "Poppins",
     "emph_italic": false,
-    "emph_size": 76,
-    "emph_color": "#FFFFFF",
+    "emph_size": 92,
+    "emph_color": "#C9B2FF",
     "highlight": "none",
     "y": 1150,
-    "animation": "acumula"
+    "animation": "acumula",
+    "emph_case": "upper",
+    "emph_linha": true
   },
   "behind": {
     "enabled": true,

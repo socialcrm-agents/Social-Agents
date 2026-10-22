@@ -99,11 +99,16 @@ def captions_ass(tl: dict, out: Path, extra_front: list[dict] | None = None) -> 
     def page_text(idx: list[int], active: int | None) -> str:
         tokens = []
         for i in idx:
-            word = esc(_case(words[i]["w"], c["case"]))
-            tokens.append(word.rstrip(".,;:") if c["case"] == "upper" else word)
+            emph_up = words[i]["emph"] and c.get("emph_case") == "upper"
+            word = esc(_case(words[i]["w"], "upper" if emph_up else c["case"]))
+            tokens.append(word.rstrip(".,;:") if c["case"] == "upper" or emph_up else word)
         # quebra em 2 linhas equilibradas quando a página passa do limite (sem palavra órfã)
         brk = None
-        if sum(len(t) + 1 for t in tokens) - 1 > max_line and len(tokens) > 1:
+        # destaque em linha própria ("uma edição que / PRENDE O OLHAR"): quebra antes da 1ª palavra de destaque
+        first_emph = next((k for k, i in enumerate(idx) if words[i]["emph"]), None)
+        if c.get("emph_linha") and first_emph:
+            brk = first_emph
+        elif sum(len(t) + 1 for t in tokens) - 1 > max_line and len(tokens) > 1:
             brk = min(range(1, len(tokens)), key=lambda k: max(len(" ".join(tokens[:k])), len(" ".join(tokens[k:]))))
         parts = []
         for k, (i, word) in enumerate(zip(idx, tokens)):
