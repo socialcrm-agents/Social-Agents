@@ -1,0 +1,4 @@
+# além das dependências da skill editor-video (.claude/skills/editor-video/requirements.txt)
+fastapi>=0.110
+uvicorn>=0.29
+anthropic>=2.0
