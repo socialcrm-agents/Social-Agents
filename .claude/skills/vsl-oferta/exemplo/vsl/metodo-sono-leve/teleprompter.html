@@ -1,0 +1,119 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Teleprompter — Método Sono Leve</title><style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:#000;color:#fff;height:100%;overflow:hidden;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-user-select:none;user-select:none}
+#palco{position:fixed;inset:0;overflow:hidden}
+#texto{position:absolute;left:0;right:0;top:0;padding:45vh 7vw 80vh;will-change:transform}
+body.espelho #texto{transform-origin:center}
+.bloco{margin-bottom:2.2em}
+.bloco h2{font-size:.42em;letter-spacing:.14em;text-transform:uppercase;color:#A78BFA;font-weight:800;margin-bottom:.6em;padding-top:.4em;border-top:2px solid #2a2440}
+.bloco h2 small{color:#777;font-weight:600;letter-spacing:.06em;margin-left:.6em}
+.fala{line-height:1.38;font-weight:650;margin-bottom:.55em}
+.nota{font-size:.42em;color:#FBBF24;font-weight:700;margin:.2em 0 1em;letter-spacing:.02em}
+.nota:before{content:"▸ "}
+.pausa{height:.9em;position:relative}
+.pausa:after{content:"· pausa ·";position:absolute;left:0;font-size:.32em;color:#555;letter-spacing:.2em}
+#guia{position:fixed;left:0;right:0;top:42vh;height:16vh;pointer-events:none;border-top:2px solid rgba(167,139,250,.55);border-bottom:2px solid rgba(167,139,250,.25);
+  background:linear-gradient(180deg,rgba(167,139,250,.08),rgba(167,139,250,0))}
+#guia:before{content:"";position:absolute;left:8px;top:-9px;border:8px solid transparent;border-left:12px solid #A78BFA}
+#sombra{position:fixed;inset:0;pointer-events:none;background:linear-gradient(180deg,#000 0,rgba(0,0,0,.55) 22vh,rgba(0,0,0,0) 40vh,rgba(0,0,0,0) 62vh,rgba(0,0,0,.7) 85vh,#000)}
+#barra{position:fixed;left:0;top:0;height:4px;background:#A78BFA;width:0;z-index:5}
+#painel{position:fixed;left:0;right:0;bottom:0;display:flex;flex-wrap:wrap;gap:8px;justify-content:center;align-items:center;padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  background:rgba(12,12,16,.92);border-top:1px solid #222;z-index:6;transition:opacity .3s}
+body.rodando #painel{opacity:.12}
+body.rodando #painel:hover{opacity:1}
+button,select{font:inherit;font-size:15px;font-weight:700;color:#fff;background:#1d1d26;border:1px solid #34343f;border-radius:10px;min-height:44px;min-width:44px;padding:0 14px;cursor:pointer}
+button.principal{background:#7C3AED;border-color:#7C3AED;min-width:110px}
+button:focus-visible,select:focus-visible{outline:2px solid #A78BFA;outline-offset:2px}
+select{max-width:46vw}
+#info{font-size:13px;color:#aaa;min-width:120px;text-align:center;font-variant-numeric:tabular-nums}
+#ajuda{position:fixed;top:12px;right:12px;font-size:12px;color:#666;z-index:6;text-align:right;line-height:1.5}
+@media (max-width:640px){#ajuda{display:none}button,select{font-size:14px;padding:0 10px}}
+</style></head><body>
+<div id="barra"></div>
+<div id="palco"><div id="texto"><div class="bloco" id="b1"><h2>1. Gancho<small>~0:44</small></h2><p class="nota">Olhe direto para a câmera. Fale baixo, como quem conta um segredo. Sem &quot;oi, tudo bem&quot;.</p><p class="fala">Se o seu bebê acorda de hora em hora, mesmo depois de mamar bem…</p><p class="fala">não é fome.</p><p class="fala">Não é manha.</p><p class="fala">E não é porque ele é um bebê difícil.</p><p class="fala">É porque, sem querer, ele aprendeu a dormir de um jeito que só funciona no seu colo.</p><div class="pausa"></div><p class="fala">Nos próximos minutos eu vou te mostrar o que está acontecendo de verdade,</p><p class="fala">e como mais de mil e duzentas mães fizeram o bebê dormir a noite inteira em até vinte e um dias,</p><p class="fala">sem deixar ele chorando sozinho.</p><p class="fala">Assiste até o final, porque o passo mais importante eu mostro só lá na frente.</p></div>
+<div class="bloco" id="b2"><h2>2. Promessa e quem sou<small>~0:34</small></h2><p class="nota">Apresente-se rápido. A história completa vem depois.</p><p class="fala">Meu nome é Carla Mendes. Eu sou consultora do sono infantil.</p><p class="fala">E antes de ajudar outras famílias, eu fui exatamente essa mãe.</p><p class="fala">O Theo, meu primeiro filho, acordou de hora em hora por onze meses.</p><p class="fala">Eu contava as mamadas da madrugada no celular. Teve noite com sete.</p><p class="fala">Então eu não vou te dar uma dica de internet.</p><p class="fala">Eu vou te mostrar o caminho que eu precisei de anos para entender,</p><p class="fala">e que hoje cabe em vinte e uma noites.</p></div>
+<div class="bloco" id="b3"><h2>3. Identificação da dor<small>~1:10</small></h2><p class="nota">Ritmo mais lento. Deixe as frases respirarem.</p><p class="fala">Talvez a sua noite seja assim.</p><p class="fala">Você nina por quarenta minutos.</p><p class="fala">Ele finalmente fecha os olhos.</p><p class="fala">Você prende a respiração, vai abaixando devagar até o berço…</p><p class="fala">e no segundo em que as costas dele encostam no lençol, ele abre os olhos e chora.</p><p class="fala">E começa tudo de novo.</p><p class="fala">Aí ele dorme no seu peito, e você fica sentada no escuro, com medo de se mexer.</p><p class="fala">Às três da manhã você já não sabe se é dia ou noite.</p><p class="fala">No dia seguinte você vai trabalhar, ou cuida da casa, sem conseguir terminar um pensamento.</p><p class="fala">E tem a parte que quase ninguém fala:</p><p class="fala">a culpa.</p><p class="fala">A culpa de perder a paciência com um bebê que não tem culpa de nada.</p><p class="fala">A briga com o marido às quatro da manhã, porque os dois estão no limite.</p><p class="fala">E aquela sensação de que todas as outras mães conseguem, menos você.</p><div class="pausa"></div><p class="fala">Se você se viu em pelo menos uma dessas cenas, presta atenção no que vem agora.</p></div>
+<div class="bloco" id="b4"><h2>4. Por que nada funcionou<small>~1:21</small></h2><p class="nota">Aqui entra o mecanismo do problema. Use o nome &quot;Ponte do Colo&quot; com calma, é a palavra que ela vai lembrar.</p><p class="fala">Você provavelmente já tentou de tudo.</p><p class="fala">Mudou o horário do banho. Comprou o ruído branco. Deu mais uma mamada antes de dormir.</p><p class="fala">Leu que era salto de desenvolvimento, depois que era dente, depois que era regressão do sono.</p><p class="fala">E alguma coisa até funcionou por duas ou três noites… e depois voltou tudo.</p><p class="fala">Sabe por quê?</p><p class="fala">Porque nenhuma dessas coisas mexe no que realmente acorda o seu bebê.</p><p class="fala">Todo bebê, todo mesmo, desperta várias vezes por noite.</p><p class="fala">O sono dele funciona em ciclos curtos, de quarenta a sessenta minutos.</p><p class="fala">No fim de cada ciclo, ele acorda um pouquinho, olha em volta e confere se está tudo igual.</p><p class="fala">Agora pensa comigo.</p><p class="fala">Se ele dormiu no seu colo, mamando, balançando…</p><p class="fala">quando ele acorda no fim do ciclo, ele está sozinho no berço.</p><p class="fala">O colo sumiu. O peito sumiu. O balanço sumiu.</p><p class="fala">É como se ele tivesse atravessado uma ponte para dormir, e a ponte desaparecesse.</p><p class="fala">Eu chamo isso de Ponte do Colo.</p><p class="fala">E enquanto a única ponte que leva o seu bebê ao sono for você,</p><p class="fala">cada fim de ciclo vira um alarme.</p><p class="fala">Não é fome. É a ponte que ele procura.</p></div>
+<div class="bloco" id="b5"><h2>5. A descoberta<small>~0:53</small></h2><p class="nota">Mecanismo da solução. Mostre alívio no rosto: é a virada do vídeo.</p><p class="fala">Quando eu entendi isso, a pergunta mudou.</p><p class="fala">Eu parei de perguntar &quot;como eu faço ele dormir?&quot;</p><p class="fala">e comecei a perguntar &quot;como eu dou para ele uma ponte que ele consiga atravessar sozinho?&quot;</p><p class="fala">A resposta foi uma coisa simples, que eu chamo de Rotina dos Três Sinais.</p><p class="fala">São três sinais, sempre na mesma ordem: uma luz, um som e um toque.</p><p class="fala">Repetidos toda noite, eles viram a nova ponte do sono.</p><p class="fala">E a diferença é que essa ponte continua lá às duas da manhã.</p><p class="fala">Quando ele acorda no fim do ciclo, a luz está igual, o som está igual,</p><p class="fala">e ele aprendeu que aquele toque significa &quot;pode voltar a dormir&quot;.</p><p class="fala">Você não some. Você fica perto.</p><p class="fala">Você só deixa de ser a única ponte.</p></div>
+<div class="bloco" id="b6"><h2>6. Prova<small>~0:42</small></h2><p class="nota">Leia os depoimentos com o nome e a idade do bebê. Se tiver print, mostre na tela.</p><p class="fala">Eu vou te contar o que aconteceu com algumas mães.</p><p class="fala">A Juliana, mãe da Alice, de nove meses, me escreveu na quarta noite:</p><p class="fala">&quot;A Alice dormiu das oito às quatro. Eu chorei de alegria.&quot;</p><p class="fala">A Renata, mãe do Bento, de catorze meses, tinha certeza de que o filho era diferente.</p><p class="fala">Ele acordava seis vezes. Em duas semanas, passou para uma.</p><p class="fala">E ela nunca deixou ele chorando sozinho.</p><p class="fala">A Patrícia me disse que a aula do pai salvou o casamento dela.</p><p class="fala">Desde dois mil e vinte e um, mais de mil e duzentas famílias passaram por esse método.</p></div>
+<div class="bloco" id="b7"><h2>7. Como funciona<small>~0:37</small></h2><p class="nota">Explique em passos simples. Pode contar nos dedos.</p><p class="fala">Funciona em três fases.</p><p class="fala">Primeiro, você ajusta o quarto e os horários, em uma tarde.</p><p class="fala">É aqui que entra a tabela de janelas de sono para a idade exata do seu bebê.</p><p class="fala">Depois, você aplica a Rotina dos Três Sinais toda noite, sempre na mesma ordem.</p><p class="fala">Nas primeiras três a cinco noites, a maioria das mães já vê menos despertares.</p><p class="fala">E por último, você vai tirando o colo aos poucos, em quatro etapas, no ritmo do seu bebê.</p><p class="fala">Sem deixar ele chorar sozinho em nenhum momento.</p></div>
+<div class="bloco" id="b8"><h2>8. Para quem é<small>~0:28</small></h2><p class="fala">Esse método é para você se o seu bebê tem entre quatro e dezoito meses,</p><p class="fala">se ele só dorme no colo ou mamando,</p><p class="fala">e se você quer as noites de volta sem abrir mão do carinho.</p><p class="fala">Ele não é para quem procura uma fórmula mágica para hoje à noite.</p><p class="fala">E se o seu bebê tem alguma questão de saúde, o primeiro passo é sempre o pediatra.</p></div>
+<div class="bloco" id="b9"><h2>9. Oferta<small>~0:49</small></h2><p class="nota">A oferta aparece na página neste momento. Fale devagar e mostre a tela da área de membros.</p><p class="fala">Por isso eu criei o Método Sono Leve.</p><p class="fala">É um curso online, com aulas curtas, de cinco a doze minutos, para você assistir no celular, até amamentando.</p><p class="fala">No módulo um, você entende o sono do seu bebê e recebe a tabela de janelas de sono.</p><p class="fala">No módulo dois, você deixa o quarto pronto para dormir em uma tarde.</p><p class="fala">No módulo três, você aprende a Rotina dos Três Sinais, noite por noite, com vídeos de mães aplicando.</p><p class="fala">No módulo quatro, o desmame do colo, em quatro etapas, sem choro sozinho.</p><p class="fala">No módulo cinco, as sonecas do dia, porque soneca ruim estraga a noite.</p><p class="fala">E no módulo seis, o que fazer quando vier salto, dente ou viagem.</p></div>
+<div class="bloco" id="b10"><h2>10. Bônus<small>~0:22</small></h2><p class="fala">E quem entrar agora leva três bônus.</p><p class="fala">O planner das vinte e uma noites, para você anotar e ver a evolução.</p><p class="fala">A aula &quot;o pai no plano&quot;, para dividir as noites sem briga.</p><p class="fala">E sessenta dias no nosso grupo de apoio no WhatsApp, para tirar dúvida comigo e com a minha equipe.</p></div>
+<div class="bloco" id="b11"><h2>11. Preço com ancoragem<small>~0:34</small></h2><p class="nota">Ancore pelo custo da noite mal dormida, não por outro curso.</p><p class="fala">Uma consultoria de sono individual comigo custa mais de quinhentos reais.</p><p class="fala">E muita mãe gasta mais do que isso em travesseiro, berço novo e aparelho de ruído que não resolvem.</p><p class="fala">O Método Sono Leve não vai custar nem metade disso.</p><p class="fala">Hoje você entra por doze vezes de vinte reais e trinta e sete centavos.</p><p class="fala">Ou cento e noventa e sete reais à vista.</p><p class="fala">Menos do que um pacote de fraldas por mês, para ter as suas noites de volta.</p></div>
+<div class="bloco" id="b12"><h2>12. Garantia<small>~0:20</small></h2><p class="fala">E você não corre nenhum risco.</p><p class="fala">Você tem sete dias de garantia.</p><p class="fala">Assiste às aulas, aplica a rotina por uma semana.</p><p class="fala">Se não sentir as noites mais tranquilas, me manda uma mensagem e eu devolvo cem por cento do valor.</p><p class="fala">Sem perguntas.</p><p class="fala">O risco é todo meu.</p></div>
+<div class="bloco" id="b13"><h2>13. Urgência<small>~0:10</small></h2><p class="nota">Só use se for verdade. Aqui: o grupo de apoio é desta turma.</p><p class="fala">O grupo de apoio é só para esta turma, porque eu respondo pessoalmente as dúvidas.</p><p class="fala">Quando as inscrições fecharem, esse bônus sai da oferta.</p></div>
+<div class="bloco" id="b14"><h2>14. CTA<small>~0:17</small></h2><p class="nota">Aponte para baixo, onde está o botão.</p><p class="fala">Então clica no botão que apareceu aqui embaixo do vídeo.</p><p class="fala">Você vai para uma página segura, coloca seus dados e recebe o acesso na hora no seu e-mail.</p><p class="fala">Hoje à noite você já pode começar pelo módulo um.</p></div>
+<div class="bloco" id="b15"><h2>15. FAQ falado<small>~0:29</small></h2><p class="fala">Algumas mães me perguntam:</p><p class="fala">&quot;Carla, vou ter que deixar meu bebê chorando?&quot;</p><p class="fala">Não. Em nenhum momento. Você fica perto o tempo todo.</p><p class="fala">&quot;E se eu não tiver tempo?&quot;</p><p class="fala">As aulas são curtas, e a rotina acontece no horário de dormir que você já tem.</p><p class="fala">&quot;E se o meu bebê for diferente?&quot;</p><p class="fala">Foi o que a Renata achou. Por isso você tem sete dias para testar sem risco.</p></div>
+<div class="bloco" id="b16"><h2>16. CTA final<small>~0:19</small></h2><p class="nota">Feche olhando para a câmera, tom de conversa.</p><p class="fala">Daqui a vinte e uma noites, você pode estar no mesmo lugar, contando as mamadas da madrugada no celular.</p><p class="fala">Ou você pode estar acordando com o sol, depois de uma noite inteira.</p><p class="fala">Clica no botão aqui embaixo e começa hoje.</p><p class="fala">Eu te espero lá dentro.</p></div></div></div>
+<div id="sombra"></div><div id="guia"></div>
+<div id="ajuda">espaço rolar · +/− velocidade · M espelhar · A/a letra · ←/→ bloco · R reinicia bloco</div>
+<div id="painel">
+  <button id="tocar" class="principal" aria-label="Rolar ou pausar">▶ Rolar</button>
+  <button id="menos" aria-label="Mais devagar">−</button><span id="info"></span><button id="mais" aria-label="Mais rápido">+</button>
+  <button id="aMenos" aria-label="Letra menor">A−</button><button id="aMais" aria-label="Letra maior">A+</button>
+  <button id="espelho" aria-label="Espelhar">⇋</button>
+  <select id="blocos" aria-label="Ir para o bloco"><option value="1">1. Gancho (0:44)</option><option value="2">2. Promessa e quem sou (0:34)</option><option value="3">3. Identificação da dor (1:10)</option><option value="4">4. Por que nada funcionou (1:21)</option><option value="5">5. A descoberta (0:53)</option><option value="6">6. Prova (0:42)</option><option value="7">7. Como funciona (0:37)</option><option value="8">8. Para quem é (0:28)</option><option value="9">9. Oferta (0:49)</option><option value="10">10. Bônus (0:22)</option><option value="11">11. Preço com ancoragem (0:34)</option><option value="12">12. Garantia (0:20)</option><option value="13">13. Urgência (0:10)</option><option value="14">14. CTA (0:17)</option><option value="15">15. FAQ falado (0:29)</option><option value="16">16. CTA final (0:19)</option></select>
+  <button id="reinicia" aria-label="Reiniciar bloco">↺</button>
+</div>
+<script>
+(function(){
+  var WPM=140, texto=document.getElementById('texto'), body=document.body;
+  var blocos=[].slice.call(document.querySelectorAll('.bloco')), sel=document.getElementById('blocos');
+  var cfg={vel:1, tam:Math.max(30,Math.min(72,Math.round(window.innerWidth/14))), espelho:false};
+  try{var s=JSON.parse(localStorage.getItem('teleprompter-cfg')||'{}'); for(var k in s) cfg[k]=s[k];}catch(e){}
+  var y=0, rodando=false, ult=0;
+  function salvar(){try{localStorage.setItem('teleprompter-cfg',JSON.stringify(cfg))}catch(e){}}
+  function aplicar(){ texto.style.fontSize=cfg.tam+'px'; body.classList.toggle('espelho',cfg.espelho);
+    document.getElementById('info').textContent=Math.round(WPM*cfg.vel)+' pal/min · '+cfg.tam+'px'; desenhar(); salvar(); }
+  function maxY(){ return Math.max(0, texto.scrollHeight - window.innerHeight*1.25); }
+  function desenhar(){ y=Math.max(0,Math.min(y,maxY()));
+    texto.style.transform='translateY('+(-y)+'px)'+(cfg.espelho?' scaleX(-1)':'');
+    document.getElementById('barra').style.width=(maxY()?100*y/maxY():0)+'%';
+    var guia=window.innerHeight*0.42, atual=0;
+    blocos.forEach(function(b,i){ if(b.offsetTop - y <= guia+5) atual=i; });
+    if(sel.selectedIndex!==atual) sel.selectedIndex=atual; }
+  function pxPorSeg(){ var linhaPx=cfg.tam*1.38, palPorLinha=Math.max(3,(texto.clientWidth*0.86)/(cfg.tam*2.9));
+    return (WPM*cfg.vel/60)/palPorLinha*linhaPx; }
+  function passo(ts){ if(!rodando) return; if(ult) y+=pxPorSeg()*(ts-ult)/1000; ult=ts; desenhar();
+    if(y>=maxY()) parar(); else requestAnimationFrame(passo); }
+  function tocar(){ rodando=true; ult=0; body.classList.add('rodando'); document.getElementById('tocar').textContent='❚❚ Pausar'; requestAnimationFrame(passo); }
+  function parar(){ rodando=false; body.classList.remove('rodando'); document.getElementById('tocar').textContent='▶ Rolar'; }
+  function alternar(){ rodando?parar():tocar(); }
+  function irBloco(i){ i=Math.max(0,Math.min(blocos.length-1,i)); y=blocos[i].offsetTop - window.innerHeight*0.42; desenhar();
+    try{history.replaceState(null,'','#bloco='+(i+1))}catch(e){} }
+  function vel(d){ cfg.vel=Math.max(0.3,Math.min(2.5,Math.round((cfg.vel+d)*20)/20)); aplicar(); }
+  function tam(d){ var bloco=sel.selectedIndex; cfg.tam=Math.max(20,Math.min(120,cfg.tam+d)); aplicar(); irBloco(bloco); }
+  document.getElementById('tocar').onclick=alternar;
+  document.getElementById('mais').onclick=function(){vel(0.05)};
+  document.getElementById('menos').onclick=function(){vel(-0.05)};
+  document.getElementById('aMais').onclick=function(){tam(4)};
+  document.getElementById('aMenos').onclick=function(){tam(-4)};
+  document.getElementById('espelho').onclick=function(){cfg.espelho=!cfg.espelho; aplicar()};
+  document.getElementById('reinicia').onclick=function(){parar(); irBloco(sel.selectedIndex)};
+  sel.onchange=function(){parar(); irBloco(sel.selectedIndex)};
+  window.addEventListener('keydown',function(e){
+    if(e.target.tagName==='SELECT') return;
+    var k=e.key;
+    if(k===' '){e.preventDefault(); alternar();}
+    else if(k==='+'||k==='='||k==='ArrowUp'){e.preventDefault(); vel(0.05);}
+    else if(k==='-'||k==='_'||k==='ArrowDown'){e.preventDefault(); vel(-0.05);}
+    else if(k==='m'||k==='M'){cfg.espelho=!cfg.espelho; aplicar();}
+    else if(k==='A'){tam(4);} else if(k==='a'){tam(-4);}
+    else if(k==='ArrowRight'){parar(); irBloco(sel.selectedIndex+1);}
+    else if(k==='ArrowLeft'){parar(); irBloco(sel.selectedIndex-1);}
+    else if(k==='r'||k==='R'){parar(); irBloco(sel.selectedIndex);}
+  });
+  var toque=null;
+  document.getElementById('palco').addEventListener('touchstart',function(e){toque=e.touches[0].clientY},{passive:true});
+  document.getElementById('palco').addEventListener('touchmove',function(e){ if(toque===null) return; var d=toque-e.touches[0].clientY;
+    toque=e.touches[0].clientY; y+=d; desenhar(); },{passive:true});
+  document.getElementById('palco').addEventListener('touchend',function(){ toque=null; });
+  document.getElementById('palco').addEventListener('wheel',function(e){ y+=e.deltaY; desenhar(); },{passive:true});
+  window.addEventListener('resize',desenhar);
+  aplicar();
+  var m=/bloco=(\d+)/.exec(location.hash); if(m) irBloco(parseInt(m[1],10)-1);
+})();
+</script></body></html>

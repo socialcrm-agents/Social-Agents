@@ -77,5 +77,10 @@ Campo vazio = ainda não decidido. `[HIPÓTESE]` no começo de um texto = a IA p
 }
 ```
 
+Detalhes que os scripts entendem:
+- `*trecho*` dentro de `pagina.headline` ou `oferta.promessa` vira o destaque colorido do título.
+- `vsl.formato`: `"16:9"` (padrão) ou `"9:16"` para player vertical (link de Shorts vira 9:16 sozinho).
+- `provas[].tipo` = `"número"` ou `"dado"` vira um cartão com o número em destaque (sem estrelas nem foto).
+
 Etapas (`etapa`), na ordem: `diagnostico` → `publico` → `oferta` → `angulos` → `roteiro` → `pagina` → `gravacao`
 → `edicao` → `criativos` → `lancamento` → `otimizacao`.

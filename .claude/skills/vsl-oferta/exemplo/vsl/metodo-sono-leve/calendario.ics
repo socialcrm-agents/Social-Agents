@@ -1,0 +1,173 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//vsl-oferta//calendario//PT
+CALSCALE:GREGORIAN
+METHOD:PUBLISH
+X-WR-CALNAME:Lançamento Método Sono Leve
+BEGIN:VEVENT
+UID:e45b08a1-fa67-5c65-9284-2e50ecfa414b@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261103T090000
+DTEND:20261103T110000
+SUMMARY:VSL dia 1: Oferta fechada
+DESCRIPTION:☑ Responder o diagnóstico (produto\, ticket\, público\, pro
+ vas)\n☑ Validar dores\, desejos e objeções do público\n☑ Fechar pro
+ messa\, mecanismo do problema e da solução (com nome)\n☑ Fechar stack\
+ , bônus\, garantia e preço com ancoragem
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:992579f4-8e5f-517b-a0eb-105e8c247439@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261104T090000
+DTEND:20261104T110000
+SUMMARY:VSL dia 2: Ângulos e começo do roteiro
+DESCRIPTION:☑ Escolher a big idea entre os ângulos propostos\n☑ Aprova
+ r 3 opções de gancho para os primeiros 30 segundos\n☑ Escrever os bloc
+ os de abertura até o mecanismo do problema
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:ae8f78ff-5a88-507e-8d7d-0e37c107104c@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261105T090000
+DTEND:20261105T110000
+SUMMARY:VSL dia 3: Roteiro completo
+DESCRIPTION:☑ Escrever os blocos de solução\, prova\, oferta\, garantia
+  e CTA\n☑ Ler o roteiro em voz alta e cortar o que travar\n☑ Conferir 
+ o tempo com o teleprompter (meta da ficha)\n☑ Definir o segundo em que a
+  oferta aparece na página
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:eaff0d89-888b-516b-94f6-7aaab7c490b6@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261106T090000
+DTEND:20261106T110000
+SUMMARY:VSL dia 4: Página de vendas
+DESCRIPTION:☐ Gerar a página em rascunho e revisar os trechos amarelos\n
+ ☐ Colocar o link do checkout e testar o botão no celular\n☐ Configura
+ r checkout: parcelamento\, order bump\, página de obrigado\n☐ Instalar 
+ pixel/eventos de conversão (Meta\, TikTok ou Google)
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:6b8ba2cd-9cf0-52b5-96d8-e09f28df6df2@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261109T090000
+DTEND:20261109T110000
+SUMMARY:VSL dia 5: Gravação
+DESCRIPTION:☐ Montar luz\, câmera na altura dos olhos e microfone de lap
+ ela\n☐ Gravar bloco a bloco no teleprompter (2 tomadas boas de cada)\n
+ ☐ Gravar 10 ganchos extras para criativos\n☐ Subir os arquivos no Goog
+ le Drive (link: qualquer pessoa com o link)
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:fb4656cd-71bc-5974-8335-d0ae6fc47fa4@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261110T090000
+DTEND:20261110T110000
+SUMMARY:VSL dia 6: Edição e hospedagem
+DESCRIPTION:☐ Editar a VSL (cortes\, legenda\, zoom\; sem música alta)\n
+ ☐ Hospedar o vídeo no player (Panda\, VTurb\, Vimeo ou YouTube não lis
+ tado)\n☐ Colar o código do player na ficha e gerar a página final\n☐
+  Assistir a página inteira no celular\, do play ao checkout
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:469ddd96-3f36-5135-a44a-ec2b0b891008@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261111T090000
+DTEND:20261111T110000
+SUMMARY:VSL dia 7: Criativos — lote 1
+DESCRIPTION:☐ Escrever 5 roteiros de criativo (um por ângulo)\n☐ Grava
+ r ou montar os 5 criativos em 9:16\n☐ Escrever textos e títulos dos an
+ úncios
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:24148aea-b237-5231-8692-58f2b2af676c@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261112T090000
+DTEND:20261112T110000
+SUMMARY:VSL dia 8: Criativos — lote 2
+DESCRIPTION:☐ Mais 5 criativos com ganchos diferentes\n☐ Separar 2 trec
+ hos fortes da própria VSL como criativo\n☐ Revisar política de anúnci
+ os (promessas\, antes/depois\, saúde)
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:6362506b-6ded-5ed2-b7d0-c3fcf98d52aa@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261113T090000
+DTEND:20261113T110000
+SUMMARY:VSL dia 9: Campanhas no ar
+DESCRIPTION:☐ Criar a campanha de conversão com os 10 criativos\n☐ Ver
+ ba de teste por dia conforme a ficha\n☐ Conferir se o evento de compra c
+ hega no gerenciador\n☐ Enviar a página para a lista/WhatsApp (se houver
+ )
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:05cf56e1-b15e-5ae2-a977-87b9182ad295@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261116T090000
+DTEND:20261116T110000
+SUMMARY:VSL dia 10: Leitura de métricas
+DESCRIPTION:☐ Anotar: CPM\, CTR\, custo por clique\, play rate da VSL\n
+ ☐ Retenção da VSL: % que chega ao pitch (segundo da oferta)\n☐ Conve
+ rsão da página e do checkout\n☐ Desligar criativos com CTR abaixo de 0
+ \,8% após 1.000 impressões
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:b1ae5343-7a37-5261-8768-dbf7491f299f@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261117T090000
+DTEND:20261117T110000
+SUMMARY:VSL dia 11: Leitura de métricas — dia 11
+DESCRIPTION:☐ Atualizar a planilha de métricas do dia\n☐ Trocar o que 
+ está pior: gancho (CTR baixo)\, VSL (retenção)\, página ou checkout (c
+ onversão)\n☐ Subir 2 criativos novos se o melhor estiver cansando (freq
+ uência > 2\,5)
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:f1593248-7a35-5440-8f62-038cc09ffa1a@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261118T090000
+DTEND:20261118T110000
+SUMMARY:VSL dia 12: Leitura de métricas — dia 12
+DESCRIPTION:☐ Atualizar a planilha de métricas do dia\n☐ Trocar o que 
+ está pior: gancho (CTR baixo)\, VSL (retenção)\, página ou checkout (c
+ onversão)\n☐ Subir 2 criativos novos se o melhor estiver cansando (freq
+ uência > 2\,5)
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:759fe49b-d3d4-58a5-9899-9f56b3f880dd@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261119T090000
+DTEND:20261119T110000
+SUMMARY:VSL dia 13: Leitura de métricas — dia 13
+DESCRIPTION:☐ Atualizar a planilha de métricas do dia\n☐ Trocar o que 
+ está pior: gancho (CTR baixo)\, VSL (retenção)\, página ou checkout (c
+ onversão)\n☐ Subir 2 criativos novos se o melhor estiver cansando (freq
+ uência > 2\,5)
+TRANSP:OPAQUE
+END:VEVENT
+BEGIN:VEVENT
+UID:c197986e-c9f0-5833-acec-37743c8b0fb1@vsl-oferta
+DTSTAMP:20261022T224514Z
+DTSTART:20261120T090000
+DTEND:20261120T110000
+SUMMARY:VSL dia 14: Leitura de métricas — dia 14
+DESCRIPTION:☐ Atualizar a planilha de métricas do dia\n☐ Trocar o que 
+ está pior: gancho (CTR baixo)\, VSL (retenção)\, página ou checkout (c
+ onversão)\n☐ Subir 2 criativos novos se o melhor estiver cansando (freq
+ uência > 2\,5)\n☐ Revisão da semana: escalar 20% a verba dos conjuntos
+  com venda abaixo do custo-alvo
+TRANSP:OPAQUE
+END:VEVENT
+END:VCALENDAR
