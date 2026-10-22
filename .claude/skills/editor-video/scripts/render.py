@@ -386,7 +386,7 @@ def qa(out: Path, tl: dict, qa_dir: Path, name: str) -> dict:
     lufs = next((l.split()[1] for l in loud.splitlines()[::-1] if l.strip().startswith("I:")), "?")
     times = [min(sh["t0"] + 0.15, tl["duration"] - 0.1) for sh in tl["shots"]][:24]
     sheet = qa_dir / f"{name}_cortes.jpg"
-    sel = "+".join(f"between(t,{t:.3f},{t + 0.034:.3f})" for t in times)
+    sel = "+".join(f"eq(n\\,{round(t * FPS)})" for t in times)  # um quadro exato por plano
     ffmpeg(["-i", str(out), "-vf", f"select='{sel}',scale=270:480,tile=6x4:padding=6:color=white",
             "-frames:v", "1", "-vsync", "vfr", str(sheet)])
     return {"duration": round(info["duration"], 2), "lufs": lufs, "sheet": str(sheet)}

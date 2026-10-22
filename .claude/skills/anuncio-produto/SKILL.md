@@ -41,7 +41,10 @@ PY SK/scripts/anuncio.py recorte <projeto>      # recorta o produto, diz qual fo
 ## 2. Olhe as fotos e escreva o roteiro (este é o seu trabalho)
 
 1. Abra cada foto (Read) e o resultado do recorte (`work/recortes.json`, `work/recortes/*.png`): veja o que é o
-   produto, textura, detalhes, embalagem, texto do rótulo, e qual foto tem o melhor recorte.
+   produto, textura, detalhes, embalagem, texto do rótulo, e qual foto tem o melhor recorte. Sem recorte bom
+   (produto na mão), ponha `"foco_principal": [x, y]` no `produto.json` (ver `cenas.md`). Benefícios só do
+   que se vê ou do que o cliente disse: material, cor e formato, sim; "proteção UV" ou "polarizado", só com a
+   informação dele.
 2. Leia `SK/references/roteiros.md`, que traz palavras por duração, fórmulas de gancho e regras. Depois leia
    `SK/references/cenas.md`, com os tipos de cena e seus params.
 3. Escreva `<projeto>/roteiro.json`; para outras durações, `roteiro_15s.json`, `roteiro_30s.json`...

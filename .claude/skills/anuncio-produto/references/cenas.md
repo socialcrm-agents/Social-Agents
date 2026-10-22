@@ -23,6 +23,16 @@ Todas as cenas ocupam o quadro inteiro (1080x1920), desenhadas em `assets/web/an
 Preço, preço antigo, desconto e parcelas vêm do `produto.json` (`anuncio.py novo --preco ...`).
 O roteiro pode sobrescrever com `"produto": {"preco": "..."}`.
 
+## Foto sem recorte bom (produto na mão, foto de ambiente)
+
+O caso mais comum é a foto de celular com o produto na mão. Quando `recorte` diz "foto inteira", as cenas de
+produto (`heroi`, `oferta`, `cta`, `prova`) mostram a foto num **cartão** enquadrado no produto.
+- Diga onde o produto está na foto principal: `"foco_principal": [x, y]` no `produto.json` (0..1).
+- `"zoom_cartao": 1.5` (padrão) aproxima o cartão.
+- `gancho`, `foto` e `detalhe` usam a foto inteira.
+- Nunca "conserte" o produto: se a mão cobre uma parte, essa parte não aparece. Não se desenha o que não está
+  na foto.
+
 ## Ícones
 
 Nomes do Lucide (em inglês), lista em `assets/web/icons/`. Exemplos por categoria:

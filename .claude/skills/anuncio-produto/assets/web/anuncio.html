@@ -110,11 +110,22 @@ function animBg(sc, lt) {
 
 // ---------- produto ----------
 function product(sc, { h = 900, y = 1060, src, below } = {}) {
-  const url = src || PR.recorte;
   if (below) h = Math.min(h, y - (below.el.offsetTop + below.el.offsetHeight) - 40);  // nunca encosta no título
+  const floor = el('div', 'floor', sc.el, { top: (y - 40) + 'px' });
+  if (!src && !PR.recorte) {
+    // sem recorte bom (produto na mão, foto de ambiente): a foto vira um cartão enquadrado no produto
+    const [fx, fy] = PR.foco || [.5, .5];
+    const wpx = Math.min(Math.round(h * .82), 860);
+    const box = el('div', 'prod', sc.el, { width: wpx + 'px', height: h + 'px', top: (y - h) + 'px', marginLeft: (-wpx / 2) + 'px',
+      borderRadius: '44px', overflow: 'hidden', border: '10px solid #fff', boxShadow: `0 40px 80px rgba(0,0,0,${(S.sombra ?? .35) + .1})` });
+    const i = img(PR.foto_principal, box, { objectFit: 'cover', objectPosition: `${fx * 100}% ${fy * 100}%` });
+    i.style.transform = `scale(${PR.zoom_cartao || 1.5})`; i.style.transformOrigin = `${fx * 100}% ${fy * 100}%`;
+    const sh = el('div', '', box, { position: 'absolute', inset: 0, mixBlendMode: 'screen' });
+    return { box, floor, sh, h, w: wpx, y };
+  }
+  const url = src || PR.recorte;
   const ratio = PR.proporcao || .6;
   const wpx = Math.round(h * ratio);
-  const floor = el('div', 'floor', sc.el, { top: (y - 40) + 'px' });
   const box = el('div', 'prod', sc.el, { width: wpx + 'px', height: h + 'px', top: (y - h) + 'px', marginLeft: (-wpx / 2) + 'px',
     filter: `drop-shadow(0 28px 40px rgba(0,0,0,${S.sombra ?? .35}))` });
   img(url, box);
@@ -174,7 +185,7 @@ const builders = {
   detalhe(sc, s) {
     const ph = el('div', 'photo', sc.el); sc.ph = img(s.foto, ph);
     sc.focus = s.foco || [.5, .5];
-    const svg = el('div', '', sc.el, { position: 'absolute', inset: 0 });
+    const svg = el('div', '', sc.el, { position: 'absolute', inset: 0 }); sc.marks = svg;
     svg.innerHTML = `<svg width="${W}" height="${H}"><circle cx="${W / 2}" cy="${H * .42}" r="190" fill="none" stroke="${C.destaque2}" stroke-width="12"
       stroke-linecap="round" stroke-dasharray="1200" stroke-dashoffset="1200"/><path d="M ${W / 2 + 330} ${H * .42 + 330} Q ${W / 2 + 300} ${H * .42 + 200} ${W / 2 + 200} ${H * .42 + 150}"
       fill="none" stroke="${C.destaque2}" stroke-width="11" stroke-linecap="round" stroke-dasharray="400" stroke-dashoffset="400"/></svg>`;
@@ -185,12 +196,11 @@ const builders = {
   beneficios(sc, s) {
     background(sc, s.fundo || (S.fundo === 'gradiente' ? 'escuro' : S.fundo));
     if (s.titulo) sc.tt = title(sc, s.titulo, { y: 210, size: 110 });
-    if (PR.recorte) sc.pd = product(sc, { h: 820, y: 1250, below: sc.tt });
-    if (sc.pd) { sc.pd.box.style.left = '78%'; sc.pd.floor.style.left = '78%'; }
+    if (PR.recorte) { sc.pd = product(sc, { h: 820, y: 1250, below: sc.tt }); sc.pd.box.style.left = '78%'; sc.pd.floor.style.left = '78%'; }
     const items = s.itens || [];
     const top = s.titulo ? 470 : 330;
     sc.cards = items.map((it, i) => {
-      const c = el('div', 'card', sc.el, { left: '60px', top: (top + i * 190) + 'px', maxWidth: '720px',
+      const c = el('div', 'card', sc.el, { left: '60px', top: (top + i * 190) + 'px', maxWidth: PR.recorte ? '720px' : '860px',
         background: C.cartao, color: C.texto_cartao, boxShadow: '0 20px 50px rgba(0,0,0,.25)' });
       const ic = el('div', 'ic', c, { background: C.destaque, color: C.sobre_destaque }); icon(it.icone, ic);
       el('div', '', c).textContent = it.texto;
@@ -219,7 +229,7 @@ const builders = {
   },
   prova(sc, s) {
     background(sc, s.fundo);
-    if (PR.recorte) { sc.pd = product(sc, { h: 640, y: 900 }); }
+    sc.pd = product(sc, { h: 640, y: 900 });
     sc.num = el('div', '', sc.el, { position: 'absolute', left: 0, right: 0, top: '940px', textAlign: 'center',
       fontFamily: 'Anton', fontSize: '170px', color: C.titulo });
     sc.stars = el('div', '', sc.el, { position: 'absolute', left: 0, right: 0, top: '1130px', textAlign: 'center', fontSize: '84px',
@@ -230,8 +240,8 @@ const builders = {
   },
   oferta(sc, s) {
     background(sc, s.fundo);
-    if (PR.recorte) { sc.pd = product(sc, { h: 760, y: 1000 }); sc.pd.box.style.left = '30%'; sc.pd.floor.style.left = '30%'; }
-    const x = PR.recorte ? 560 : 140;
+    sc.pd = product(sc, { h: PR.recorte ? 760 : 560, y: 1000 }); sc.pd.box.style.left = '30%'; sc.pd.floor.style.left = '30%';
+    const x = 560;
     if (PR.preco_antigo) {
       sc.old = el('div', 'price-old', sc.el, { left: x + 'px', top: '420px', color: C.texto_suave });
       sc.old.innerHTML = `${PR.preco_antigo}<div class="strike" style="background:${C.alerta}"></div>`;
@@ -246,7 +256,7 @@ const builders = {
     if (PR.parcelas) { sc.par = el('div', '', sc.el, { position: 'absolute', left: x + 'px', top: '820px', fontWeight: 700, fontSize: '44px', color: C.titulo });
       sc.par.textContent = PR.parcelas; }
     if (PR.desconto) {
-      sc.badge = el('div', 'badge', sc.el, { left: (PR.recorte ? 90 : 700) + 'px', top: '230px' });
+      sc.badge = el('div', 'badge', sc.el, { left: '90px', top: '230px' });
       const pts = Array.from({ length: 32 }, (_, i) => { const r = i % 2 ? 112 : 135, a = i / 32 * Math.PI * 2; return `${135 + r * Math.cos(a)},${135 + r * Math.sin(a)}`; }).join(' ');
       sc.badge.innerHTML = `<svg viewBox="0 0 270 270"><polygon points="${pts}" fill="${C.alerta}"/></svg><span>${PR.desconto}</span>`;
     }
@@ -257,7 +267,7 @@ const builders = {
   cta(sc, s) {
     background(sc, s.fundo);
     sc.tt = title(sc, s.texto || (P.plataforma === 'tiktok_shop' ? 'TOQUE NO CARRINHO' : 'COMPRE AGORA'), { y: 220, size: 140 });
-    if (PR.recorte) sc.pd = product(sc, { h: 820, y: 1200, below: sc.tt });
+    sc.pd = product(sc, { h: 820, y: 1200, below: sc.tt });
     if (P.plataforma === 'tiktok_shop') {
       sc.cart = el('div', 'cart', sc.el, { left: '120px', top: '1290px', width: '150px', height: '150px', borderRadius: '40px',
         background: C.carrinho, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: '0 16px 40px rgba(0,0,0,.35)' });
@@ -323,11 +333,23 @@ const updates = {
   },
   detalhe(sc, lt, s) {
     const k = prog(lt, 0, 1.1, 'inOutCubic'), z = 1 + (s.zoom || 1.1) * k;
-    const [fx, fy] = sc.focus;
-    // leva o ponto de foco para o centro do círculo (50%, 42%)
-    const tx = (0.5 - fx) * W * z * k, ty = (0.42 - fy) * H * z * k;
+    // foco vem em coordenadas da foto (0..1); a foto cobre o quadro (object-fit: cover), então converte
+    const nw = sc.ph.naturalWidth || W, nh = sc.ph.naturalHeight || H, cov = Math.max(W / nw, H / nh);
+    const px = (sc.focus[0] * nw * cov) - (nw * cov - W) / 2, py = (sc.focus[1] * nh * cov) - (nh * cov - H) / 2;
+    // leva o ponto de foco até (50%, 42%), sem deixar aparecer borda vazia; o círculo segue o ponto
+    const lim = (v, m) => Math.max(-m, Math.min(m, v));
+    const tx = lim(k * (-(px - W / 2) * z), (z - 1) * W / 2), ty = lim(k * (H * .42 - H / 2 - (py - H / 2) * z), (z - 1) * H / 2);
     sc.ph.style.transformOrigin = '50% 50%';
     sc.ph.style.transform = `translate(${tx}px, ${ty}px) scale(${z})`;
+    const qx = W / 2 + (px - W / 2) * z + tx, qy = H / 2 + (py - H / 2) * z + ty;
+    // ponto do lado direito: seta e texto vão para a esquerda (nada sai da tela)
+    const flip = px > W * .55;
+    sc.marks.style.transformOrigin = `${W / 2}px ${H * .42}px`;
+    sc.marks.style.transform = `translate(${qx - W / 2}px, ${qy - H * .42}px)${flip ? ' scaleX(-1)' : ''}`;
+    if (sc.lab) {
+      Object.assign(sc.lab.style, flip ? { left: '60px', right: '440px' } : { left: '360px', right: '150px' });
+      sc.lab.style.translate = `${Math.max(Math.min(qx - W / 2, 120), -120)}px ${qy - H * .42}px`;
+    }
     sc.circle.setAttribute('stroke-dashoffset', 1200 * (1 - prog(lt, .9, .5, 'outCubic')));
     sc.arrow.setAttribute('stroke-dashoffset', 400 * (1 - prog(lt, 1.2, .35, 'outCubic')));
     if (sc.lab) { const q = prog(lt, 1.35, .3, 'outBack'); sc.lab.style.transform = `scale(${q}) rotate(-3deg)`; sc.lab.style.opacity = clamp(q * 2); }

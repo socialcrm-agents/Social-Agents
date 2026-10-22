@@ -139,6 +139,7 @@ def build(project: Path, rot: dict, voz: dict, work: Path) -> tuple[dict, list[d
     produto.update({k: v for k, v in (rot.get("produto") or {}).items()})
     produto["fotos"] = fotos
     produto["foto_principal"] = photo_url(proj.get("foto_principal"), fotos)
+    produto["foco"] = proj.get("foco_principal") or [0.5, 0.5]  # onde está o produto na foto principal (0..1)
     if hero_info and hero_info.get("recorte") and Path(hero_info["recorte"]).exists():
         produto["recorte"] = serve(Path(hero_info["recorte"]))
         produto["proporcao"] = hero_info.get("proporcao", 0.6)
@@ -304,7 +305,7 @@ def mix(project: Path, rot: dict, style: dict, scenes_mov: Path, sfx: list[dict]
 
 def qa_sheet(out: Path, scenes: list[dict], sheet: Path) -> str:
     times = [min(s["t0"] + max((s["t1"] - s["t0"]) * 0.8, 0.5), s["t1"] - 0.3) for s in scenes][:12]
-    sel = "+".join(f"between(t,{t:.3f},{t + 0.034:.3f})" for t in times)
+    sel = "+".join(f"eq(n\\,{round(t * FPS)})" for t in times)  # um quadro exato por cena
     cols = min(len(times), 6)
     rows = (len(times) + cols - 1) // cols
     ffmpeg(["-i", str(out), "-vf", f"select='{sel}',scale=270:480,tile={cols}x{rows}:padding=6:color=white",

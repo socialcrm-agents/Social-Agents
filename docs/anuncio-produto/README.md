@@ -24,6 +24,17 @@ as 3 fotos e o vídeo girando foram renderizados em 3D aqui mesmo. O teste defin
 | 15 s | faber (masculina, Piper) | oferta | gancho com selo, herói, oferta, CTA | 12,5 s | 30 s |
 | 20 s | gravação "do cliente" (simulada com outra voz, com pausas e improviso) | tiktok_shop | 5 cenas | 19,8 s | 45 s |
 
+- **Foto real do usuário** (óculos de sol na mão, dentro do carro, sem preço):
+  - o recorte trouxe a mão junto e, com a faixa recortada, a ponte coberta pelo polegar sumiu;
+  - por isso o anúncio usa a foto num cartão enquadrado no produto;
+  - roteiro só com o visível (hexagonal, armação de metal dourada, lente escura) e sem cena de oferta;
+  - resultado: 16,4 s com 6 cenas, voz alex, 60 s no total.
+  
+  Corrigido nesta foto:
+  - o foco do zoom não convertia as coordenadas da foto para a tela;
+  - o zoom mostrava a borda da foto;
+  - o texto do detalhe saía da tela;
+  - a folha de quadros pulava a última cena (também no editor de vídeo).
 - **Gravação do cliente**:
   - pausas encurtadas: 21,2 s → 18,4 s de fala;
   - 82% do roteiro alinhado com a fala;
