@@ -57,6 +57,7 @@ Pedido via `edit.py <projeto> --motion '<json>'` (ou `--motion @arquivo.json` co
 | `pergunta` | front (zona topo) | Card claro no alto com etiqueta ("PERGUNTA") e o texto digitado no ritmo da fala; a legenda some enquanto ele aparece | `text`, `label`, `ate_at` (palavra em que a digitação termina), `accent`, `bg`, `esconde_legenda` |
 | `palavra` | behind (cai para front se a cabeça encosta no topo) | Palavra gigante em degradê atrás da cabeça, entrando com desfoque ("SIM.") | `text`, `cores: [cima, baixo]`, `size`, `font`, `sombra` |
 | `player` | front (zona topo) | Janela de player descendo do topo: título, selo, vídeo tocando, barra de progresso e tempo | `items: [{video, start}]` ou `[{image}]`, `titulo`, `selo`, `total` ("3:01"), `legenda`, `accent` |
+| `editor_ia` | full (usa vídeo) | Interface de editor com IA: prévia do vídeo real, "VOCÊ PEDE" digitando, "A IA EDITA" marcando itens, linha do tempo com 4 faixas (miniaturas reais, legenda, edição, áudio) e cursor andando; termina acima da faixa da legenda | `titulo`, `arquivo`, `pedido`, `digitar_ate` (s), `itens[{text, at}]`, `accent`, `accent2`, `status` |
 
 Zona topo (`pergunta`, `player`): o rosto desce no enquadramento (quando há zoom para isso), o CTA vai para baixo
 e a legenda sobe para logo acima dele. Estilo `pro_clean` = acabamento de anúncio premium (legenda limpa em
