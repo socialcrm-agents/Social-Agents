@@ -54,6 +54,14 @@ Pedido via `edit.py <projeto> --motion '<json>'` (ou `--motion @arquivo.json` co
 | `luz` | front | Vazamento de luz / clarão | `kind`, `color` |
 | `quadrinho` | full (usa vídeo) | Pessoa vai para um painel de história em quadrinhos; painéis com ilustrações animadas do que ela fala; balão, onomatopeia e botão de CTA no estilo quadrinho | `paineis[{ilustracao, rotulo, at}]` (até 3) ou `{imagem}` para foto realista, `balao`, `onomatopeia`, `cta`, `fundo`, `fundo2` |
 
+| `pergunta` | front (zona topo) | Card claro no alto com etiqueta ("PERGUNTA") e o texto digitado no ritmo da fala; a legenda some enquanto ele aparece | `text`, `label`, `ate_at` (palavra em que a digitação termina), `accent`, `bg`, `esconde_legenda` |
+| `palavra` | behind (cai para front se a cabeça encosta no topo) | Palavra gigante em degradê atrás da cabeça, entrando com desfoque ("SIM.") | `text`, `cores: [cima, baixo]`, `size`, `font`, `sombra` |
+| `player` | front (zona topo) | Janela de player descendo do topo: título, selo, vídeo tocando, barra de progresso e tempo | `items: [{video, start}]` ou `[{image}]`, `titulo`, `selo`, `total` ("3:01"), `legenda`, `accent` |
+
+Zona topo (`pergunta`, `player`): o rosto desce no enquadramento (quando há zoom para isso), o CTA vai para baixo
+e a legenda sobe para logo acima dele. Estilo `pro_clean` = acabamento de anúncio premium (legenda limpa em
+caixa baixa montando palavra a palavra, zoom sutil, sons discretos): combine com esses três blocos.
+
 Ilustrações prontas (`lib/ilustracoes.js`, desenhadas no código, sem custo e sem direitos de terceiros):
 `menta`, `frutas` (tutti-frutti), `dente` (escova e brilho), `casa` (casa 3D se montando), `brilho`. Para um
 assunto sem ilustração, use `{imagem: "arquivo.png"}` no painel: uma foto do cliente ou uma imagem gerada

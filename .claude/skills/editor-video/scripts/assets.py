@@ -64,6 +64,9 @@ def caption_y(tl: dict, t: float) -> int:
     base = min(c["y"], SAFE_BOTTOM)
     if any(m["t0"] <= t < m["t1"] for m in tl.get("motion", []) if m.get("layer") == "full"):
         return base  # animação de tela cheia: não há rosto para desviar
+    if any(m.get("zona") == "topo" and m["t0"] <= t < m["t1"] for m in tl.get("motion", [])) and \
+            any(g["type"] == "cta" and g["t0"] <= t < g["t1"] for g in tl.get("graphics", [])):
+        return SAFE_BOTTOM - 190  # CTA desceu (o alto está ocupado): a legenda fica logo acima do botão
     shot = next((s for s in tl["shots"] if s["t0"] <= t < s["t1"]), None)
     chin = shot.get("chin") if shot else None
     if not chin:
@@ -125,6 +128,19 @@ def captions_ass(tl: dict, out: Path, extra_front: list[dict] | None = None) -> 
         pos = "" if c["animation"] == "slide" else f"\\pos({W // 2},{y})"
         intro = {"pop": "\\fscx88\\fscy88\\t(0,110,\\fscx100\\fscy100)", "fade": "\\fad(160,0)",
                  "slide": f"\\move({W // 2},{y + 26},{W // 2},{y},0,140)"}.get(c["animation"], "")
+        if c["animation"] == "acumula":
+            # a frase se monta: cada palavra aparece (fade curto) quando é dita, as anteriores ficam
+            for k, i in enumerate(idx):
+                t0 = page["t0"] if k == 0 else words[i]["t0"]
+                t1 = words[idx[k + 1]]["t0"] if k + 1 < len(idx) else page["t1"]
+                if t1 <= t0:
+                    continue
+                txt = page_text(idx[:k + 1], i)
+                head, sep, last = txt.rpartition(" ")
+                last = "{\\alpha&HFF&\\t(0,110,\\alpha&H00&)}" + last
+                lines.append(f"Dialogue: 0,{ts(t0)},{ts(t1)},Cap,,0,0,0,,{{\\an2\\pos({W // 2},{y})\\blur0.6}}"
+                             + (head + sep if sep else "") + last)
+            continue
         if hl == "none":
             lines.append(f"Dialogue: 0,{ts(page['t0'])},{ts(page['t1'])},Cap,,0,0,0,,"
                          f"{{\\an2{pos}{intro}}}{page_text(idx, None)}")

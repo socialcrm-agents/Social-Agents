@@ -124,6 +124,16 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
         params.setdefault("head", head_position(work, t0, t1, w, h))
         if not params.get("items"):
             params["items"] = snapshots(aroll, tl, mdir, work, params.get("count", 6))
+    if tpl == "palavra" and "y" not in params:
+        # palavra atrás da cabeça: a base das letras fica um pouco abaixo do topo da cabeça; sem espaço acima
+        # da cabeça (rosto colado no topo), ela vem para a frente, no alto, em vez de sumir atrás da pessoa
+        head = head_position(work, t0, t1, w, h)
+        size = params.setdefault("size", 340)
+        if head["top"] * h < 220 + size * 0.75:
+            item["layer"] = "front"
+            params["y"] = round(220 / h, 3)
+        else:
+            params["y"] = round(max(head["top"] * h - size * 0.75, 220) / h, 3)
     if item.get("hand") and hands is not None:
         a, b = int(t0 * fps), int(t1 * fps)
         params["hand"] = hands[a:b]

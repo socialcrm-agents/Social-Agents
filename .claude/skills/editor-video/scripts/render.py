@@ -51,8 +51,12 @@ def face_for_shots(tl: dict, work: Path) -> bool:
             fy = statistics.median(p["cy"] for p in pts)
             z = max((sh["zoom0"] + sh["zoom1"]) / 2, 1.0001)
             # com palavra atrás no plano, o rosto desce no quadro para sobrar espaço acima da cabeça
-            has_word = any(b["t0"] < sh["t1"] and b["t1"] > sh["t0"] for b in tl["behind"])
-            target_y = 0.48 if has_word else 0.40
+            has_word = any(b["t0"] < sh["t1"] and b["t1"] > sh["t0"] for b in tl["behind"]) or any(
+                m.get("layer") == "behind" and m["t0"] < sh["t1"] and m["t1"] > sh["t0"] for m in tl.get("motion", []))
+            top_busy = any(m.get("zona") == "topo" and m["t0"] < sh["t1"] and m["t1"] > sh["t0"]
+                           for m in tl.get("motion", []))
+            # card/player no alto ou palavra atrás: o rosto desce no quadro para sobrar espaço em cima
+            target_y = 0.56 if top_busy else 0.48 if has_word else 0.40
             sh["cx"] = round(min(max((fx * z - 0.5) / (z - 1), 0), 1), 3)
             sh["cy"] = round(min(max((fy * z - target_y) / (z - 1), 0), 1), 3)
             # queixo no quadro final (px): a legenda desse plano fica sempre abaixo dele
@@ -259,7 +263,8 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
             continue
         png = gdir / f"{k:02d}_{g['type']}.png"
         import assets
-        cta_top = g["type"] == "cta" and \
+        top_busy = any(m.get("zona") == "topo" and m["t0"] < g["t1"] and m["t1"] > g["t0"] for m in tl.get("motion", []))
+        cta_top = g["type"] == "cta" and not top_busy and \
             max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > assets.SAFE_BOTTOM - 220
         gcfg = {**tl["graphics_cfg"], "logo_position": g.get("position"), "logo_opacity": g.get("opacity", 0.85)}
         graphic_png(g["type"], g["text"], tl["style"], gcfg, png, top=cta_top)

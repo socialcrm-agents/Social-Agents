@@ -103,7 +103,9 @@ arquivo, digitação, carimbo), `carrossel3d` (telas e clipes em arco 3D), `onda
 `checklist`, `notificacao`, `botao_cta`, `anotacao` (à mão), `carimbo`, `pedacos` (vídeo girando sobre a cabeça),
 `card_fogo` (card na mão que queima). Mais: `clones` (pessoa duplicada/várias versões), `cenario` (vários
 cenários), `giro` (imagens girando/antes-depois), `vendas` (notificações de venda com "plim", só números reais),
-`tabela` (2 colunas), `cronometro`, `luz`.
+`tabela` (2 colunas), `cronometro`, `luz`, `quadrinho` (pessoa num painel de HQ + ilustrações do que ela fala).
+Acabamento premium (referência de anúncios de infoproduto): estilo `pro_clean` + `pergunta` (card digitando),
+`palavra` (palavra gigante em degradê atrás da cabeça) e `player` (janela de vídeo com título, selo e progresso).
 O **mapa de gatilhos** já põe vários sozinhos (frase da marca, dinheiro, enumeração, "comenta PALAVRA",
 "clica no botão"); confira em `timeline.json` (`motion[].trigger`) e ajuste.
 Efeitos de impacto: `--fx tremida@palavra`, `clarao`, `glitch`, `whip` (chicote já entra sozinho em tela cheia).

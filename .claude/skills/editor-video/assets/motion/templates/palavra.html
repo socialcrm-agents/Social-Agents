@@ -1,0 +1,35 @@
+<!doctype html>
+<!-- PALAVRA EM DEGRADÊ (layer: behind por padrão): palavra gigante atrás da cabeça com degradê (ex.: branco ->
+     lilás), entrando com desfoque e escala; sai com fade. Para palavra simples sem degradê, o editor já faz
+     "palavras atrás" sozinho (behind). Use esta quando quiser o acabamento de anúncio premium.
+     params: text, cores: ["#FFFFFF", "#B794FF"], y (topo, fração da altura; padrão 0.11), size (px; padrão ajusta
+             à largura), font ("Poppins" 900 | "Anton") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #w { position: absolute; left: 0; right: 0; text-align: center; line-height: .9; white-space: nowrap;
+       -webkit-background-clip: text; background-clip: text; color: transparent; letter-spacing: -2px; }
+</style></head>
+<body><div id="w"><span id="t"></span></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const el = document.getElementById('w'), span = document.getElementById('t');
+const [c1, c2] = p.cores || ['#FFFFFF', '#B794FF'];
+span.textContent = p.text || 'SIM.';
+el.style.fontFamily = p.font || 'Poppins';
+el.style.fontWeight = p.font === 'Anton' ? 400 : 900;
+el.style.backgroundImage = `linear-gradient(180deg, ${c1} 15%, ${c2} 100%)`;
+// sombra suave: a palavra continua legível mesmo sobre fundo claro
+const shadow = p.sombra === false ? '' : 'drop-shadow(0 10px 30px rgba(0,0,0,.45)) ';
+let size = p.size || 400;
+el.style.fontSize = size + 'px';
+while (span.offsetWidth > W * 0.86 && size > 120)  // mede o texto, não a linha inteira
+  { size -= 10; el.style.fontSize = size + 'px'; }
+el.style.top = (H * (p.y ?? 0.11)) + 'px';
+motion.onFrame((t) => {
+  const k = motion.inOut(t, 0, D, 0.32, 0.3, 'outCubic');
+  el.style.opacity = k;
+  el.style.filter = shadow + (k < 1 ? `blur(${(1 - k) * 14}px)` : '');
+  el.style.transform = `scale(${1.12 - 0.12 * k + 0.015 * Math.sin(t * 1.5)})`;
+});
+</script></body></html>

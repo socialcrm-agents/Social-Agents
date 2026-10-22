@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- PERGUNTA (layer: front): card claro no topo, estilo caixinha de pergunta, com o texto sendo digitado no ritmo
+     da fala (a pessoa lê a pergunta enquanto ela aparece).
+     params: text, label ("PERGUNTA"), ate_at (palavra/instante em que a digitação termina; padrão 75% da duração),
+             accent (cor da etiqueta), bg (cor do card), y (topo, padrão 230) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #card { position: absolute; left: 50px; right: 160px; padding: 30px 40px 36px; border-radius: 30px;
+          box-shadow: 0 24px 60px rgba(0,0,0,.35); transform-origin: 30% 0%; }
+  #label { font-weight: 800; font-size: 26px; letter-spacing: 6px; text-transform: uppercase; margin-bottom: 10px; }
+  #text { font-weight: 800; font-size: 56px; line-height: 1.12; color: #17122b; min-height: 1.12em; }
+  #caret { display: inline-block; width: 5px; height: .95em; margin-left: 4px; vertical-align: -0.12em; background: #17122b; }
+</style></head>
+<body><div id="card"><div id="label"></div><div id="text"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const card = document.getElementById('card'), label = document.getElementById('label'), text = document.getElementById('text');
+card.style.top = (p.y || 230) + 'px';
+card.style.background = p.bg || '#EEEAF8';
+label.textContent = p.label ?? 'PERGUNTA';
+label.style.color = p.accent || '#7C5CFF';
+const full = String(p.text || '');
+const words = full.split(/(\s+)/);  // mantém os espaços
+const end = typeof p.ate_at === 'number' ? Math.max(p.ate_at, 0.4) : D * 0.75;
+// reserva a altura final para o card não "crescer" aos pulos
+text.textContent = full; const hFinal = text.offsetHeight; text.style.height = hFinal + 'px';
+motion.onFrame((t) => {
+  const k = motion.inOut(t, 0, D, 0.28, 0.3, 'outCubic');
+  card.style.opacity = k;
+  card.style.transform = `translateY(${(1 - k) * -40}px) scale(${0.96 + 0.04 * k})`;
+  // digitação palavra a palavra, proporcional ao tamanho do texto
+  const n = Math.round(full.length * motion.clamp((t - 0.1) / Math.max(end - 0.1, 0.2)));
+  let out = '', used = 0;
+  for (const w of words) { if (used + w.length > n && w.trim()) break; out += w; used += w.length; }
+  const blink = Math.floor(t * 2.2) % 2 === 0 || n < full.length;
+  text.innerHTML = out.replace(/&/g, '&amp;').replace(/</g, '&lt;') + `<span id="caret" style="opacity:${blink ? 1 : 0}"></span>`;
+});
+</script></body></html>
