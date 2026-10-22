@@ -139,6 +139,12 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
     if item.get("hand") and hands is not None:
         a, b = int(t0 * fps), int(t1 * fps)
         params["hand"] = hands[a:b]
+    # dados extras por template (rosto quadro a quadro, mãos, palavras...): módulos motion_dados_*.py
+    import importlib
+    import pkgutil
+    for mod in sorted(m.name for m in pkgutil.iter_modules([str(Path(__file__).parent)]) if m.name.startswith("motion_dados_")):
+        importlib.import_module(mod).enriquecer(tpl, params, item, work=work, tl=tl, aroll=aroll, mask=mask,
+                                                t0=t0, t1=t1, w=w, h=h, fps=fps, project=project)
     page = page_for(item)
     sig = hashlib.sha1(json.dumps([page, params, t1 - t0, w, h, fps], sort_keys=True).encode()
                        + _page_bytes(page, work)).hexdigest()[:12]
