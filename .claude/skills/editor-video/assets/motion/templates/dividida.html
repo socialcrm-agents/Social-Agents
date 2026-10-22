@@ -1,0 +1,261 @@
+<!doctype html>
+<!-- TELA DIVIDIDA (layer: full, needs_video: true): a pessoa sai da tela cheia para um painel arredondado com cantos
+     de foco (embaixo ou em cima) e a outra metade mostra um conteúdo animado no tempo da fala. Volta à tela cheia no fim.
+     params comuns: modo ("grade" | "pendencias" | "leque" | "palavra" | "imagem"), lado ("baixo" padrão = pessoa embaixo,
+       ou "cima"), accent (#B794FF), itens [{..., at}] (at = palavra falada ou segundos).
+     grade:      rotulo ("PENSA NO QUE ISSO ABRE"), titulo ("O que isso abre pra **você**" — **x** fica em destaque),
+                 itens [{texto, icone (Lucide), image (opcional), at}] (2 a 4)
+     pendencias: titulo ("Gravações"), sub ("8 arquivos · sem edição"), itens [{texto: "aumenta a fonte", at}] = post-its,
+                 chips ["VÍDEOS PARADOS", "PRAZO APERTADO"], chips_at, prazo ("HOJE 23:59"), prazo_at
+     leque:      images [arquivos] (3 a 6; sem imagens usa quadros do próprio vídeo), titulo (opcional), itens [{at}] opcional
+     palavra:    texto ("ESPAÇO"), at
+     imagem:     image (arquivo), legenda (opcional), at
+     Arquivos locais vão em "image"/"images" (são copiados para o servidor de render). -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #bg { inset: 0; background: radial-gradient(120% 70% at 50% 30%, #241445 0%, #0d0820 62%, #07040f 100%); }
+  #glow { inset: 0; background: radial-gradient(60% 35% at 50% 28%, rgba(183,148,255,.20), rgba(183,148,255,0)); }
+  #frameline { left: 26px; right: 26px; top: 26px; bottom: 26px; border-radius: 46px; border: 3px solid rgba(183,148,255,.45);
+               box-shadow: inset 0 0 60px rgba(124,92,255,.18); }
+  #person { position: absolute; overflow: hidden; background: #000; }
+  #person img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .br { position: absolute; width: 54px; height: 54px; border-color: rgba(255,255,255,.85); border-style: solid; border-width: 0; }
+  #content { position: absolute; }
+  .rotulo { font-weight: 800; font-size: 24px; letter-spacing: 6px; color: rgba(255,255,255,.55); text-transform: uppercase; }
+  .titulo { font-weight: 800; font-size: 62px; line-height: 1.08; color: #fff; margin-top: 8px; }
+  .tile { position: absolute; border-radius: 26px; background: rgba(255,255,255,.06); border: 2px solid rgba(183,148,255,.28);
+          overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+  .tile .pic { position: absolute; left: 0; right: 0; top: 0; bottom: 92px; background: rgba(183,148,255,.10); display: grid; place-items: center; }
+  .tile .pic img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .tile .pic .ic { width: 110px; height: 110px; color: #fff; }
+  .tile .pic .ic svg, .lbl .ic svg, .chip .ic svg, .note .ic svg, .head .ic svg, .prazo .ic svg { width: 100%; height: 100%; }
+  .tile .lbl { position: absolute; left: 22px; right: 18px; bottom: 0; height: 92px; display: flex; align-items: center; gap: 12px;
+               font-weight: 800; font-size: 25px; letter-spacing: 1px; color: #fff; text-transform: uppercase; line-height: 1.1; }
+  .tile .lbl .ic { flex: 0 0 auto; width: 34px; height: 34px; }
+  .card { position: absolute; border-radius: 28px; background: rgba(20,12,40,.92); border: 2px solid rgba(183,148,255,.30);
+          box-shadow: 0 30px 70px rgba(0,0,0,.45); }
+  .head { position: absolute; left: 30px; right: 30px; top: 22px; height: 50px; display: flex; align-items: center; gap: 14px;
+          font-weight: 800; font-size: 32px; color: #fff; }
+  .head .ic { width: 36px; height: 36px; color: rgba(255,255,255,.8); }
+  .head .sub { margin-left: auto; font-weight: 700; font-size: 22px; color: rgba(255,255,255,.5); }
+  .file { position: absolute; }
+  .file .th { position: relative; border-radius: 12px; overflow: hidden; background: #000; border: 2px solid rgba(255,255,255,.12); }
+  .file .th img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.8) brightness(.8); }
+  .file .th .pz { position: absolute; left: 50%; top: 50%; width: 34px; height: 34px; margin: -17px; display: flex; gap: 7px; justify-content: center; }
+  .file .th .pz i { width: 9px; height: 34px; background: #fff; border-radius: 2px; }
+  .file .nm { font-weight: 700; font-size: 17px; color: rgba(255,255,255,.5); margin-top: 6px; white-space: nowrap; overflow: hidden; }
+  .note { position: absolute; padding: 16px 24px; background: #fff; border-radius: 10px; color: #17122b; font-weight: 800;
+          font-size: 30px; white-space: nowrap; box-shadow: 0 16px 34px rgba(0,0,0,.45); display: flex; gap: 10px; align-items: center; }
+  .note .ic { width: 26px; height: 26px; }
+  .chip { position: absolute; display: flex; align-items: center; gap: 12px; padding: 12px 22px 12px 14px; border-radius: 999px;
+          background: rgba(124,92,255,.22); border: 2px solid rgba(183,148,255,.4); font-weight: 800; font-size: 24px; color: #fff; letter-spacing: 1px; }
+  .chip .ic { width: 32px; height: 32px; border-radius: 50%; padding: 6px; color: #fff; }
+  .prazo { position: absolute; padding: 18px 28px; border-radius: 22px; background: rgba(255,190,60,.10); border: 2px solid rgba(255,190,60,.45); }
+  .prazo .k { font-weight: 800; font-size: 22px; letter-spacing: 4px; color: rgba(255,214,140,.85); display: flex; gap: 10px; align-items: center; }
+  .prazo .k .ic { width: 26px; height: 26px; }
+  .prazo .v { font-family: 'Anton'; font-size: 92px; line-height: 1; color: #FFC23D; letter-spacing: 1px; }
+  .prazo .v small { font-family: 'Poppins'; font-weight: 800; font-size: 36px; margin-left: 12px; color: #FFC23D; }
+  .fan { position: absolute; border-radius: 24px; overflow: hidden; border: 4px solid rgba(255,255,255,.9); background: #111;
+         box-shadow: 0 30px 70px rgba(0,0,0,.55); transform-origin: 50% 120%; }
+  .fan img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .dash { position: absolute; border-radius: 30px; display: grid; place-items: center; }
+  .dash svg { position: absolute; inset: 0; }
+  .dash span { position: relative; font-family: 'Poppins'; font-weight: 900; font-size: 110px; color: #fff; letter-spacing: 6px; }
+  .reveal { position: absolute; border-radius: 26px; overflow: hidden; border: 4px solid rgba(255,255,255,.9); background: #111;
+            box-shadow: 0 40px 90px rgba(0,0,0,.6); }
+  .reveal img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .leg { position: absolute; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 34px; color: #fff; letter-spacing: 2px; text-transform: uppercase; }
+  .hl { color: var(--accent); }
+</style></head>
+<body>
+<div id="bg" class="abs"></div><div id="glow" class="abs"></div><div id="frameline" class="abs"></div>
+<div id="content"></div>
+<div id="person"><img id="plate"></div>
+<div id="brk"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const accent = p.accent || '#B794FF';
+document.body.style.setProperty('--accent', accent);
+const modo = p.modo || 'grade';
+const baixo = (p.lado || 'baixo') !== 'cima';
+const at = (v, d) => (typeof v === 'number' ? v : d);
+const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+const rich = (s) => esc(s).replace(/\*\*(.+?)\*\*/g, '<span class="hl">$1</span>');
+
+// ---------- geometria: zona segura 220..1470, margem esquerda 60, direita 150 ----------
+const X0 = 60, X1 = W - 150, CW = X1 - X0;
+// pessoa embaixo: o painel dela pode descer até perto da borda (o corpo pode ficar sob a interface do app; o
+// rosto fica no alto do painel). Pessoa em cima: o conteúdo termina antes de 1470 (zona segura).
+const top = 230, gap = 36;
+const contentH = baixo ? 650 : 560;
+const personH = baixo ? H - 130 - (top + contentH + gap) : 1460 - top - contentH - gap;
+const cy = baixo ? top : top + personH + gap;          // conteúdo
+const py = baixo ? top + contentH + gap : top;          // pessoa
+const content = document.getElementById('content');
+Object.assign(content.style, { left: X0 + 'px', top: cy + 'px', width: CW + 'px', height: contentH + 'px' });
+const person = document.getElementById('person'), img = document.getElementById('plate');
+
+// cantos de foco (colchetes) dentro do painel da pessoa
+const brk = document.getElementById('brk');
+const corners = ['tl', 'tr', 'bl', 'br'].map((c) => {
+  const e = document.createElement('div'); e.className = 'br';
+  const w = '4px';
+  if (c[0] === 't') e.style.borderTopWidth = w; else e.style.borderBottomWidth = w;
+  if (c[1] === 'l') e.style.borderLeftWidth = w; else e.style.borderRightWidth = w;
+  brk.appendChild(e); return { e, c };
+});
+
+const icon = (name, holder) => motion.waitFor(motion.icon(name || 'sparkles').then((svg) => { holder.innerHTML = svg; }));
+const el = (cls, parent, html = '') => { const e = document.createElement('div'); e.className = cls; e.innerHTML = html; parent.appendChild(e); return e; };
+const loadImg = (im, src) => motion.waitFor(new Promise((r) => { im.onload = r; im.onerror = r; im.src = src; }));
+// quadro estático do próprio vídeo (miniaturas): instante k (0..1) da janela
+const frameAt = (k) => motion.frameSrc('plate', Math.max(0, Math.min(D - 0.05, k * D)));
+
+const itens = p.itens || [];
+const anim = [];   // {e, t0, kind, extra}
+
+if (modo === 'grade') {
+  const head = el('', content, `${p.rotulo ? `<div class="rotulo">${esc(p.rotulo)}</div>` : ''}<div class="titulo">${rich(p.titulo || 'O que isso abre pra **você**')}</div>`);
+  Object.assign(head.style, { position: 'absolute', left: '6px', top: '0px', right: '0px' });
+  anim.push({ e: head, t0: 0.35, kind: 'up' });
+  const list = itens.length ? itens.slice(0, 4) : [{ texto: 'Criativos para testar', icone: 'sparkles' }, { texto: 'Conteúdo com sua identidade', icone: 'palette' }];
+  const cols = 2, rows = Math.ceil(list.length / cols);
+  const gy = p.rotulo ? 200 : 150, tg = 26;
+  const tw = (CW - tg) / cols, th = Math.min((contentH - gy - tg * (rows - 1)) / rows, 360);
+  list.forEach((it, i) => {
+    const e = el('tile', content);
+    Object.assign(e.style, { left: (i % cols) * (tw + tg) + 'px', top: gy + Math.floor(i / cols) * (th + tg) + 'px', width: tw + 'px', height: th + 'px' });
+    const pic = el('pic', e);
+    if (it.image) { const im = document.createElement('img'); pic.appendChild(im); loadImg(im, it.image); }
+    else { const ic = el('ic', pic); icon(it.icone, ic); }
+    const lbl = el('lbl', e, '<div class="ic"></div><div></div>');
+    lbl.lastChild.textContent = it.texto || '';
+    icon(it.icone || 'sparkles', lbl.firstChild);
+    anim.push({ e, t0: at(it.at, 0.8 + i * 0.45), kind: 'pop' });
+  });
+}
+
+if (modo === 'pendencias') {
+  const card = el('card', content);
+  const cardH = 430;
+  Object.assign(card.style, { left: '0px', top: '0px', width: CW + 'px', height: cardH + 'px' });
+  const head = el('head', card, '<div class="ic"></div><div></div><div class="sub"></div>');
+  icon('folder', head.firstChild);
+  head.children[1].textContent = p.titulo || 'Gravações';
+  head.children[2].textContent = p.sub || '8 arquivos · sem edição';
+  anim.push({ e: card, t0: 0.3, kind: 'up' });
+  const names = p.arquivos || ['aula_01.mov', 'reels_02.mov', 'vsl_final.mov', 'take_03.mov', 'live_corte.mov', 'aula_02.mov', 'podcast.mov', 'teste_04.mov'];
+  const fc = 4, fg = 20, fw = (CW - 60 - fg * (fc - 1)) / fc, fh = fw * 0.62;
+  names.slice(0, 8).forEach((nm, i) => {
+    const f = el('file', card, '<div class="th"><img><div class="pz"><i></i><i></i></div></div><div class="nm"></div>');
+    Object.assign(f.style, { left: 30 + (i % fc) * (fw + fg) + 'px', top: 100 + Math.floor(i / fc) * (fh + 52) + 'px', width: fw + 'px' });
+    f.firstChild.style.height = fh + 'px';
+    loadImg(f.querySelector('img'), frameAt((i + 0.5) / 8));
+    f.querySelector('.nm').textContent = nm;
+    anim.push({ e: f, t0: 0.45 + i * 0.05, kind: 'fade' });
+  });
+  // post-its espalhados por cima da grade
+  const notes = itens.length ? itens : [{ texto: 'aumenta a fonte' }, { texto: 'troca a música' }, { texto: 'corta esse trecho' }];
+  const spots = [[20, 120, -4], [CW - 330, 96, 3], [CW * 0.32, 245, -2], [CW * 0.62, 268, 4]];
+  notes.slice(0, 4).forEach((it, i) => {
+    const n = el('note', card, '<div class="ic"></div><div></div>');
+    icon('pencil', n.firstChild); n.lastChild.textContent = it.texto || '';
+    const [x, y, r] = spots[i];
+    Object.assign(n.style, { left: x + 'px', top: y + 'px' });
+    anim.push({ e: n, t0: at(it.at, 1.0 + i * 0.35), kind: 'note', r });
+  });
+  // chips + prazo embaixo do card
+  const chips = p.chips || ['VÍDEOS PARADOS', 'PRAZO APERTADO'];
+  chips.slice(0, 3).forEach((c, i) => {
+    const ch = el('chip', content, '<div class="ic"></div><div></div>');
+    ch.firstChild.style.background = accent; icon(i ? 'clock' : 'pause', ch.firstChild);
+    ch.lastChild.textContent = c;
+    Object.assign(ch.style, { left: '0px', top: cardH + 30 + i * 74 + 'px' });
+    anim.push({ e: ch, t0: at(p.chips_at, 1.4) + i * 0.25, kind: 'left' });
+  });
+  const pr = el('prazo', content, '<div class="k"><div class="ic"></div><span>ENTREGA</span></div><div class="v"></div>');
+  icon('calendar', pr.querySelector('.ic'));
+  const [d1, d2] = String(p.prazo || 'HOJE 23:59').split(' ');
+  pr.querySelector('.v').innerHTML = `${esc(d1)}${d2 ? `<small>${esc(d2)}</small>` : ''}`;
+  Object.assign(pr.style, { right: '0px', top: cardH + 30 + 'px' });
+  anim.push({ e: pr, t0: at(p.prazo_at, 1.9), kind: 'pop', pulse: true });
+}
+
+if (modo === 'leque') {
+  let srcs = (p.images || p.imagens || []).slice(0, 6);
+  if (!srcs.length) srcs = [0.1, 0.3, 0.5, 0.7, 0.9].map(frameAt);
+  const n = srcs.length;
+  // leque cabe na largura útil: card + (n-1) passos de 72% do card <= largura do conteúdo
+  const cw = Math.min(250, CW * 0.84 / (1 + (n - 1) * 0.72)), ch = cw * 1.65;  // folga para a rotação
+  if (p.titulo) {
+    const tt = el('titulo', content); tt.innerHTML = rich(p.titulo);
+    Object.assign(tt.style, { position: 'absolute', left: '0px', right: '0px', top: '0px', textAlign: 'center', fontSize: '54px' });
+    anim.push({ e: tt, t0: 0.3, kind: 'up' });
+  }
+  const baseY = (p.titulo ? 120 : 40) + (contentH - (p.titulo ? 120 : 40) - ch) / 2 - 10;
+  srcs.forEach((s, i) => {
+    const f = el('fan', content, '<img>');
+    loadImg(f.firstChild, s);
+    const off = i - (n - 1) / 2;
+    Object.assign(f.style, { width: cw + 'px', height: ch + 'px', left: CW / 2 - cw / 2 + off * cw * 0.72 + 'px', top: baseY + Math.abs(off) * 26 + 'px', zIndex: 10 - Math.round(Math.abs(off) * 2) });
+    anim.push({ e: f, t0: at((itens[i] || {}).at, 0.5 + i * 0.18), kind: 'fan', r: off * 8, ry: off * -14 });
+  });
+}
+
+if (modo === 'palavra') {
+  // pessoa em cima: a legenda do vídeo passa por volta de y=1100; a caixa fica embaixo dela
+  const bw = CW - 80, bh = baixo ? 380 : 270;
+  const b = el('dash', content, `<svg width="${bw}" height="${bh}"><rect x="3" y="3" width="${bw - 6}" height="${bh - 6}" rx="30" fill="rgba(183,148,255,.06)" stroke="${accent}" stroke-opacity=".8" stroke-width="4" stroke-dasharray="16 14"/></svg><span></span>`);
+  b.querySelector('span').textContent = p.texto || 'ESPAÇO';
+  Object.assign(b.style, { left: '40px', top: (baixo ? (contentH - bh) / 2 : contentH - bh) + 'px', width: bw + 'px', height: bh + 'px' });
+  anim.push({ e: b, t0: at(p.at, 0.5), kind: 'dash' });
+}
+
+if (modo === 'imagem') {
+  const iw = 470, ih = 560;
+  const r = el('reveal', content, '<img>');
+  if (p.image) loadImg(r.firstChild, p.image); else loadImg(r.firstChild, frameAt(0.5));
+  Object.assign(r.style, { left: (CW - iw) / 2 + 'px', top: (contentH - ih) / 2 - 10 + 'px', width: iw + 'px', height: ih + 'px' });
+  anim.push({ e: r, t0: at(p.at, 0.5), kind: 'reveal' });
+  if (p.legenda) {
+    const l = el('leg', content); l.textContent = p.legenda;
+    l.style.top = (contentH + ih) / 2 + 12 + 'px';
+    anim.push({ e: l, t0: at(p.at, 0.5) + 0.4, kind: 'up' });
+  }
+}
+
+const pw = CW, ph = personH;
+motion.onFrame(async (t) => {
+  await motion.setFrame(img, 'plate', t);
+  // pessoa: tela cheia -> painel -> tela cheia
+  const kin = motion.prog(t, 0.0, 0.6, 'inOutCubic'), kout = motion.prog(t, D - 0.55, 0.5, 'inOutCubic');
+  const k = kin * (1 - kout);
+  const x = motion.lerp(0, X0, k), y = motion.lerp(0, py, k), w = motion.lerp(W, pw, k), h = motion.lerp(H, ph, k);
+  Object.assign(person.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: 36 * k + 'px',
+    border: `${Math.round(3 * k)}px solid rgba(183,148,255,${0.6 * k})`, boxShadow: `0 30px 80px rgba(0,0,0,${0.5 * k})` });
+  img.style.objectPosition = `50% ${motion.lerp(50, 32, k)}%`;
+  const inset = 22, L = 54;
+  for (const { e, c } of corners) {
+    e.style.left = (c[1] === 'l' ? x + inset : x + w - inset - L) + 'px';
+    e.style.top = (c[0] === 't' ? y + inset : y + h - inset - L) + 'px';
+    e.style.opacity = k;
+  }
+  const out = 1 - motion.prog(t, D - 0.6, 0.4, 'inQuad');
+  for (const a of anim) {
+    const q = motion.prog(t, a.t0, 0.45, a.kind === 'note' || a.kind === 'pop' ? 'outBack' : 'outCubic');
+    const o = Math.min(1, q * 1.6) * out;
+    a.e.style.opacity = o;
+    if (a.kind === 'up') a.e.style.transform = `translateY(${(1 - q) * 30}px)`;
+    else if (a.kind === 'left') a.e.style.transform = `translateX(${(1 - q) * -40}px)`;
+    else if (a.kind === 'pop') a.e.style.transform = `scale(${0.85 + 0.15 * q})` + (a.pulse && q >= 1 ? ` scale(${1 + 0.025 * Math.sin(t * 6)})` : '');
+    else if (a.kind === 'note') a.e.style.transform = `rotate(${a.r * q}deg) scale(${0.6 + 0.4 * q})`;
+    else if (a.kind === 'fan') a.e.style.transform = `perspective(1400px) translateY(${(1 - q) * 120}px) rotate(${a.r * q}deg) rotateY(${a.ry * q}deg)`;
+    else if (a.kind === 'dash') {
+      a.e.style.transform = `scale(${0.94 + 0.06 * q})`;
+      a.e.querySelector('rect').setAttribute('stroke-dashoffset', String(-t * 40));
+      a.e.querySelector('span').style.letterSpacing = `${motion.lerp(30, 6, q)}px`;
+    } else if (a.kind === 'reveal') a.e.style.transform = `perspective(1600px) rotateY(${(1 - q) * -28 + Math.sin(t * 1.2) * 3}deg) rotateX(${(1 - q) * 10}deg) scale(${0.88 + 0.12 * q})`;
+  }
+});
+</script></body></html>

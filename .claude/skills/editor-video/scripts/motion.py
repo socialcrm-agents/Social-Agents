@@ -93,7 +93,7 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
             return {k: localize(v, k) for k, v in obj.items()}
         if isinstance(obj, list):
             return [localize(v, key) for v in obj]
-        if isinstance(obj, str) and key in ("image", "images", "src", "logo", "photo") and not obj.startswith("/work/") \
+        if isinstance(obj, str) and key in ("image", "images", "imagens", "imagem", "src", "logo", "photo", "foto") and not obj.startswith("/work/") \
                 and Path(obj).expanduser().is_file():
             src = Path(obj).expanduser()
             dst = mdir / "assets" / f"{hashlib.sha1(str(src).encode()).hexdigest()[:8]}_{src.name}"
