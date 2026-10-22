@@ -140,6 +140,7 @@ def build(project: Path, rot: dict, voz: dict, work: Path) -> tuple[dict, list[d
     produto["fotos"] = fotos
     produto["foto_principal"] = photo_url(proj.get("foto_principal"), fotos)
     produto["foco"] = proj.get("foco_principal") or [0.5, 0.5]  # onde está o produto na foto principal (0..1)
+    produto["zoom_cartao"] = proj.get("zoom_cartao")
     if hero_info and hero_info.get("recorte") and Path(hero_info["recorte"]).exists():
         produto["recorte"] = serve(Path(hero_info["recorte"]))
         produto["proporcao"] = hero_info.get("proporcao", 0.6)
