@@ -47,6 +47,7 @@ import sys
 from pathlib import Path
 
 from common import EditorError, load_json, load_style, log, main_guard, perfil, probe, project_paths, save_json
+from drive import LinkError, baixar, eh_link
 
 HERE = Path(__file__).resolve().parent
 
@@ -136,6 +137,11 @@ def main() -> None:
         done.append(f"B-roll em '{parts[0]}'")
     add("broll_remove", a.broll_remove, "remover B-roll nº")
     for f in a.add_broll:
+        if eh_link(f):
+            try:
+                f = str(baixar(f, project / "fontes"))
+            except LinkError as exc:
+                raise EditorError(str(exc)) from exc
         p = Path(f).expanduser().resolve()
         if not p.exists():
             raise EditorError(f"B-roll não encontrado: {f}")

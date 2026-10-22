@@ -1,20 +1,28 @@
-# IA tira-dúvidas do Editor Viral
+# IA tira-dúvidas (Editor Viral e VSL & Oferta)
+
+Um atendente por produto, com o mesmo código. Escolha com `ATENDENTE_PRODUTO` (`editor`, o padrão, ou `vsl`).
 
 | Arquivo | Conteúdo |
 |---|---|
-| `base-conhecimento.md` | O que o atendente sabe: produtos, instalação (Mac/Windows/Linux), leitura do `setup.py`, erros comuns, como pedir edições, tempos, limites |
-| `prompt-sistema.md` | Tom e regras (responde só pela base, não promete resultado, pede o sistema e um print do erro, encaminha com `[ENCAMINHAR_HUMANO]`) |
-| `bot.py` | Atendente pela Claude API: modo terminal e a função `responder(historico, pergunta)` para o servidor do WhatsApp |
+| `base-conhecimento.md` | Editor Viral: produtos, instalação (Mac/Windows/Linux), leitura do `setup.py`, erros comuns, como pedir edições, tempos, limites, vídeo longo pelo Drive |
+| `base-conhecimento-vsl.md` | VSL & Oferta: o que o pacote faz, instalação no Claude.ai (Projetos), ChatGPT (GPT ou Projeto) e Claude Code, como continuar com a FICHA DA OFERTA, gravar e mandar vídeo de 30 min pelo Drive, editar, hospedar o vídeo, publicar a página, checkout, limites |
+| `prompt-sistema.md` | Tom e regras comuns (responde só pela base, não promete resultado, encaminha com `[ENCAMINHAR_HUMANO]`). `{{PRODUTO}}` e `{{REGRAS_PRODUTO}}` são preenchidos pelo `bot.py` |
+| `bot.py` | Atendente pela Claude API: modo terminal e a função `responder(historico, pergunta)` para o servidor do WhatsApp. O nome e as regras de cada produto ficam em `PRODUTOS` |
 
 ## Rodar
 
 ```bash
 pip install anthropic
 export ANTHROPIC_API_KEY=...          # ou: ant auth login
-python3 suporte/bot.py                # conversa no terminal
+python3 suporte/bot.py                # conversa no terminal (Editor Viral)
+ATENDENTE_PRODUTO=vsl python3 suporte/bot.py    # atendente do VSL & Oferta
 ```
 
+Um processo atende um produto. Para os dois no WhatsApp, use um número para cada um, ou guarde o produto
+comprado junto do telefone do cliente e escolha a base pelo produto.
+
 Variáveis:
+- `ATENDENTE_PRODUTO`: `editor` (padrão) ou `vsl`.
 - `ATENDENTE_MODELO`: padrão `claude-opus-5-5`; `claude-haiku-5-5` é cerca de 40x mais barato.
 - `ANTHROPIC_BASE_URL`: opcional, para proxy.
 
@@ -30,7 +38,7 @@ if "[ENCAMINHAR_HUMANO]" in texto:     # avise a equipe e tire a marca antes de 
 
 ## Custo aproximado por pergunta
 
-O system (prompt + base) tem cerca de 4 mil tokens e vai em cache. A conta abaixo assume histórico curto e uma
+O system (prompt + base) tem cerca de 4 mil tokens (Editor) ou 3,5 mil (VSL) e vai em cache. A conta abaixo assume histórico curto e uma
 resposta de cerca de 300 tokens (mais o raciocínio em effort "low").
 
 | Modelo | 1ª pergunta (grava o cache) | Perguntas seguintes (cache lido) |
@@ -44,7 +52,7 @@ resposta de cerca de 300 tokens (mais o raciocínio em effort "low").
 
 ## Atualizar
 
-Edite `base-conhecimento.md` quando mudar instalação, preço ou recurso. O bot lê o arquivo a cada pergunta. A
+Edite `base-conhecimento.md` (ou `base-conhecimento-vsl.md`) quando mudar instalação, preço ou recurso. O bot lê o arquivo a cada pergunta. A
 primeira pergunta depois de uma edição grava o cache de novo.
 
 ## Ainda não testado

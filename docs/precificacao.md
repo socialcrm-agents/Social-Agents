@@ -15,6 +15,7 @@ cada zip:
 | `python3 tools/empacotar.py editor-video --perfil motion` | **Pacote Motion 3D**: só o que falta ao front. O cliente descompacta por cima e vira "completo". | upsell |
 | `python3 tools/empacotar.py editor-video` | completo | você, parceiros, licença de agência |
 | `python3 tools/empacotar.py anuncio-produto` | anúncio de produto | outro funil |
+| `python3 tools/empacotar.py vsl-oferta` | **VSL & Oferta**: skill do Claude Code + pasta "colar no Claude ou ChatGPT" (instruções + 12 arquivos), 0,1 MB | terceiro funil; cruza com o editor |
 
 Testado do zero numa pasta limpa:
 - **Só o front instalado:** editou um vídeo de 48 s sem Node nem Chromium e pulou as 4 animações que o plano
@@ -54,6 +55,24 @@ A base de conhecimento tem ~4 mil tokens e fica em cache. Preços por milhão de
 - você ou alguém para o atendimento humano.
 
 Taxa do meio de pagamento: ~4-6% (varia por plataforma).
+
+### VSL & Oferta: custo marginal zero
+A entrevista, a oferta, o roteiro e a página rodam no plano Claude ou ChatGPT **do comprador** (Projetos e GPTs
+personalizados exigem plano pago nessas plataformas). Você não paga token por cliente.
+
+Seu custo é o atendente tira-dúvidas (`ATENDENTE_PRODUTO=vsl`), com a mesma conta acima:
+- a base da VSL tem ~3,5 mil tokens em cache;
+- no Opus 5.5 dá **~US$ 0,01-0,015 por pergunta**, ~US$ 0,10 (~R$ 0,55) por conversa de 5-8 perguntas;
+- no Haiku 5.5 fica abaixo de R$ 0,05 por conversa.
+
+**Cruzamento com o editor (custo do SaaS):** quem compra a VSL e manda o vídeo de 10-30 min para o Editor no
+WhatsApp gera um job bem mais pesado que um Reels (*estimativa*, ainda não medido):
+- render de ~1,5-3 s de CPU por segundo de vídeo, ou seja, 25-90 min de CPU para 30 min de vídeo
+  (~US$ 0,06-0,20);
+- transcrição maior para o cérebro, ~US$ 0,20-0,40.
+
+Hoje o SaaS cobra 1 crédito por vídeo, de qualquer duração. Para vídeo longo, cobre por faixa (ex.: 1 crédito a
+cada 3 min) ou venda a edição da VSL como item à parte.
 
 ## 3. Escada sugerida
 

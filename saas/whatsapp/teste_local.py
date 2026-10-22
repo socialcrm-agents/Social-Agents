@@ -7,7 +7,9 @@
 2. simula a Meta chamando o webhook com o vídeo -> job na fila;
 3. roda o worker (pipeline real do editor-video; sem ANTHROPIC_API_KEY o cérebro fica de fora);
 4. confere que o vídeo enviado tem < 15 MB;
-5. simula a correção por texto "legenda maior" e confere a segunda entrega.
+5. simula a correção por texto "legenda maior" e confere a segunda entrega;
+6. link do Google Drive (falso): privado -> instrução + crédito devolvido; público -> baixa, edita e, tratado como
+   vídeo longo, volta como documento.
 """
 
 from __future__ import annotations
@@ -40,6 +42,11 @@ class FakeGraph(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
     def do_GET(self):
+        if self.path.startswith("/drive"):  # imita drive.usercontent.google.com/download (sem token)
+            if "id=PRIVADO" in self.path:
+                return self._send(b"<html><a href='https://accounts.google.com/ServiceLogin'>login</a></html>",
+                                  "text/html")
+            return self._send(VIDEO.read_bytes(), "video/mp4")
         assert self.headers.get("Authorization") == "Bearer token-teste", "sem token"
         if self.path.startswith("/download/"):
             return self._send(VIDEO.read_bytes(), "video/mp4")
@@ -117,6 +124,24 @@ def main() -> None:
     webhook({"type": "text", "text": {"body": "faz chover confete roxo"}})
     worker.main()
     print(f"[3] saldo -> {ENVIADOS[n]['text']['body']!r}; pedido estranho -> {ENVIADOS[-1]['text']['body'][:60]!r}")
+    # 4) vídeo por link do Drive: privado e depois público (forçado a "longo" para testar o envio como documento)
+    import config
+    sys.modules["drive"].DRIVE_DL = f"http://127.0.0.1:{srv.server_address[1]}/drive"
+    cred = fila.cliente(tel)["creditos"]
+    n = len(ENVIADOS)
+    webhook({"type": "text", "text": {"body": "segue: https://drive.google.com/file/d/PRIVADO_123456/view?usp=sharing"}})
+    worker.main()
+    erro = ENVIADOS[-1]["text"]["body"]
+    assert "Qualquer pessoa com o link" in erro and fila.cliente(tel)["creditos"] == cred, (erro, cred)
+    print(f"[4a] link privado -> {erro.splitlines()[0]!r} ... crédito devolvido ({cred})")
+    config.LONGO_S = 1
+    n = len(ENVIADOS)
+    webhook({"type": "text", "text": {"body": "https://drive.google.com/file/d/PUBLICO_123456/view"}})
+    worker.main()
+    novos = [m["type"] for m in ENVIADOS[n:]]
+    assert novos == ["text", "document"], novos
+    print(f"[4b] link público -> {novos}, documento {ENVIADOS[-1]['document']['filename']!r}, "
+          f"{Path(fila.job()['saida']).stat().st_size / 1e6:.1f} MB")
     print("RELATÓRIO", fila.relatorio())
     print("TESTE OK")
     srv.shutdown()

@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, PlainTextResponse
 import config
 import fila
 import whatsapp_api as wa
+from config import achar_link
 
 app = FastAPI(title="Editor no WhatsApp")
 APP_SECRET = os.environ.get("WA_APP_SECRET", "")  # assina o POST da Meta (X-Hub-Signature-256)
@@ -29,7 +30,9 @@ APP_SECRET = os.environ.get("WA_APP_SECRET", "")  # assina o POST da Meta (X-Hub
 AJUDA = ("🎬 *Editor de vídeo*\n"
          "1. Me manda um vídeo seu falando (até 3 min).\n"
          "2. Em ~2 min eu devolvo editado: cortes, legenda animada, zoom e efeitos.\n"
-         "3. Quer mudar? Responde em texto: \"legenda maior\", \"sem zoom\", \"tira 'então' do começo\".\n\n"
+         "3. Quer mudar? Responde em texto: \"legenda maior\", \"sem zoom\", \"tira 'então' do começo\".\n"
+         "4. Vídeo longo (VSL, aula, até 30 min)? Sobe no Google Drive, compartilha como \"Qualquer pessoa com o "
+         "link\" e me manda o link.\n\n"
          "Comandos: *estilo viral* | *estilo premium* | *estilo anuncio* | *saldo* | *ajuda*")
 ESTILOS = {"viral": "reels_viral", "premium": "editorial_premium", "anuncio": "anuncio_conversao"}
 
@@ -89,6 +92,14 @@ def tratar(msg: dict) -> None:
         return
     texto = msg["text"]["body"]
     t = _norm(texto)
+    link = achar_link(texto)
+    if link:  # vídeo longo por link (Drive/Dropbox/.mp4): o worker baixa e avisa se estiver privado
+        if fila.novo_job(tel, "novo", entrada=link) is None:
+            wa.enviar_texto(tel, "Seus créditos acabaram. Para continuar, escolha um plano: <link do checkout>")
+            return
+        wa.enviar_texto(tel, "Recebi o link! 📥 Vou baixar e editar. Vídeo longo leva mais tempo: te aviso quando "
+                             "ficar pronto.")
+        return
     if t in ("ajuda", "oi", "ola", "menu", "help"):
         wa.enviar_texto(tel, AJUDA)
     elif t == "saldo":

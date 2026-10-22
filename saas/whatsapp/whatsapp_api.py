@@ -75,3 +75,11 @@ def enviar_video(tel: str, arquivo: Path, legenda: str = "") -> dict:
     return _json("POST", f"{config.WA_PHONE_ID}/messages", {
         "messaging_product": "whatsapp", "to": tel, "type": "video",
         "video": {"id": mid, "caption": legenda[:1024]}})
+
+
+def enviar_documento(tel: str, arquivo: Path, legenda: str = "") -> dict:
+    """Documento (até 100 MB): usado para vídeo longo, que não cabe nos 16 MB de vídeo."""
+    mid = subir_midia(arquivo)
+    return _json("POST", f"{config.WA_PHONE_ID}/messages", {
+        "messaging_product": "whatsapp", "to": tel, "type": "document",
+        "document": {"id": mid, "caption": legenda[:1024], "filename": arquivo.name}})

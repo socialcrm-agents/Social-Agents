@@ -14,12 +14,18 @@ WhatsApp ─► Meta (Cloud API) ─► POST /webhook (app.py) ─► fila SQLit
 
 | Arquivo | Papel |
 |---|---|
-| `app.py` | Webhook: verificação da Meta, assinatura, vídeo → job, texto → comando ou correção, link de download |
+| `app.py` | Webhook: verificação da Meta, assinatura, vídeo → job, link de vídeo (Drive/Dropbox/.mp4) → job, texto → comando ou correção, link de download |
 | `fila.py` | SQLite: jobs, créditos por telefone, tokens e custo de IA por job |
 | `worker.py` | Roda o editor de verdade, um job por vez; 1 nova tentativa; devolve o crédito se falhar; apaga arquivos antigos |
 | `cerebro.py` | Claude API com saída estruturada: decide cortes, gancho, CTA, animações e efeitos; entende correções. Sem chave, usa as regras da skill e um mapa de pedidos comuns |
 | `whatsapp_api.py` | Graph API: baixar mídia, subir mídia, enviar texto e vídeo (só biblioteca padrão) |
-| `teste_local.py` | Teste ponta a ponta com uma Graph API falsa, sem nenhuma credencial |
+| `teste_local.py` | Teste ponta a ponta com uma Graph API falsa, sem nenhuma credencial (inclui link do Drive privado e público) |
+
+**Vídeo longo (VSL, aula, até 30 min):** o cliente sobe no Google Drive, compartilha como "Qualquer pessoa com o
+link" e cola o link na conversa. O worker baixa com `drive.py` da skill (link privado ou de pasta volta com a
+instrução de como liberar, e o crédito é devolvido). Resultado com mais de 3 min volta pelo link de download
+(`PUBLIC_URL`, qualidade cheia) ou, sem `PUBLIC_URL`, como documento de até 100 MB. `MAX_LINK_MB` limita o
+download (padrão 4000).
 
 ## O que criar na Meta
 1. Conta no **Meta Business** e um app do tipo **Business** em developers.facebook.com, com o produto **WhatsApp**.

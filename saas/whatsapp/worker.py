@@ -6,6 +6,8 @@
 
 Vídeo novo: run.py new -> transcribe -> analyze -> cérebro (Claude) -> edit.py --no-render -> run.py render
             -> comprime para o WhatsApp (< 15 MB) -> envia o vídeo e um resumo.
+Link:       Drive/Dropbox/.mp4 no texto -> baixa (drive.py da skill) -> mesmo caminho do vídeo novo; vídeo longo
+            (> 3 min) volta por link (PUBLIC_URL) ou como documento (até 100 MB).
 Correção:   cérebro (ou regras) -> edit.py (renderiza a próxima versão) -> comprime -> envia.
 """
 
@@ -48,10 +50,10 @@ def duracao(arq: Path) -> float:
     return float(out or 0)
 
 
-def comprimir(src: Path, dst: Path) -> Path:
+def comprimir(src: Path, dst: Path, max_mb: float = config.MAX_SEND_MB) -> Path:
     """H.264 Main sem B-frames + AAC + faststart (o que o WhatsApp exige). Até 3 tentativas de bitrate."""
     dur = max(duracao(src), 1.0)
-    limite = config.MAX_SEND_MB * 8e6 * 0.94  # bits, com margem para o contêiner
+    limite = max_mb * 8e6 * 0.94  # bits, com margem para o contêiner
     audio = 128_000
     for k, fator in enumerate((1.0, 0.8, 0.6)):
         video = min(int((limite / dur - audio) * fator), 8_000_000)
@@ -59,12 +61,22 @@ def comprimir(src: Path, dst: Path) -> Path:
                         "-bf", "0", "-preset", "veryfast", "-b:v", str(video), "-maxrate", str(int(video * 1.3)),
                         "-bufsize", str(video * 2), "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", str(audio), "-ac", "2",
                         "-movflags", "+faststart", str(dst)], check=True)
-        if dst.stat().st_size <= config.MAX_SEND_MB * 1e6:
+        if dst.stat().st_size <= max_mb * 1e6:
             return dst
     return dst  # ainda grande: o envio cai para link
 
 
-def entregar(tel: str, arquivo: Path, legenda: str) -> None:
+def entregar(tel: str, arquivo: Path, legenda: str, original: Path | None = None) -> None:
+    """Curto: vídeo (16 MB). Longo: link para o arquivo em qualidade cheia (PUBLIC_URL) ou documento (100 MB)."""
+    if original is not None:
+        if config.PUBLIC_URL:
+            wa.enviar_texto(tel, f"{legenda}\n\nSeu vídeo editado (qualidade cheia): "
+                                 f"{config.PUBLIC_URL.rstrip('/')}/v/{original.parent.parent.name}/{original.name}")
+        elif arquivo.stat().st_size <= config.MAX_DOC_MB * 1e6:
+            wa.enviar_documento(tel, arquivo, legenda)
+        else:
+            raise RuntimeError("vídeo longo passou de 95 MB e PUBLIC_URL não está configurado")
+        return
     if arquivo.stat().st_size <= config.MAX_SEND_MB * 1e6:
         wa.enviar_video(tel, arquivo, legenda)
     elif config.PUBLIC_URL:
@@ -85,7 +97,11 @@ def job_novo(job) -> tuple[Path, str]:
     est = fila.cliente(tel)["estilo"] or config.DEFAULT_STYLE
     # nome aleatório: a pasta vira parte do link de download, então não pode expor o telefone do cliente
     projeto = config.DATA / "projetos" / secrets.token_urlsafe(16)
-    sh("run.py", "new", str(projeto), "--clips", job["entrada"], "--style", est, "--force")
+    entrada = job["entrada"]
+    if config.achar_link(entrada or "") == entrada:  # veio por link: baixa antes (LinkError avisa o cliente)
+        entrada = str(config.baixar(entrada, config.DATA / "entrada" / f"link_{job['id']}",
+                                    max_mb=config.MAX_LINK_MB, progresso=False))
+    sh("run.py", "new", str(projeto), "--clips", entrada, "--style", est, "--force")
     sh("transcribe.py", str(projeto))
     sh("analyze.py", str(projeto))
     ops = cerebro.decidir((projeto / "transcript.txt").read_text(encoding="utf-8"),
@@ -126,10 +142,18 @@ def processar(job) -> None:
     try:
         out, legenda = (job_novo if job["tipo"] == "novo" else job_correcao)(job)
         envio = out.with_name(out.stem + "_whatsapp.mp4")
-        comprimir(out, envio)
-        entregar(tel, envio, legenda)
+        longo = duracao(out) > config.LONGO_S
+        if longo and config.PUBLIC_URL:
+            envio = out  # vai por link, sem recomprimir
+        else:
+            comprimir(out, envio, config.MAX_DOC_MB if longo else config.MAX_SEND_MB)
+        entregar(tel, envio, legenda, original=out if longo else None)
         fila.concluir(job["id"], status="ok", saida=str(envio), segundos=round(time.time() - t, 1))
         print(f"OK job {job['id']} ({job['tipo']}) em {time.time() - t:.0f}s: {envio.stat().st_size / 1e6:.1f} MB", flush=True)
+    except config.LinkError as exc:  # link privado, de pasta ou quebrado: não adianta tentar de novo
+        fila.concluir(job["id"], status="erro", erro=f"link: {exc}")
+        fila.add_creditos(tel, 1)
+        wa.enviar_texto(tel, f"Não consegui baixar o vídeo do link 😕\n\n{exc}")
     except PedidoNaoEntendido:
         fila.concluir(job["id"], status="erro", erro="pedido não entendido")
         wa.enviar_texto(tel, "Não entendi o ajuste 🤔 Tenta assim: \"legenda maior\", \"sem zoom\", "
@@ -138,7 +162,8 @@ def processar(job) -> None:
         traceback.print_exc()
         if not fila.falhou(job, f"{exc}"):
             wa.enviar_texto(tel, "Não consegui editar esse vídeo 😕 Seu crédito foi devolvido. "
-                                 "Tente um vídeo de até 3 minutos, com você falando para a câmera.")
+                                 "Tente um vídeo com você falando para a câmera (até 3 min aqui no chat; "
+                                 "mais longo, mande o link do Google Drive).")
 
 
 def limpar_antigos() -> None:
@@ -152,7 +177,7 @@ def limpar_antigos() -> None:
             shutil.rmtree(p, ignore_errors=True)
     for p in (config.DATA / "entrada").glob("*"):
         if p.stat().st_mtime < limite:
-            p.unlink(missing_ok=True)
+            shutil.rmtree(p, ignore_errors=True) if p.is_dir() else p.unlink(missing_ok=True)
 
 
 def main() -> None:

@@ -149,6 +149,10 @@ Quem comprou só o Corte Viral pode ignorar `node` e `playwright` MISSING.
 8. **Vídeo muito grande ou demorado**: vídeos com mais de 3 minutos demoram mais (o Claude roda em segundo plano).
    Para revisar rápido, peça "me manda uma prévia". O Claude Code lê o arquivo direto da pasta, então não há limite
    de tamanho como nos anexos de conversa.
+   **Vídeo longo (VSL, aula, até 30 min) ou que está em outro lugar:** suba no Google Drive, compartilhe como
+   **"Qualquer pessoa com o link" → Leitor** e mande o link (no Claude Code: "edita esse vídeo: <link>"; no Editor
+   no WhatsApp: cole o link na conversa). Link do Dropbox também serve. Se o link estiver privado, o editor responde
+   como liberar. No WhatsApp, vídeo com mais de 3 minutos volta por link de download ou como documento.
 9. **Windows: erro ao criar atalho (symlink)**: `python3 tools/instalar_skills.py --copiar`.
 10. **A skill não aparece no Claude Code**: confira se existe `~/.claude/skills/editor-video/SKILL.md` (Windows:
     `%USERPROFILE%\.claude\skills\editor-video\SKILL.md`). Se não existir, rode o instalador de novo. Depois

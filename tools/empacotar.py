@@ -7,6 +7,9 @@
                                                                     efeitos (sem animações 3D, sem Node/Chromium)
   python3 tools/empacotar.py editor-video --perfil motion       -> Pacote Motion 3D: só os arquivos que faltam ao
                                                                     front; o cliente descompacta POR CIMA da pasta
+  python3 tools/empacotar.py vsl-oferta                         -> dist/vsl-oferta-AAAA-MM-DD.zip: a skill do Claude Code
+                                                                    + COLAR-NO-CLAUDE-OU-CHATGPT/ (instruções + arquivos de
+                                                                    conhecimento para Projeto do Claude.ai / GPT)
 
 O código é um só (este repositório, sempre completo). O perfil só escolhe o que entra no zip e grava um
 perfil.json que liga ou desliga as animações (scripts/common.py: perfil()).
@@ -21,6 +24,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import sys
 import zipfile
 from pathlib import Path
@@ -62,6 +66,59 @@ Licenças de terceiros: veja assets/fonts (SIL OFL) e o arquivo LICENCAS.txt.
 """
 
 
+LEIA_ME_VSL = """{nome} — como usar (escolha UM dos jeitos)
+
+A) Claude.ai (Projetos) — o mais fácil, sem instalar nada
+  1. claude.ai → Projetos → Criar projeto (ex.: "Minha VSL").
+  2. Em "Instruções do projeto", cole TODO o conteúdo de COLAR-NO-CLAUDE-OU-CHATGPT/INSTRUCOES.md.
+  3. Em "Conhecimento do projeto", envie os 12 arquivos numerados (01-ficha.md ... 12-politicas.md).
+  4. Abra uma conversa nova dentro do projeto e escreva: "quero montar minha VSL".
+
+B) ChatGPT (GPT personalizado ou Projeto)
+  GPT: chatgpt.com → Explorar GPTs → Criar → aba Configurar →
+     • Instruções: cole o INSTRUCOES.md   • Conhecimento: envie os 12 arquivos numerados
+     • Recursos: deixe "Interpretador de código" ligado (para gerar a página e o calendário em arquivo)
+     → Criar (pode deixar "Só eu").
+  Projeto: ChatGPT → Projetos → Novo projeto → Instruções (cole o INSTRUCOES.md) → Adicionar arquivos (os 12).
+  Depois escreva: "quero montar minha VSL".
+
+C) Claude Code (gera os arquivos na sua pasta: página, teleprompter, calendário)
+  1. Instale o Claude Code (https://claude.com/claude-code) e o Python 3.10+.
+  2. Descompacte a pasta vsl-oferta em ~/.claude/skills/vsl-oferta
+     (Windows: %USERPROFILE%\\.claude\\skills\\vsl-oferta).
+  3. Abra o Claude Code numa pasta de trabalho e digite /vsl-oferta.
+
+Para continuar outro dia: no Claude.ai/ChatGPT, cole o bloco "FICHA DA OFERTA" que a IA te entregou no fim
+da última conversa. No Claude Code, a ficha fica salva em vsl/<nome-do-projeto>/ficha.json.
+Vídeo longo (VSL de até 30 min): suba no Google Drive e compartilhe como "Qualquer pessoa com o link".
+"""
+
+# arquivos de conhecimento do pacote "colar no chat" (os nomes são citados em chat/instrucoes.md)
+VSL_CONHECIMENTO = ["ficha", "diagnostico", "publico", "oferta", "angulos", "roteiro-vsl", "pagina-vendas",
+                    "copies", "gravacao", "criativos", "lancamento", "politicas"]
+
+
+def instrucoes_vsl(root: Path) -> str:
+    """chat/instrucoes.md com os campos do vendedor (config.json) preenchidos."""
+    cfg = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    txt = (root / "chat" / "instrucoes.md").read_text(encoding="utf-8")
+    cruz = "\n".join(f"- Na etapa {p['quando']}: {p['frase']} {p.get('link', '')}".rstrip()
+                      for p in cfg.get("produtos_cruzados", [])) or "- nenhum"
+    bonus = "\n".join(f"- {b['nome']}: {b['descricao']} ({b.get('onde', '')})"
+                       for b in cfg.get("bonus_padrao", [])) or "nenhum"
+    txt = (txt.replace("{{PRODUTOS_CRUZADOS}}", cruz).replace("{{BONUS}}", bonus)
+           .replace("{{SUPORTE}}", cfg.get("suporte", "")).replace("{{NOME_PRODUTO}}", cfg.get("nome_produto", "")))
+    sobra = re.findall(r"\{\{[A-Z_]+\}\}", txt)
+    if sobra:
+        print(f"AVISO: campos sem valor em INSTRUCOES.md: {', '.join(sorted(set(sobra)))}")
+    if "[preencher" in txt:
+        print(f"AVISO: {txt.count('[preencher')} campo(s) '[preencher...]' em config.json (links, suporte, bônus). "
+              "Preencha antes de vender.")
+    if len(txt) > 8000:
+        print(f"AVISO: INSTRUCOES.md tem {len(txt)} caracteres; o GPT personalizado aceita até 8000.")
+    return txt
+
+
 def files_for(skill: str, perfil: str = "completo") -> list[Path]:
     root = SKILLS / skill
     cfg = PERFIS[perfil]
@@ -84,6 +141,9 @@ def licencas(skill: str) -> str:
     base = ["Fontes Anton, Poppins, DM Serif Display, Caveat: SIL Open Font License 1.1 (assets/fonts/OFL-*.txt).",
             "Ícones Lucide: ISC (assets/.../icons/LICENSE).",
             "Playwright (Apache-2.0) e ffmpeg (LGPL/GPL) são instalados à parte e usados como programas externos."]
+    if skill == "vsl-oferta":
+        return ("Sem material de terceiros: textos, roteiros e scripts originais. A página gerada usa fontes do "
+                "sistema (sem fonte ou biblioteca externa).\n")
     if skill == "anuncio-produto":
         base += ["Vozes: Kokoro-82M (Apache-2.0); vozes Piper pt_BR treinadas em dataset CC0 (OHF-Voice).",
                  "Recorte: IS-Net / U2-Net (Apache-2.0). Transcrição opcional: Parakeet TDT v3 (NVIDIA, CC-BY-4.0).",
@@ -110,12 +170,21 @@ def main() -> None:
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         for f in files:
             z.write(f, Path(skill) / f.relative_to(SKILLS / skill))
+        if skill == "vsl-oferta":
+            root = SKILLS / skill
+            chat = "COLAR-NO-CLAUDE-OU-CHATGPT"
+            z.writestr(f"{chat}/INSTRUCOES.md", instrucoes_vsl(root))
+            for n, nome in enumerate(VSL_CONHECIMENTO, 1):
+                z.write(root / "references" / f"{nome}.md", f"{chat}/{n:02d}-{nome}.md")
+            z.writestr("LEIA-ME.txt", LEIA_ME_VSL.format(nome=json.loads(
+                (root / "config.json").read_text(encoding="utf-8")).get("nome_produto", skill)))
         if skill == "editor-video":
             z.writestr(f"{skill}/perfil.json", json.dumps({"perfil": "corte-viral" if perfil == "corte-viral"
                                                            else "completo", "motion": PERFIS[perfil]["motion"]}))
-        z.writestr(f"{skill}/LEIA-ME.txt", LEIA_ME_MOTION if perfil == "motion" else LEIA_ME.format(
-            nome=skill, node="" if perfil == "corte-viral" else " e Node.js 18+",
-            playwright="" if perfil == "corte-viral" else "     npm install -g playwright && npx playwright install chromium\n"))
+        if skill != "vsl-oferta":  # o da VSL fica na raiz do zip (três jeitos de usar)
+            z.writestr(f"{skill}/LEIA-ME.txt", LEIA_ME_MOTION if perfil == "motion" else LEIA_ME.format(
+                nome=skill, node="" if perfil == "corte-viral" else " e Node.js 18+",
+                playwright="" if perfil == "corte-viral" else "     npm install -g playwright && npx playwright install chromium\n"))
         if perfil != "motion":
             z.writestr(f"{skill}/LICENCAS.txt", licencas(skill))
     print(f"OK: {out} ({len(files)} arquivos, {out.stat().st_size / 1e6:.1f} MB)")

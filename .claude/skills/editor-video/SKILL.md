@@ -65,6 +65,13 @@ PY SK/scripts/run.py new <projeto> --clips <bruto1.mp4> [<bruto2.mp4> ...] --sty
 PY SK/scripts/transcribe.py <projeto>     # transcript.txt + transcript.json (tempo por palavra)
 ```
 
+**Vídeo longo / pelo Drive.** VSL de 30 min, aula ou live não passa no upload do chat (~30 MB) nem no WhatsApp
+(16 MB). Peça para a pessoa subir no Google Drive e compartilhar como **"Qualquer pessoa com o link → Leitor"**;
+`--clips` e `--broll` (e `edit.py --add-broll`) aceitam o link direto (Drive, Dropbox ou `.mp4`) e baixam em
+`<projeto>/fontes/`. Link privado ou de pasta volta com a instrução de como liberar; repasse-a. Baixar sem
+editar: `PY SK/scripts/drive.py <link> <pasta>`. Para vídeo longo use `--format 16:9` (ou 9:16 se for VSL para
+celular) e `--draft` na primeira prévia.
+
 ## 2. Leia a transcrição e decida como editor (este é o seu trabalho, não do script)
 
 Leia `transcript.txt` inteiro. Depois:

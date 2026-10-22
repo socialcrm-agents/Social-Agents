@@ -2,6 +2,7 @@
 """Orquestrador do editor de vídeo.
 
   run.py new <projeto> --clips a.mp4 b.mp4 [--style reels_viral] [--broll pasta_ou_arquivos ...]
+         (--clips/--broll também aceitam link do Google Drive, Dropbox ou .mp4: baixa em <projeto>/fontes/)
          [--hook "texto"] [--cta "texto"]
   run.py all <projeto>          transcreve, escolhe tomadas, planeja e renderiza (v1)
   run.py plan <projeto>         só replaneja (após mudar estilo/overrides)
@@ -24,6 +25,7 @@ from pathlib import Path
 
 from common import (STYLES_DIR, EditorError, load_json, load_style, log, main_guard, probe, project_paths,
                     require_tools, save_json)
+from drive import LinkError, baixar, eh_link
 
 HERE = Path(__file__).resolve().parent
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm"}
@@ -38,9 +40,19 @@ def step(script: str, project: Path, *extra: str) -> None:
     log(f"   ({script}: {time.time() - t:.1f}s)")
 
 
-def collect(items: list[str], exts: set[str]) -> list[Path]:
+def collect(items: list[str], exts: set[str], fontes: Path | None = None) -> list[Path]:
+    """Arquivos, pastas ou links (Google Drive, Dropbox, http): links são baixados em <projeto>/fontes/."""
     out: list[Path] = []
     for it in items or []:
+        if eh_link(it):
+            if fontes is None:
+                raise EditorError(f"Link não aceito aqui: {it}")
+            log(f"Baixando {it} ...")
+            try:
+                out.append(baixar(it, fontes))
+            except LinkError as exc:
+                raise EditorError(str(exc)) from exc
+            continue
         p = Path(it).expanduser().resolve()
         if p.is_dir():
             out += sorted(x for x in p.iterdir() if x.suffix.lower() in exts)
@@ -62,7 +74,7 @@ def cmd_new(a) -> None:
     for k in ("work", "renders", "versions", "qa"):
         paths[k].mkdir(parents=True, exist_ok=True)
     clips = []
-    for n, p in enumerate(collect(a.clips, VIDEO_EXT), 1):
+    for n, p in enumerate(collect(a.clips, VIDEO_EXT, project / "fontes"), 1):
         info = probe(p)
         if not info["has_audio"]:
             log(f"Aviso: {p.name} não tem áudio; não dá para cortar por fala (use como B-roll).")
@@ -71,7 +83,7 @@ def cmd_new(a) -> None:
         raise EditorError("Nenhum clipe de vídeo informado (--clips).")
     broll = [{"id": f"b{n}", "path": str(p), "kind": "image" if p.suffix.lower() in IMAGE_EXT else "video",
               **({} if p.suffix.lower() in IMAGE_EXT else {"duration": probe(p)["duration"]})}
-             for n, p in enumerate(collect(a.broll, VIDEO_EXT | IMAGE_EXT), 1)]
+             for n, p in enumerate(collect(a.broll, VIDEO_EXT | IMAGE_EXT, project / "fontes"), 1)]
     save_json(paths["project"], {
         "style": a.style, "format": a.format, "brand": a.brand, "clips": clips, "broll": broll, "version": 0,
         "overrides": {"word_fixes": {}, "cuts": [], "restores": [], "behind_add": [], "behind_remove": [],
