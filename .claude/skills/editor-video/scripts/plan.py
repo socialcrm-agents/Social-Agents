@@ -13,7 +13,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from common import FORMATS, EditorError, load_brand, load_json, load_style, log, main_guard, norm, project_paths, save_json
+from common import (FORMATS, EditorError, load_brand, load_json, load_style, log, main_guard, norm, perfil, project_paths,
+                    save_json)
 
 STOP = set("""a o as os um uma uns umas de do da dos das em no na nos nas num numa para pra pro por com sem que se
 e ou mas como quando onde eu tu ele ela nos vos eles elas voce voces te me lhe isso isto aquilo esse essa este esta
@@ -397,6 +398,9 @@ def main() -> None:
             m.update({k: v for k, v in MOTION_DEFAULTS.get(m["template"], {}).items() if k not in m})
         motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
         fx += trig_fx
+    if motion and not perfil()["motion"]:
+        log(f"   {len(motion)} animação(ões) puladas: elas fazem parte do Pacote Motion 3D (não instalado)")
+        motion, trig_sfx = [], []
     # impacto automático: chicote + whoosh na entrada de animações de tela cheia
     fx += [{"type": "whip", "t": round(max(m["t0"] - 0.05, 0), 3)} for m in motion if m.get("layer") == "full"]
     # palavra gigante não aparece por cima de animação de tela cheia

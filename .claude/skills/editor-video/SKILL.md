@@ -86,6 +86,9 @@ aprovação para o primeiro render, a não ser que ele tenha pedido.
 
 ## 2b. Motion graphics (o "anima o que você quiser ver na tela")
 
+> Se `SK/perfil.json` disser `"motion": false` (pacote Corte Viral), pule esta seção: as animações 3D fazem parte
+> do **Pacote Motion 3D**. Se o usuário pedir uma, diga em uma linha que ela está nesse pacote e siga com o resto.
+
 Leia `SK/references/motion.md`. Para cada momento do roteiro que pede visual (explicação de passos, números,
 lugar, produto, comparação), proponha uma animação e peça com `edit.py --motion`:
 - explicação em passos/itens -> `moldura` (pessoa na moldura 3D + itens surgindo no tempo da fala)

@@ -23,7 +23,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from common import MODELS_DIR  # noqa: E402
+from common import MODELS_DIR, perfil  # noqa: E402
 
 PY_PKGS = {"numpy": "numpy", "PIL": "pillow", "sherpa_onnx": "sherpa-onnx", "mediapipe": "mediapipe"}
 PARAKEET_URL = ("https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/"
@@ -133,7 +133,11 @@ def check_motion() -> bool:
 
 def main() -> None:
     install, fetch = "--install" in sys.argv, "--models" in sys.argv
-    results = [check_ffmpeg(), check_python(install), check_models(fetch), check_motion()]
+    p = perfil()
+    print(f"STATUS pacote {p['perfil']}{'' if p['motion'] else ' (sem Pacote Motion 3D: animações desligadas)'}")
+    results = [check_ffmpeg(), check_python(install), check_models(fetch)]
+    if p["motion"]:
+        results.append(check_motion())  # Node + Chromium só são necessários para as animações
     print("READY" if all(results) else "NOT READY (veja as linhas STATUS acima)")
 
 

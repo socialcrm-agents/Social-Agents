@@ -46,7 +46,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from common import EditorError, load_json, load_style, log, main_guard, probe, project_paths, save_json
+from common import EditorError, load_json, load_style, log, main_guard, perfil, probe, project_paths, save_json
 
 HERE = Path(__file__).resolve().parent
 
@@ -172,6 +172,8 @@ def main() -> None:
     if a.format:
         proj["format"] = a.format
         done.append(f"formato {a.format}")
+    if a.motion and not perfil()["motion"]:
+        raise EditorError("Animações (--motion) fazem parte do Pacote Motion 3D, que não está instalado nesta skill.")
     for spec in a.motion:
         text = Path(spec[1:]).read_text(encoding="utf-8") if spec.startswith("@") else spec
         try:

@@ -30,6 +30,18 @@ def safe_zone(w: int, h: int) -> tuple[int, int, int]:
     return int(h * 0.07), int(h * 0.92), int(w * 0.05)
 
 
+def perfil() -> dict:
+    """Pacote instalado: "completo" (padrão, este repositório), "corte-viral" (front, sem animações 3D) ou
+    "corte-viral" + Pacote Motion por cima (volta a "completo"). Vem de perfil.json, gerado pelo empacotador."""
+    data = {"perfil": "completo", "motion": True}
+    p = SKILL_DIR / "perfil.json"
+    if p.exists():
+        data.update(json.loads(p.read_text(encoding="utf-8")))
+    # sem os arquivos do motor de animação, o motion fica desligado mesmo que o perfil diga o contrário
+    data["motion"] = bool(data["motion"]) and (SKILL_DIR / "assets" / "motion").is_dir()
+    return data
+
+
 class EditorError(RuntimeError):
     pass
 
