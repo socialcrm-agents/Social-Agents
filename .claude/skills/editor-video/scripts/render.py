@@ -114,7 +114,7 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
 
 
 # quanto do alto do quadro (px, em 1920) cada elemento de topo precisa livre
-LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560}
+LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560, "proibido": 560}
 
 
 def recuo_windows(motions: list[dict], stats: list | None) -> list[dict]:

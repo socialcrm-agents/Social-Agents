@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- MANCHETE (layer: front, zona topo — também funciona como "behind", atrás da cabeça: não tem caixa opaca)
+     Manchete de 1-3 linhas no alto; cada palavra entra no tempo da fala (desfoque + subida). As palavras marcadas
+     (ou a última linha inteira) ganham degradê de destaque. Riscar: traço animado + leve glitch nas palavras.
+     params: linhas: ["EU GRAVEI", "ESSE VÍDEO", "UMA VEZ SÓ"]   (ou text: "uma linha só")
+               cada linha pode ser {text, at}: "at" = trecho falado em que a linha entra (o editor converte);
+               dentro da linha as palavras entram em cascata; sem "at", tudo entra em cascata no início
+             destaque: [palavras] (padrão: última linha), cores: [c1, c2] do destaque (padrão lilás -> rosa)
+             riscar: [palavras] ou true (todas), riscar_at (s; padrão 60% da duração), cor_risco ("#FF3B5C")
+             rotulo (linha pequena acima), sub (linha pequena abaixo), icone (Lucide, ex. "timer", abaixo da manchete)
+             size (px, padrão 112; 150 com uma linha só — encolhe para caber), y (topo px, padrão 250), cor ("#FFFFFF") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #box { position: absolute; left: 60px; right: 150px; display: flex; flex-direction: column; align-items: center; }
+  #rot, #sub { font-weight: 800; letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
+               text-shadow: 0 4px 18px rgba(0,0,0,.55); }
+  #rot { font-size: 34px; color: #fff; margin-bottom: 8px; }
+  #sub { font-size: 36px; color: #f3eaff; margin-top: 6px; }
+  .ln { display: flex; justify-content: center; gap: .26em; white-space: nowrap; font-weight: 900; line-height: 1.02;
+        text-transform: uppercase; letter-spacing: .5px; }
+  .w { position: relative; display: inline-block; color: #fff; text-shadow: 0 6px 26px rgba(0,0,0,.55); }
+  .w.hi { color: transparent; -webkit-background-clip: text; background-clip: text; text-shadow: none;
+          filter: drop-shadow(0 6px 22px rgba(0,0,0,.5)); }
+  .strike { position: absolute; left: -4%; top: 52%; height: .11em; border-radius: .06em; width: 0; }
+  .ghost { position: absolute; inset: 0; opacity: 0; mix-blend-mode: screen; }
+  #ic { margin-top: 14px; width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; }
+  #ic svg { width: 70px; height: 70px; stroke: #fff; stroke-width: 2.4; }
+</style></head>
+<body><div id="box"><div id="rot"></div><div id="lines"></div><div id="sub"></div><div id="ic"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, D = motion.duration;
+const [c1, c2] = p.cores || ['#C9B2FF', '#FF5FB0'];
+const grad = `linear-gradient(90deg, ${c1}, ${c2})`;
+const rawL = p.linhas && p.linhas.length ? p.linhas : [p.text || ''];
+const linhas = rawL.map((l) => (typeof l === 'object' ? String(l.text || '') : String(l)));
+const linhaAt = rawL.map((l) => (typeof l === 'object' && typeof l.at === 'number' ? l.at : null));
+const norm = (s) => String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9%$]/g, '');
+const destaque = new Set((p.destaque || []).map(norm));
+const autoLast = !p.destaque && linhas.length > 1;
+const riscarAll = p.riscar === true;
+const riscar = new Set(Array.isArray(p.riscar) ? p.riscar.map(norm) : []);
+const box = document.getElementById('box'), holder = document.getElementById('lines');
+box.style.top = (p.y || 250) + 'px';
+const rot = document.getElementById('rot'), sub = document.getElementById('sub'), ic = document.getElementById('ic');
+rot.textContent = p.rotulo || ''; if (!p.rotulo) rot.style.display = 'none';
+sub.textContent = p.sub || ''; if (!p.sub) sub.style.display = 'none';
+if (p.icone) {
+  ic.style.background = grad; ic.style.boxShadow = `0 12px 40px ${c2}66`;
+  motion.waitFor(motion.icon(p.icone).then((svg) => { ic.innerHTML = svg; }));
+} else ic.style.display = 'none';
+let size = p.size || (linhas.length === 1 ? 150 : 112);
+const words = [];
+linhas.forEach((txt, li) => {
+  const ln = document.createElement('div'); ln.className = 'ln';
+  String(txt).split(/\s+/).filter(Boolean).forEach((tok) => {
+    const w = document.createElement('span'); w.className = 'w'; w.textContent = tok;
+    const hi = destaque.has(norm(tok)) || (autoLast && li === linhas.length - 1);
+    if (hi) { w.classList.add('hi'); w.style.backgroundImage = grad; }
+    const rk = riscarAll || riscar.has(norm(tok));
+    let strike = null, ghost = null;
+    if (rk) {
+      strike = document.createElement('i'); strike.className = 'strike';
+      strike.style.background = p.cor_risco || '#FF3B5C';
+      strike.style.boxShadow = `0 0 18px ${p.cor_risco || '#FF3B5C'}`;
+      w.appendChild(strike);
+      ghost = document.createElement('span'); ghost.className = 'ghost'; ghost.textContent = tok;
+      ghost.style.color = '#ff3b8a'; w.appendChild(ghost);
+    }
+    ln.appendChild(w);
+    words.push({ el: w, strike, ghost, rk, li });
+  });
+  holder.appendChild(ln);
+});
+const fit = () => { holder.querySelectorAll('.ln').forEach((l) => { l.style.fontSize = size + 'px'; }); };
+fit();
+const maxW = W - 210;
+// mede depois das fontes carregarem (senão a largura sai da fonte reserva)
+motion.waitFor(document.fonts.ready.then(() => {
+  fit();
+  while ([...holder.querySelectorAll('.ln')].some((l) => l.scrollWidth > maxW) && size > 48) { size -= 4; fit(); }
+}));
+// tempos de entrada: linha com "at" entra nesse instante; palavras em cascata dentro da linha
+const n = words.length;
+let cursor = 0.1;
+words.forEach((w, i) => {
+  const first = i === 0 || words[i - 1].li !== w.li;
+  if (first && linhaAt[w.li] != null) cursor = linhaAt[w.li];
+  w.at = cursor;
+  cursor += Math.min(0.14, (D * 0.45) / Math.max(n, 1));
+});
+const riscarAt = typeof p.riscar_at === 'number' ? p.riscar_at : D * 0.6;
+const rnd = (k) => { const x = Math.sin(k * 12.9898) * 43758.5453; return x - Math.floor(x); };
+motion.onFrame((t) => {
+  const out = motion.prog(t, D - 0.3, 0.3);
+  const head = motion.prog(t, 0, 0.3);
+  rot.style.opacity = head * (1 - out); sub.style.opacity = motion.prog(t, words.length ? words[n - 1].at + 0.1 : 0.3, 0.3) * (1 - out);
+  sub.style.transform = `translateY(${(1 - motion.prog(t, words.length ? words[n - 1].at : 0.2, 0.35)) * 16}px)`;
+  if (p.icone) { const q = motion.prog(t, (words[n - 1]?.at ?? 0.3) + 0.15, 0.4, 'outBack');
+    ic.style.transform = `scale(${q}) rotate(${(1 - q) * -40 + Math.sin(t * 3) * 4}deg)`; ic.style.opacity = Math.min(1, q) * (1 - out); }
+  words.forEach((w, i) => {
+    const k = motion.prog(t, w.at, 0.32, 'outCubic');
+    w.el.style.opacity = k * (1 - out);
+    w.el.style.filter = (w.el.classList.contains('hi') ? 'drop-shadow(0 6px 22px rgba(0,0,0,.5)) ' : '') + (k < 1 ? `blur(${(1 - k) * 10}px)` : '');
+    w.el.style.transform = `translateY(${(1 - k) * 34}px)`;
+    if (w.rk) {
+      const s = motion.prog(t, riscarAt + i * 0.06, 0.28, 'outCubic');
+      w.strike.style.width = (108 * s) + '%';
+      // glitch curto logo depois do risco: deslocamento de canal + palavra que desbota
+      const g = t > riscarAt && t < riscarAt + 0.45 ? 1 : 0;
+      const jitter = g ? (rnd(Math.floor(t * 30) + i) - 0.5) * 18 : 0;
+      w.ghost.style.opacity = g * 0.7;
+      w.ghost.style.transform = `translate(${jitter}px, ${-jitter * 0.3}px)`;
+      w.el.style.opacity = k * (1 - out) * (1 - 0.45 * s);
+    }
+  });
+});
+</script></body></html>
