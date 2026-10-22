@@ -1,0 +1,33 @@
+<!doctype html>
+<!-- TABELA DE 2 COLUNAS (layer: front ou full): comparação lado a lado (ex.: "o que todo mundo faz" x "o que eu faço"),
+     linhas entrando no tempo da fala, coluna da direita com destaque. params: left, right (títulos),
+     rows: [{l, r, at}], accent, mode ("card"|"full"), y -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #c { position: absolute; left: 50%; width: 960px; border-radius: 36px; overflow: hidden; background: #fffdf9; color: #1d1b18;
+       box-shadow: 0 40px 100px rgba(0,0,0,.35); }
+  .row { display: grid; grid-template-columns: 1fr 1fr; }
+  .row > div { padding: 24px 28px; font-size: 38px; font-weight: 700; border-top: 2px solid #eee6d8; }
+  .head > div { font-family: 'Anton'; font-size: 52px; text-transform: uppercase; border-top: 0; }
+  .l { color: #8a8174; text-decoration: line-through; text-decoration-color: #E63B2E; text-decoration-thickness: 4px; }
+</style></head>
+<body><div id="bgw"></div><div id="c"><div class="row head"><div id="hl"></div><div id="hr"></div></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, H = motion.h, D = motion.duration;
+const accent = p.accent || '#FFD21F';
+if (p.mode === 'full') document.getElementById('bgw').outerHTML = '<div class="warm-bg"></div><div class="blinds"></div>';
+document.getElementById('hl').textContent = p.left || 'Todo mundo'; document.getElementById('hr').textContent = p.right || 'Eu';
+document.getElementById('hr').style.background = accent;
+const c = document.getElementById('c');
+const rows = (p.rows || [{ l: 'Curso de 12 módulos', r: 'Produto pronto em 24h' }]).map((r, i) => {
+  const el = document.createElement('div'); el.className = 'row';
+  el.innerHTML = `<div class="l">${r.l}</div><div class="r" style="background:${accent}22">${r.r}</div>`; c.appendChild(el);
+  return { el, at: typeof r.at === 'number' ? r.at : 0.5 + i * 0.8 };
+});
+motion.onFrame((t) => {
+  const k = motion.inOut(t, 0, D, 0.45, 0.3, 'outBack');
+  c.style.top = (p.y ?? H * 0.2) + 'px'; c.style.transform = `translateX(-50%) scale(${0.9 + 0.1 * k})`; c.style.opacity = Math.min(1, k * 1.5);
+  for (const r of rows) { const kr = motion.prog(t, r.at, 0.35, 'outCubic'); r.el.style.opacity = kr; r.el.style.transform = `translateY(${(1 - kr) * 30}px)`; }
+});
+</script></body></html>

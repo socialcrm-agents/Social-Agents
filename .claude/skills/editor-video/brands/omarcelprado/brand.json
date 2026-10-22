@@ -1,0 +1,63 @@
+{
+  "name": "Marcel Prado",
+  "handle": "@omarcelprado",
+  "status": "Extraído dos artefatos 'Diagnóstico completo' (21/10), 'Plano para viralizar' (08/10) e 'Editor Viral IA — Catálogo' (22/10). Cores e fontes são PROPOSTA (nenhum doc define hex ou fonte): confirmar com o Marcel.",
+  "colors": {
+    "accent": "#FFD21F",
+    "warm_white": "#F6F1E8",
+    "ink": "#141414",
+    "alert": "#E63B2E",
+    "_origem": "amarelo = 'óculos amarelo' + 'deixa a legenda amarela' (referência); branco quente = fundo das telas da referência; vermelho = setas e cortes da referência"
+  },
+  "fonts": [],
+  "fonts_note": "Legenda em duas fontes da referência ('pesada + serifada itálica') = Anton + DM Serif Display Italic, já incluídas na skill.",
+  "logo": {"file": null, "watermark": false, "_nota": "Nenhum logo encontrado em Drive, Notion ou artefatos. Coloque o PNG em brands/omarcelprado/logo.png e ligue watermark."},
+  "cta": {
+    "default": "COMENTA PRODUTO",
+    "reels_viral": "COMENTA PRODUTO",
+    "anuncio_conversao": "CLICA NO BOTÃO",
+    "editorial_premium": "Comenta PRODUTO"
+  },
+  "cta_keywords": ["PRODUTO", "VENDA", "NÚMEROS", "COMEÇAR", "SEMANA", "OPERADOR"],
+  "word_fixes": {
+    "cloud": "Claude",
+    "claud": "Claude",
+    "clode": "Claude",
+    "chatgpt": "ChatGPT",
+    "processas": "processa",
+    "hubla": "Hubla",
+    "lovable": "Lovable",
+    "metricool": "Metricool",
+    "heygen": "HeyGen",
+    "infoprodutores": "Infoprodutores"
+  },
+  "icon_words": {
+    "nutricionista": "apple", "psicóloga": "brain", "psicologa": "brain", "personal": "dumbbell", "advogado": "scale",
+    "cabeleireira": "scissors", "marceneiro": "hammer", "esteticista": "sparkles", "professora": "graduation-cap",
+    "anúncio": "megaphone", "anuncio": "megaphone", "venda": "badge-dollar-sign", "vendas": "badge-dollar-sign",
+    "garantia": "shield-check", "página": "layout-template", "pagina": "layout-template", "oferta": "tag",
+    "audiência": "users", "audiencia": "users", "equipe": "users-round", "renda": "wallet"
+  },
+  "speed": 1.15,
+  "styles": {
+    "reels_viral": {
+      "cuts": {"max_gap": 0.08, "pad_in": 0.03, "pad_out": 0.05},
+      "captions": {"font": "Anton", "emph_font": "DM Serif Display", "emph_italic": true, "emph_size": 128,
+                   "highlight": "#FFD21F", "emph_color": "#FFD21F"},
+      "behind": {"color": "#FFFFFF"},
+      "graphics": {"accent": "#FFD21F"}
+    },
+    "anuncio_conversao": {
+      "cuts": {"max_gap": 0.1, "pad_in": 0.03, "pad_out": 0.06},
+      "captions": {"emph_font": "DM Serif Display", "emph_italic": true, "highlight": "#FFD21F", "emph_color": "#FFD21F"},
+      "graphics": {"accent": "#FFD21F"},
+      "behind": {"color": "#FFD21F"}
+    },
+    "editorial_premium": {
+      "captions": {"emph_color": "#FFD21F"},
+      "graphics": {"accent": "#FFD21F"}
+    }
+  },
+  "triggers": "triggers.json",
+  "music": null
+}

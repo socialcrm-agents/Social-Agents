@@ -175,6 +175,35 @@ def build_segments(words, keep: list[int], style: dict, silences: dict | None = 
     return out
 
 
+def shorten(words, keep: list[int], segs: list[dict], target: float) -> set[int]:
+    """Tira frases inteiras do meio (nunca o gancho nem o fechamento) até caber em `target` segundos de bruto.
+    Fica o que tem mais peso: números, palavras de poder e frases curtas; a edição sempre termina em fim de frase."""
+    from plan import score_word  # mesma régua de ênfase do planejador
+    total = sum(s["out"] - s["in"] for s in segs)
+    if total <= target:
+        return set()
+    sents, cur = [], []
+    for i in keep:
+        cur.append(i)
+        if words[i]["w"].endswith((".", "!", "?")):
+            sents.append(cur)
+            cur = []
+    if cur:
+        sents.append(cur)
+    if len(sents) <= 2:
+        return set()
+    middle = sents[1:-1]
+    dur = lambda s: words[s[-1]]["t1"] - words[s[0]]["t0"] + 0.15
+    weight = lambda s: sum(score_word(words[i]["w"]) for i in s) / dur(s)
+    drop: set[int] = set()
+    for s in sorted(middle, key=weight):
+        if total <= target:
+            break
+        drop.update(s)
+        total -= dur(s)
+    return drop
+
+
 def main() -> None:
     project = Path(sys.argv[1])
     paths = project_paths(project)
@@ -187,6 +216,18 @@ def main() -> None:
     drop, report = analyze(words, style, proj.get("overrides", {}))
     keep = [i for i in range(len(words)) if i not in drop]
     segs = build_segments(words, keep, style, tr.get("silences"))
+    target = proj.get("target_duration")
+    if target:
+        from common import load_brand
+        speed = float(proj.get("overrides", {}).get("speed") or load_brand(proj.get("brand")).get("speed")
+                      or style.get("speed", 1.0))
+        extra = shorten(words, keep, segs, target * speed)
+        if extra:
+            drop |= extra
+            report.append((f"Versão curta ({target:.0f} s): frases de menor peso removidas",
+                           " / ".join(" ".join(words[i]["w"] for i in sorted(extra)[:12]).split(". ")[:3])))
+            keep = [i for i in range(len(words)) if i not in drop]
+            segs = build_segments(words, keep, style, tr.get("silences"))
     raw = sum(c["duration"] for c in proj["clips"])
     final = sum(s["out"] - s["in"] for s in segs)
     save_json(paths["edl"], {"style": proj["style"], "segments": segs, "dropped": sorted(drop),

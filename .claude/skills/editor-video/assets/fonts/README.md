@@ -9,3 +9,4 @@ comercial. Ela não permite vender as fontes sozinhas. Mantenha os arquivos OFL-
 | Anton-Regular.ttf | Anton | The Anton Project Authors | OFL-anton.txt |
 | Poppins-Bold/ExtraBold/Black.ttf | Poppins | The Poppins Project Authors | OFL-poppins.txt |
 | DMSerifDisplay-Regular/Italic.ttf | DM Serif Display | The DM Serif Display Project Authors (Colophon Foundry) | OFL-dmserifdisplay.txt |
+| Caveat-Variable.ttf | Caveat (manuscrita, anotações à mão) | The Caveat Project Authors | OFL-caveat.txt |

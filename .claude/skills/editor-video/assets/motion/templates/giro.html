@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- IMAGENS GIRANDO EM 3D (layer: front): um card que gira mostrando frente e verso (antes -> depois), ou várias
+     imagens em sequência girando como moeda. params: images: ["antes.png", "depois.png", ...] ou texts: ["ANTES", "DEPOIS"],
+     labels: ["antes", "depois"], at (s), every (s por giro, default 1.0), size (fração da largura, default .62), y (0..1) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #stage { position: absolute; left: 50%; perspective: 2000px; }
+  #card { position: relative; transform-style: preserve-3d; }
+  .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 34px; overflow: hidden; background: #fffdf9;
+          border: 8px solid #fff; box-shadow: 0 40px 80px rgba(0,0,0,.4); display: grid; place-items: center; }
+  .face img { width: 100%; height: 100%; object-fit: cover; }
+  .face .tx { font-family: 'Anton'; font-size: 120px; color: #141414; text-align: center; padding: 20px; }
+  .tag { position: absolute; left: 24px; top: 24px; padding: 6px 22px; border-radius: 999px; background: #141414; color: #fff;
+         font-weight: 800; font-size: 34px; text-transform: uppercase; }
+</style></head>
+<body><div id="stage"><div id="card"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const items = (p.images || []).map((s) => ({ img: s })).concat((p.texts || []).map((s) => ({ txt: s })));
+if (!items.length) items.push({ txt: 'ANTES' }, { txt: 'DEPOIS' });
+const size = (p.size || 0.62) * W, ar = p.aspect || 1.25;
+const stage = document.getElementById('stage'), card = document.getElementById('card');
+card.style.width = size + 'px'; card.style.height = size * ar + 'px';
+const faces = [0, 1].map((side) => { const f = document.createElement('div'); f.className = 'face';
+  if (side) f.style.transform = 'rotateY(180deg)'; card.appendChild(f); return f; });
+const html = (it, i) => (it.img ? `<img src="${it.img}">` : `<div class="tx">${it.txt}</div>`) +
+  ((p.labels || [])[i] ? `<div class="tag">${p.labels[i]}</div>` : '');
+items.forEach((it) => it.img && motion.waitFor(motion.loadImage(it.img).catch(() => null)));
+const at = p.at ?? 0.3, every = p.every || 1.0;
+motion.onFrame((t) => {
+  const kin = motion.inOut(t, 0, D, 0.45, 0.3, 'outBack');
+  stage.style.top = (p.y ?? 0.42) * H - (size * ar) / 2 + 'px';
+  stage.style.transform = `translateX(-50%) scale(${kin})`;
+  // cada giro de 180° troca para o próximo item; a face de trás recebe o item seguinte
+  const flips = Math.max(0, (t - at) / every);
+  const done = Math.floor(flips), part = motion.ease.inOutCubic(Math.min(1, (flips - done) / 0.6));
+  const idx = Math.min(done, items.length - 1);
+  const turning = done < items.length - 1 && t >= at;
+  const ang = (turning ? done + part : Math.min(done, items.length - 1)) * 180;
+  card.style.transform = `rotateY(${ang}deg) rotateX(${Math.sin(t * 1.4) * 6}deg)`;
+  const front = idx % 2 === 0 ? faces[0] : faces[1], back = front === faces[0] ? faces[1] : faces[0];
+  front.innerHTML = html(items[idx], idx);
+  if (items[idx + 1]) back.innerHTML = html(items[idx + 1], idx + 1);
+});
+</script></body></html>

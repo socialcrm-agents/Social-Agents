@@ -19,6 +19,10 @@ bruto.mp4 ─► transcribe (Parakeet, pt-BR, tempo por palavra)
 | [limitacoes.md](limitacoes.md) | O que funciona no Claude Code e o que não funciona |
 | [teste-real.md](teste-real.md) | Teste com vídeo real: antes/depois, números, o que foi corrigido |
 | [comparativo-me-ia.md](comparativo-me-ia.md) | O que os anúncios do ME.IA mostram vs. o que a Skill faz |
+| [concorrentes.md](concorrentes.md) | Concorrentes: páginas (inferidas) e efeitos dos anúncios, o que replicar |
+| [../../.claude/skills/editor-video/references/catalogo.md](../../.claude/skills/editor-video/references/catalogo.md) | Os 46 itens do catálogo do Marcel mapeados para a Skill |
+| [../../.claude/skills/editor-video/references/conectores.md](../../.claude/skills/editor-video/references/conectores.md) | Quando usar cada conector e como o arquivo chega ao projeto |
+| [../../.claude/skills/editor-video/brands/omarcelprado/brand.md](../../.claude/skills/editor-video/brands/omarcelprado/brand.md) | Kit de marca do Marcel (voz, CTAs, evitar, padrões de edição) |
 | [../../.claude/skills/editor-video/references/motion.md](../../.claude/skills/editor-video/references/motion.md) | Templates de motion e como criar animações sob medida |
 | [../../.claude/skills/editor-video/references/dependencias.md](../../.claude/skills/editor-video/references/dependencias.md) | Instalação |
 | [../../.claude/skills/editor-video/references/revisoes.md](../../.claude/skills/editor-video/references/revisoes.md) | Pedidos em português -> comandos |

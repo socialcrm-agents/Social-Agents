@@ -4,6 +4,7 @@
 @font-face { font-family: 'Poppins'; font-weight: 800; src: url('/fonts/Poppins-ExtraBold.ttf'); font-display: block; }
 @font-face { font-family: 'Poppins'; font-weight: 900; src: url('/fonts/Poppins-Black.ttf'); font-display: block; }
 @font-face { font-family: 'DM Serif Display'; src: url('/fonts/DMSerifDisplay-Regular.ttf'); font-display: block; }
+@font-face { font-family: 'Caveat'; src: url('/fonts/Caveat-Variable.ttf'); font-weight: 400 700; font-display: block; }
 @font-face { font-family: 'DM Serif Display'; font-style: italic; src: url('/fonts/DMSerifDisplay-Italic.ttf'); font-display: block; }
 html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
 body { width: var(--w, 1080px); height: var(--h, 1920px); position: relative; font-family: 'Poppins', sans-serif; color: #fff; }

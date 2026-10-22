@@ -32,6 +32,9 @@ Operações:
                                  (lista em references/motion.md; "at" dentro de params aceita palavra falada)
   --motion-remove N              remove a N-ésima animação pedida
   --icons on|off                 ícones automáticos nas palavras-chave
+  --gatilhos on|off              mapa de gatilhos (frase/dinheiro/enumeração -> efeito + som)
+  --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
+  --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
 """
 
 from __future__ import annotations
@@ -74,6 +77,9 @@ def main() -> None:
     ap.add_argument("--motion", action="append", default=[])
     ap.add_argument("--motion-remove", action="append", type=int, default=[])
     ap.add_argument("--icons", choices=["on", "off"])
+    ap.add_argument("--gatilhos", choices=["on", "off"])
+    ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
+    ap.add_argument("--fx", action="append", default=[], help="efeito de impacto: tipo@palavra (tremida, clarao, glitch, whip)")
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
@@ -180,6 +186,16 @@ def main() -> None:
     if a.icons:
         ov["icons"] = a.icons == "on"
         done.append(f"ícones automáticos: {a.icons}")
+    if a.gatilhos:
+        ov["triggers"] = a.gatilhos == "on"
+        done.append(f"gatilhos automáticos: {a.gatilhos}")
+    if a.velocidade:
+        ov["speed"] = a.velocidade
+        done.append(f"velocidade da fala ×{a.velocidade}")
+    for spec in a.fx:
+        kind, _, at = spec.partition("@")
+        ov.setdefault("fx_requests", []).append({"type": kind, "at": at})
+        done.append(f"efeito {kind} em '{at}'")
     if not done and not a.note:
         raise EditorError("Nenhuma operação informada. Veja edit.py --help.")
     ov.setdefault("notes", []).append({"when": datetime.datetime.now().isoformat(timespec="seconds"),

@@ -72,7 +72,7 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
     mdir.mkdir(parents=True, exist_ok=True)
     w, h, fps = tl["w"], tl["h"], tl["fps"]
     t0, t1 = item["t0"], item["t1"]
-    params = dict(item.get("params", {}))
+    params = json.loads(json.dumps(item.get("params", {})))  # cópia profunda (itens são reescritos abaixo)
     params.setdefault("cues", {})
     params["format"] = {"w": w, "h": h}
     if item.get("needs_video"):
@@ -84,15 +84,43 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
         params["video"] = {"plate": f"/work/{rel}/plate/%05d.jpg",
                            "cut": f"/work/{rel}/cut/%05d.png" if info["has_cut"] else None,
                            "bg": f"/work/{rel}/bg/%05d.jpg" if info["has_cut"] else None, "count": info["count"]}
-    # arquivos locais do usuário (logo, imagem) viram URLs servidas a partir de work/motion/assets
-    for key, val in list(params.items()):
-        if isinstance(val, str) and key in ("image", "src", "logo", "photo") and Path(val).expanduser().exists():
-            src = Path(val).expanduser()
+    # arquivos locais do usuário (logo, imagens, cenários) viram URLs servidas a partir de work/motion/assets
+    def localize(obj, key=""):
+        if isinstance(obj, dict):
+            return {k: localize(v, k) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [localize(v, key) for v in obj]
+        if isinstance(obj, str) and key in ("image", "images", "src", "logo", "photo") and not obj.startswith("/work/") \
+                and Path(obj).expanduser().is_file():
+            src = Path(obj).expanduser()
             dst = mdir / "assets" / f"{hashlib.sha1(str(src).encode()).hexdigest()[:8]}_{src.name}"
             dst.parent.mkdir(exist_ok=True)
             if not dst.exists():
                 shutil.copy2(src, dst)
-            params[key] = f"/work/{dst.relative_to(work).as_posix()}"
+            return f"/work/{dst.relative_to(work).as_posix()}"
+        return obj
+    params = localize(params)
+    # cards de vídeo (carrossel, pedaços): cada vídeo vira uma sequência de quadros servida ao navegador
+    for it in params.get("items", []) if isinstance(params.get("items"), list) else []:
+        if isinstance(it, dict) and it.get("video") and Path(str(it["video"])).expanduser().exists():
+            src = Path(it["video"]).expanduser()
+            key = hashlib.sha1(f"{src}{it.get('start', 0)}{t1 - t0}".encode()).hexdigest()[:10]
+            fdir = mdir / f"vid_{key}"
+            if not (fdir / "done").exists():
+                fdir.mkdir(parents=True, exist_ok=True)
+                ffmpeg(["-ss", f"{float(it.get('start', 0)):.3f}", "-i", str(src), "-t", f"{t1 - t0:.3f}",
+                        "-vf", f"fps={fps},scale=540:-2", "-q:v", "4", str(fdir / "%05d.jpg")])
+                (fdir / "done").write_text("ok")
+            it["frames"] = f"/work/{fdir.relative_to(work).as_posix()}/%05d.jpg"
+            it["count"] = len(list(fdir.glob("*.jpg")))
+            del it["video"]
+    tpl = item.get("template")
+    if tpl == "onda_audio" and "wave" not in params:
+        params["wave"] = wave_data(project)
+    if tpl == "pedacos":
+        params.setdefault("head", head_position(work, t0, t1, w, h))
+        if not params.get("items"):
+            params["items"] = snapshots(aroll, tl, mdir, work, params.get("count", 6))
     if item.get("hand") and hands is not None:
         a, b = int(t0 * fps), int(t1 * fps)
         params["hand"] = hands[a:b]
@@ -112,6 +140,58 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
     if proc.returncode != 0:
         raise EditorError(f"Motion '{item.get('template') or page}' falhou:\n{proc.stderr[-1500:]}")
     log(f"   motion {item.get('template') or page}: {proc.stdout.strip().split(' -> ')[0]}")
+    return out
+
+
+def wave_data(project: Path, bars: int = 220) -> dict:
+    """Onda do áudio bruto (1º clipe) + trechos cortados pela edição, normalizados 0..1, e durações."""
+    import wave as wv
+    from common import load_json
+    edl = load_json(project / "edl.json") or {}
+    proj = load_json(project / "project.json")
+    clip = proj["clips"][0]
+    wav = project / "work" / f"{clip['id']}.wav"
+    with wv.open(str(wav)) as f:
+        a = np.frombuffer(f.readframes(f.getnframes()), np.int16).astype(np.float32) / 32768
+    chunks = np.array_split(np.abs(a), bars)
+    peaks = np.array([c.max() if len(c) else 0 for c in chunks])
+    peaks = (peaks / (peaks.max() or 1)).round(3).tolist()
+    dur = clip["duration"]
+    kept = sorted((s["in"], s["out"]) for s in edl.get("segments", []) if s["clip"] == clip["id"])
+    cuts, pos = [], 0.0
+    for a_, b_ in kept:
+        if a_ > pos + 0.05:
+            cuts.append([round(pos / dur, 4), round(a_ / dur, 4)])
+        pos = max(pos, b_)
+    if pos < dur - 0.05:
+        cuts.append([round(pos / dur, 4), 1.0])
+    return {"peaks": peaks, "cuts": cuts, "raw": round(dur, 2), "final": edl.get("edit_duration", dur)}
+
+
+def head_position(work: Path, t0: float, t1: float, w: int, h: int) -> dict:
+    """Centro e topo da cabeça na janela (pela máscara/rosto do render); padrão: centro, 30% da altura."""
+    from common import load_json
+    stats = load_json(work / "mask_stats.json") or []
+    win = [s for s in stats[int(t0 * 30): int(t1 * 30)] if s.get("face") and s.get("top")]
+    if not win:
+        return {"x": 0.5, "top": 0.3}
+    xs = sorted(s["face"][0] + s["face"][2] / 2 for s in win)
+    tops = sorted(s["top"] for s in win)
+    return {"x": round(xs[len(xs) // 2], 3), "top": round(tops[len(tops) // 2] / h, 3)}
+
+
+def snapshots(aroll: Path, tl: dict, mdir: Path, work: Path, n: int) -> list[dict]:
+    """n quadros do próprio vídeo editado, espalhados no tempo (para pedaços/carrossel)."""
+    out = []
+    dur = tl.get("duration") or 10
+    sdir = mdir / "snaps"
+    sdir.mkdir(exist_ok=True)
+    for i in range(n):
+        t = dur * (i + 0.5) / n
+        f = sdir / f"snap_{hashlib.sha1(f'{aroll}{t:.2f}'.encode()).hexdigest()[:8]}.jpg"
+        if not f.exists():
+            ffmpeg(["-ss", f"{t:.2f}", "-i", str(aroll), "-frames:v", "1", "-vf", f"{tl['grade']},scale=360:-2", str(f)])
+        out.append({"image": f"/work/{f.relative_to(work).as_posix()}"})
     return out
 
 

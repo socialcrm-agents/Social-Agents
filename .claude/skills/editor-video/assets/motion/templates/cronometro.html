@@ -1,0 +1,29 @@
+<!doctype html>
+<!-- CRONÔMETRO / TEMPO (layer: front): relógio contando até o tempo dito (ex.: "pronto em 7 min"), anel de progresso.
+     params: seconds (valor final mostrado, ex. 420), label ("pronto em"), accent, y (0..1), size (px) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>#w { position: absolute; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#t { font-family: 'Anton'; color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6); }
+#l { font-weight: 800; font-size: 40px; text-transform: uppercase; letter-spacing: 2px; color: #fff; text-shadow: 0 4px 16px rgba(0,0,0,.6); }</style></head>
+<body><div id="w"><svg id="ring"></svg><div id="l"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, H = motion.h, D = motion.duration;
+const size = p.size || 300, accent = p.accent || '#FFD21F', total = p.seconds ?? 420;
+const NS = 'http://www.w3.org/2000/svg', ring = document.getElementById('ring');
+ring.setAttribute('width', size); ring.setAttribute('height', size); ring.setAttribute('viewBox', '0 0 100 100');
+ring.innerHTML = `<circle cx="50" cy="50" r="44" fill="rgba(0,0,0,.45)" stroke="rgba(255,255,255,.25)" stroke-width="6"/>
+  <circle id="arc" cx="50" cy="50" r="44" fill="none" stroke="${accent}" stroke-width="6" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+  <text id="tt" x="50" y="58" text-anchor="middle" font-family="Anton" font-size="24" fill="#fff"></text>`;
+const L = 2 * Math.PI * 44, arc = ring.querySelector('#arc'); arc.setAttribute('stroke-dasharray', `${L} ${L}`);
+document.getElementById('l').textContent = p.label || 'pronto em';
+const w = document.getElementById('w');
+motion.onFrame((t) => {
+  const k = motion.inOut(t, 0, D, 0.4, 0.3, 'outBack');
+  w.style.top = (p.y ?? 0.2) * H + 'px'; w.style.transform = `translateX(-50%) scale(${k})`;
+  const kc = motion.prog(t, 0.3, Math.max(D - 0.9, 0.6), 'outCubic');
+  arc.setAttribute('stroke-dashoffset', String(L * (1 - kc)));
+  const s = Math.round(total * kc);
+  ring.querySelector('#tt').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+});
+</script></body></html>

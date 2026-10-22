@@ -43,6 +43,13 @@ MOTION_DEFAULTS = {
     "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
     "mapa": {"layer": "front"}, "infografico": {"layer": "front"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},
+    "tela_ia": {"layer": "full"}, "carrossel3d": {"layer": "full", "needs_video": True},
+    "notificacao": {"layer": "front"}, "botao_cta": {"layer": "front"}, "anotacao": {"layer": "front"},
+    "carimbo": {"layer": "front"}, "checklist": {"layer": "front"}, "onda_audio": {"layer": "front"},
+    "pedacos": {"layer": "behind"}, "card_fogo": {"layer": "front"},
+    "clones": {"layer": "full", "needs_video": True}, "cenario": {"layer": "full", "needs_video": True},
+    "giro": {"layer": "front"}, "luz": {"layer": "front"},
+    "vendas": {"layer": "front"}, "tabela": {"layer": "front"}, "cronometro": {"layer": "front"},
 }
 DEFAULT_CTA = {"reels_viral": "SEGUE PRA VER MAIS", "anuncio_conversao": "CLIQUE EM SAIBA MAIS", "editorial_premium": "Link na bio"}
 
@@ -129,7 +136,10 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
             a["t1"] = b["t0"]
     full = [m for m in full if m["t1"] - m["t0"] >= 1.0]
     out = list(full)
+    manual = [m for m in items if m.get("layer") != "full" and not m.get("auto")]
     for m in (m for m in items if m.get("layer") != "full"):
+        if m.get("auto") and any(m is not x and m["t0"] < x["t1"] and m["t1"] > x["t0"] for x in manual):
+            continue
         for f in full:
             if m["t0"] < f["t1"] and m["t1"] > f["t0"]:
                 if m["t0"] >= f["t0"]:
@@ -209,9 +219,11 @@ def main() -> None:
     zcfg = {**style["zoom"], **ov.get("zoom", {})}
 
     # 1) planos com tempo na timeline final + zoom
+    # velocidade da fala (ex.: 1.15 = 15% mais rápido, sem mudar o tom); duração quantizada em quadros (sem deriva)
+    speed = float(ov.get("speed") or brand.get("speed") or style.get("speed", 1.0))
     plan_shots, t = [], 0.0
     for n, s in enumerate(shots(edl["segments"], words_src, style)):
-        dur = round(s["out"] - s["in"], 3)
+        dur = round(round((s["out"] - s["in"]) / speed * 30) / 30, 4)
         if zcfg.get("off"):
             z0 = z1 = 1.0
         elif zcfg["mode"] == "push":
@@ -224,7 +236,7 @@ def main() -> None:
             z1 = z0 + zcfg["push"] + (0.03 if punch else 0.0)
         plan_shots.append({"clip": s["clip"], "src": clips[s["clip"]]["path"], "in": s["in"], "out": s["out"],
                            "t0": round(t, 3), "t1": round(t + dur, 3), "zoom0": round(z0, 3), "zoom1": round(z1, 3),
-                           "cx": 0.5, "cy": 0.42})
+                           "cx": 0.5, "cy": 0.42, "speed": speed})
         t += dur
     total = round(t, 3)
 
@@ -237,8 +249,8 @@ def main() -> None:
                 idx = words_src.index(w)
                 if idx in set(edl["dropped"]):
                     continue
-                words.append({"w": fix_word(w["w"], fixes), "t0": round(sh["t0"] + max(w["t0"] - sh["in"], 0), 3),
-                              "t1": round(min(sh["t0"] + w["t1"] - sh["in"], sh["t1"]), 3), "emph": False})
+                words.append({"w": fix_word(w["w"], fixes), "t0": round(sh["t0"] + max(w["t0"] - sh["in"], 0) / speed, 3),
+                              "t1": round(min(sh["t0"] + (w["t1"] - sh["in"]) / speed, sh["t1"]), 3), "emph": False})
 
     # 3) ênfase: melhor palavra de cada frase + pedidos do usuário
     sentence, last_emph = [], -9.0
@@ -370,6 +382,23 @@ def main() -> None:
     busy = [(0.0, gfx_hook_end), (cta_start, total)] + [(b["t0"] - 0.3, b["t1"] + 0.3) for b in behind] \
         + [(b["t0"], b["t1"]) for b in broll if b["mode"] != "full"]
     motion = plan_motion(words, ov, style, total, busy)
+    # mapa de gatilhos (frase, palavra, dinheiro, enumeração -> efeito + som + impacto); pedido explícito vence
+    trig_sfx, fx = [], []
+    for req in ov.get("fx_requests", []):
+        hit = find_word(words, req["at"]) if req.get("at") else None
+        if hit:
+            fx.append({"type": req["type"], "t": round(hit["t0"], 3)})
+    if ov.get("triggers", True):
+        import triggers
+        manual = [(m["t0"], m["t1"]) for m in motion if not m.get("auto")]
+        auto, trig_sfx, trig_fx = triggers.apply(words, triggers.load_rules(brand), style["name"], total,
+                                                 brand.get("cta_keywords", ["PRODUTO"]), busy + manual)
+        for m in auto:
+            m.update({k: v for k, v in MOTION_DEFAULTS.get(m["template"], {}).items() if k not in m})
+        motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
+        fx += trig_fx
+    # impacto automático: chicote + whoosh na entrada de animações de tela cheia
+    fx += [{"type": "whip", "t": round(max(m["t0"] - 0.05, 0), 3)} for m in motion if m.get("layer") == "full"]
     # palavra gigante não aparece por cima de animação de tela cheia
     fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]
@@ -390,6 +419,13 @@ def main() -> None:
                 if m.get("layer") == "full"]
     if s["pop"]:
         sfx += [{"type": "pop", "t": m["t0"] + 0.05, "gain": s["pop"] * 0.8} for m in motion if m.get("template") == "icone"]
+    # som de venda em cada notificação da pilha de vendas; tick nas linhas da tabela
+    for m in motion:
+        if m.get("template") == "vendas":
+            ev = m["params"].get("every", 0.45)
+            sfx += [{"type": "venda", "t": round(m["t0"] + 0.15 + i * ev, 3), "gain": 0.5}
+                    for i in range(len(m["params"].get("items", [])))]
+    sfx += trig_sfx
     sfx.sort(key=lambda x: x["t"])
 
     save_json(paths["timeline"], {
@@ -397,7 +433,7 @@ def main() -> None:
         "shots": plan_shots, "words": words, "captions": {"cfg": cap, "pages": cap_pages},
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
         "sfx": sfx, "grade": style["grade"], "audio": style["audio"],
-        "music": ov.get("music") or brand.get("music"), "motion": motion, "brand": proj.get("brand"),
+        "music": ov.get("music") or brand.get("music"), "motion": motion, "brand": proj.get("brand"), "fx": fx,
     })
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "
         f"{len(behind)} atrás da pessoa | {len(broll)} B-roll | {len(graphics)} gráficos | {len(motion)} motion | {len(sfx)} SFX")

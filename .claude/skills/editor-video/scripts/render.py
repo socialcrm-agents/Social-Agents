@@ -76,15 +76,21 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
     d.mkdir(parents=True)
     files = []
     for n, sh in enumerate(tl["shots"]):
-        dur = sh["out"] - sh["in"]
+        speed = sh.get("speed", 1.0)
+        tl_dur = sh["t1"] - sh["t0"]              # duração na timeline (já em quadros inteiros)
+        dur = tl_dur * speed                      # trecho do bruto que vira esse plano
         z0, z1 = sh["zoom0"], sh["zoom1"]
         z = f"({z0}+{z1 - z0:.4f}*t/{dur:.3f})"
-        vf = (f"fps={FPS},scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},"
+        tempo = f",setpts=(PTS-STARTPTS)/{speed:.4f}" if abs(speed - 1) > 1e-3 else ""
+        vf = (f"scale={W}:{H}:force_original_aspect_ratio=increase:flags=lanczos,crop={W}:{H},"
               f"scale=w='2*trunc({W}*{z}/2)':h='2*trunc({H}*{z}/2)':eval=frame:flags=bicubic,"
-              f"crop={W}:{H}:x='(in_w-{W})*{sh['cx']}':y='(in_h-{H})*{sh['cy']}',setsar=1,format=yuv420p")
+              f"crop={W}:{H}:x='(in_w-{W})*{sh['cx']}':y='(in_h-{H})*{sh['cy']}'{tempo},fps={FPS},setsar=1,format=yuv420p")
+        atempo = f"atempo={speed:.4f}," if abs(speed - 1) > 1e-3 else ""
         out = d / f"{n:03d}.mp4"
         ffmpeg(["-ss", f"{sh['in']:.3f}", "-i", sh["src"], "-t", f"{dur:.3f}", "-vf", vf,
-                "-af", f"aresample=48000,afade=t=in:d=0.012,afade=t=out:st={max(dur - 0.02, 0):.3f}:d=0.02",
+                "-af", f"{atempo}aresample=48000,afade=t=in:d=0.012,afade=t=out:st={max(tl_dur - 0.02, 0):.3f}:d=0.02,"
+                f"apad,atrim=0:{tl_dur:.4f}",  # áudio com a duração exata do plano: sem deriva entre som e imagem
+                "-frames:v", str(round(tl_dur * FPS)),
                 "-c:v", "libx264", "-preset", preset, "-crf", "15", "-c:a", "pcm_s16le", str(out.with_suffix(".mkv"))])
         files.append(out.with_suffix(".mkv"))
     lst = d / "list.txt"
@@ -178,6 +184,32 @@ def prepare_fonts(tl: dict, work: Path) -> Path:
         if not dst.exists():
             dst.symlink_to(src.resolve())
     return fdir
+
+
+def fx_chain(f: list[str], cur: str, fx: list[dict]) -> str:
+    """Efeitos de impacto no quadro final: tremida, clarão, glitch e chicote (whip) nos instantes pedidos."""
+    if not fx:
+        return cur
+    win = lambda kind: "+".join(f"between(t,{e['t']:.3f},{e['t'] + e.get('dur', DUR_FX[kind]):.3f})"
+                                for e in fx if e["type"] == kind)
+    chain = []
+    if win("tremida"):
+        m = 28  # margem para a tremida não mostrar borda
+        sx = "+".join(f"between(t,{e['t']:.3f},{e['t'] + e.get('dur', DUR_FX['tremida']):.3f})*{e.get('force', 1)}"
+                      for e in fx if e["type"] == "tremida")
+        chain.append(f"scale={W + 2 * m}:{H + 2 * m},crop={W}:{H}:x='{m}+({sx})*{m * 0.8}*sin(t*97)':"
+                     f"y='{m}+({sx})*{m * 0.8}*cos(t*83)'")
+    if win("clarao"):
+        chain.append(f"eq=brightness=0.35:contrast=0.8:enable='{win('clarao')}'")
+    if win("glitch"):
+        chain.append(f"rgbashift=rh=-14:bh=14:gv=6:enable='{win('glitch')}',noise=alls=35:allf=t:enable='{win('glitch')}'")
+    if win("whip"):
+        chain.append(f"avgblur=sizeX=60:sizeY=1:enable='{win('whip')}'")
+    f.append(f"[{cur}]{','.join(chain)},setsar=1[vfx]")
+    return "vfx"
+
+
+DUR_FX = {"tremida": 0.3, "clarao": 0.08, "glitch": 0.22, "whip": 0.1}
 
 
 def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: list, front: list,
@@ -309,6 +341,7 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         y = f"'34*max(0,1-(t-{t0:.3f})/0.25)'"
         f.append(f"[{cur}][g{k}]overlay=x=0:y={y}:eof_action=pass:enable='between(t,{t0:.3f},{t1:.3f})'[vg{k}]")
         cur = f"vg{k}"
+    cur = fx_chain(f, cur, tl.get("fx", []))
     f.append(f"[{cur}]ass=captions.ass:fontsdir=fonts,format=yuv420p[vout]")
 
     lufs = tl["audio"]["lufs"]

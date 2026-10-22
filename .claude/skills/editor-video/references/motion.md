@@ -31,6 +31,28 @@ Pedido via `edit.py <projeto> --motion '<json>'` (ou `--motion @arquivo.json` co
 | `documentario` | full | Foto/print com câmera Ken Burns até o ponto que importa + círculos/setas/rótulos no tempo da fala | `image`, `focus`, `zoom`, `title`, `marks[{x, y, label, at, kind}]` |
 | `icone` | front | Ícone que pula com rótulo (o plano já põe automático em palavras-chave no Viral/Anúncio) | `icon`, `label`, `color`, `y` |
 
+### Blocos da referência e efeitos (rodada 3)
+
+| Template | Layer padrão | O que faz | Params principais |
+|---|---|---|---|
+| `tela_ia` | full | Chat de IA genérico em fundo branco quente: saudação, cursor clica no +, arquivo entra, digita, envia, resposta digitando, carimbo, setas à mão | `greeting`, `steps[{do: attach/type/send/reply/stamp/mark, at, ...}]` |
+| `carrossel3d` | full (usa vídeo) | Telas e clipes girando em arco 3D | `items[{image}/{video, start}/{self:true}]`, `title`, `speed` |
+| `onda_audio` | front | Onda do bruto, cortes em vermelho somem, duração cai (dados reais) | `title`, `mode` |
+| `checklist` | front | Itens marcados na palavra falada + barra | `title`, `items[{text, at}]` |
+| `notificacao` | front | Notificação descendo do topo + selo "feito" | `app`, `title`, `text`, `icon`, `badge` |
+| `botao_cta` | front | Botão "Saiba Mais" com cursor clicando | `text`, `sub`, `click_at`, `accent` |
+| `anotacao` | front | Setas, círculos, sublinhados e texto à mão | `marks[{kind, from, to, text, at}]` (0..1) |
+| `carimbo` | front | Carimbo com tremida | `text`, `color`, `x`, `y`, `size`, `rot` |
+| `pedacos` | behind | Recortes do vídeo subindo e girando acima da cabeça | `count`, `items` (opcional) |
+| `card_fogo` | front | Card preso na mão que queima de baixo para cima | `title`, `sub`, `follow: "hand"`, `burn_at` |
+| `clones` | full (usa vídeo) | Pessoa duplicada em versões (P&B, neon, quente...), com atraso | `copies[{label, look, delay, mirror}]` |
+| `cenario` | full (usa vídeo) | Vários cenários (imagens) atrás da pessoa, trocando com chicote | `scenes[{image, at, label}]` |
+| `giro` | front | Card girando em 3D (antes → depois, sequência de imagens) | `images` ou `texts`, `labels`, `every` |
+| `vendas` | front | Notificações de venda empilhando com "plim" (só números reais) | `items[{title, text}]`, `app` |
+| `tabela` | front | Comparação em 2 colunas | `left`, `right`, `rows[{l, r, at}]` |
+| `cronometro` | front | Relógio contando até o tempo dito | `seconds`, `label` |
+| `luz` | front | Vazamento de luz / clarão | `kind`, `color` |
+
 Exemplos (os mesmos dos anúncios de referência):
 - "Me coloca numa moldura do lado direito e do lado esquerdo explica a receita": `moldura` com `items`.
 - "Separa tudo em camadas de vidro: o fundo, as logos e eu": `camadas`.

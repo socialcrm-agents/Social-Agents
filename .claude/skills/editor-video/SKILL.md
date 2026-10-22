@@ -22,6 +22,15 @@ npm install -g playwright && npx playwright install chromium   # motion graphics
 Só siga quando imprimir `READY`. Cada linha `MISSING` traz o comando de correção para o sistema do usuário.
 Detalhes em `SK/references/dependencias.md`.
 
+## 0b. Marca do cliente (leia antes de editar)
+
+Se existir `SK/brands/<slug>/` para o cliente (ex.: `omarcelprado`), crie o projeto com `--brand <slug>` e **leia
+`brand.md` antes de escrever qualquer gancho, texto de tela ou CTA**: tom de voz, CTAs, o que evitar, padrões de
+edição aprovados, paleta e o vídeo de referência. O `brand.json` aplica sozinho cores, legenda em duas fontes, CTA
+padrão, correções de palavras do ASR, velocidade (×1,15), pausas curtas e o mapa de gatilhos da marca
+(`triggers.json`). Cliente novo: copie `brands/omarcelprado/` como modelo e preencha com o material dele.
+Consulte também `SK/references/catalogo.md` (tudo que o editor faz) em toda edição.
+
 ## 1. Intake
 
 - Clipes: os arquivos que o usuário indicar (vários clipes = várias tomadas do mesmo roteiro, na ordem de gravação).
@@ -33,7 +42,7 @@ Detalhes em `SK/references/dependencias.md`.
 - Projeto: uma pasta nova por vídeo (ex.: `~/video-edits/<slug>`).
 
 ```bash
-PY SK/scripts/run.py new <projeto> --clips <bruto1.mp4> [<bruto2.mp4> ...] --style <estilo> [--format 16:9] \
+PY SK/scripts/run.py new <projeto> --clips <bruto1.mp4> [<bruto2.mp4> ...] --style <estilo> [--format 16:9] [--brand slug] \
    [--broll <arquivos ou pasta>] [--hook "texto do gancho"] [--cta "chamada final"]
 PY SK/scripts/transcribe.py <projeto>     # transcript.txt + transcript.json (tempo por palavra)
 ```
@@ -68,6 +77,15 @@ lugar, produto, comparação), proponha uma animação e peça com `edit.py --mo
 - números (preço, metragem, resultado) -> `infografico`; endereço/distância -> `mapa`; foto/print com marcações -> `documentario`
 - qualquer outra coisa (anatomia, receita animada, planeta abrindo, gráfico): escreva uma composição própria
   seguindo o contrato de `motion.md`, renderize um trecho e olhe os quadros antes de usar.
+Blocos da referência do Marcel (fundo branco quente com sombra de persiana): `tela_ia` (chat de IA com cursor,
+arquivo, digitação, carimbo), `carrossel3d` (telas e clipes em arco 3D), `onda_audio` (cortes reais, 2:03 → 0:40),
+`checklist`, `notificacao`, `botao_cta`, `anotacao` (à mão), `carimbo`, `pedacos` (vídeo girando sobre a cabeça),
+`card_fogo` (card na mão que queima). Mais: `clones` (pessoa duplicada/várias versões), `cenario` (vários
+cenários), `giro` (imagens girando/antes-depois), `vendas` (notificações de venda com "plim", só números reais),
+`tabela` (2 colunas), `cronometro`, `luz`.
+O **mapa de gatilhos** já põe vários sozinhos (frase da marca, dinheiro, enumeração, "comenta PALAVRA",
+"clica no botão"); confira em `timeline.json` (`motion[].trigger`) e ajuste.
+Efeitos de impacto: `--fx tremida@palavra`, `clarao`, `glitch`, `whip` (chicote já entra sozinho em tela cheia).
 Ritmo: no máximo uma animação de tela cheia a cada ~6-8 s num Reels; num vídeo longo, use nos pontos-chave.
 Ícones em palavras-chave entram sozinhos no Viral/Anúncio (`--icons off` desliga).
 Não invente números, endereços ou dados: só o que a pessoa disse ou o usuário forneceu.
@@ -82,6 +100,16 @@ PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v
 - O render imprime quantas palavras ficaram ATRÁS da pessoa e quantas foram para a FRENTE: atrás só acontece com
   rosto detectado e cabeça estável; sem pessoa (tela, mão, produto), a palavra vira título animado na frente.
 - Render final ~2x a duração do vídeo em CPU de 4 núcleos. `--draft` em `render.py` é mais rápido.
+
+## 3b. Mídia dos conectores e versões
+
+- `qa/pedidos-de-midia.md` (gerado no plan) lista citações, profissões, cenários e ferramentas ditas na fala, com o
+  conector certo (Pinterest, Canva, Moda, Instagram...). Atenda só 2-4 que melhoram o vídeo, seguindo
+  `SK/references/conectores.md` (inclui como baixar quando a rede da nuvem bloqueia), salve em `<projeto>/midia/`
+  e encaixe (`--motion cenario`, `documentario`, `giro`, `--add-broll`).
+- Variações de gancho (ele grava 3 ganchos seguidos e depois o corpo): `PY SK/scripts/run.py variacoes <projeto> --ganchos 3`
+  → `renders/gancho1.mp4`, `gancho2.mp4`, `gancho3.mp4`.
+- Versões curtas terminando em fim de frase: `PY SK/scripts/run.py curta <projeto> --segundos 30 15`.
 
 ## 4. Confira antes de entregar (obrigatório)
 

@@ -58,6 +58,20 @@
 - Composições sob medida (anatomia, planeta abrindo) dependem do Claude escrever um bom HTML/Three.js e de
   modelos 3D licenciados para realismo.
 
+**Conectores (testados em 22/10/2026)**
+- Funcionam para buscar e gerar: Pinterest e Instagram (Scrape Creators: busca e transcrição), Canva (gerar imagem e
+  design), Moda (upload por URL, canvas, screenshot). **Nesta nuvem, o download dos arquivos é bloqueado**
+  (i.pinimg.com, export-download.canva.com, assets-cdn.moda.app, *.fbcdn.net). Pela ponte do Moda (screenshot)
+  chega uma imagem de até ~562x1000. No Claude Code local, ou liberando esses domínios no ambiente, baixa normal.
+- HeyGen: o conector só tem HyperFrames (HTML), e o compose é recusado no CLI. **Não há avatar falante via
+  conector**: gere no app HeyGen e anexe o MP4.
+- Hugging Face: o conector está ligado, mas o `invoke` está desativado e os jobs pedem conta paga.
+- Páginas de concorrentes não abrem desta nuvem; o mapa saiu dos anúncios (Biblioteca da Meta) e está em
+  `concorrentes.md`, com a estrutura das páginas marcada como inferida.
+
+**Marca @omarcelprado**
+- Cores e fontes do kit são PROPOSTA (nenhum documento define hex, fonte ou logo). Confirme ou envie o logo.
+
 **Claude Code**
 - O Claude não "assiste" ao vídeo: ele lê transcrição, JSONs e olha quadros extraídos (contact sheet). A QA
   visual é por amostragem de quadros, não do vídeo inteiro.

@@ -1,0 +1,40 @@
+<!doctype html>
+<!-- NOTIFICAÇÃO NO TOPO (layer: front): banner estilo celular descendo do topo, com selo "feito" que carimba depois.
+     Ex. da referência: "deixa a legenda amarela" + selo "feito".
+     params: app ("Editor IA"), title, text, icon (Lucide), badge ("feito"), badge_at (s), accent, y (px do topo) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #n { position: absolute; left: 50%; width: 900px; border-radius: 44px; padding: 30px 34px; display: flex; gap: 26px; align-items: center;
+       background: rgba(250,248,244,.94); color: #151515; box-shadow: 0 30px 70px rgba(0,0,0,.35); }
+  #ic { flex: 0 0 auto; width: 100px; height: 100px; border-radius: 24px; display: grid; place-items: center; color: #111; }
+  #ic svg { width: 58px; height: 58px; }
+  #app { font-size: 28px; font-weight: 700; color: #7a746b; text-transform: uppercase; letter-spacing: 1px; }
+  #title { font-size: 40px; font-weight: 800; margin-top: 2px; }
+  #text { font-size: 36px; font-weight: 700; color: #3a3631; margin-top: 2px; }
+  #badge { position: absolute; right: -24px; top: -30px; padding: 10px 26px; border-radius: 999px; font-weight: 900;
+           font-size: 36px; color: #fff; background: #1faa59; text-transform: uppercase; box-shadow: 0 10px 24px rgba(0,0,0,.3); }
+  #badge svg { width: 34px; height: 34px; vertical-align: -6px; margin-right: 6px; stroke: #fff; }
+</style></head>
+<body><div id="n"><div id="ic"></div><div><div id="app"></div><div id="title"></div><div id="text"></div></div><div id="badge"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const n = document.getElementById('n'), badge = document.getElementById('badge');
+document.getElementById('app').textContent = p.app || 'Editor IA · agora';
+document.getElementById('title').textContent = p.title || 'Pedido recebido';
+document.getElementById('text').textContent = p.text || 'deixa a legenda amarela';
+document.getElementById('ic').style.background = p.accent || '#FFD21F';
+motion.waitFor(motion.icon(p.icon || 'message-square-text').then((s) => (document.getElementById('ic').innerHTML = s)));
+motion.waitFor(motion.icon('check').then((s) => (badge.innerHTML = s + (p.badge || 'feito'))));
+if (p.badge === '') badge.style.display = 'none';
+const y = p.y ?? 250, bAt = p.badge_at ?? Math.min(1.2, D * 0.5);
+motion.onFrame((t) => {
+  const k = motion.inOut(t, 0, D, 0.45, 0.35, 'outBack');
+  n.style.top = y + 'px';
+  n.style.transform = `translate(-50%, ${(1 - k) * -260}px)`;
+  n.style.opacity = Math.min(1, k * 2);
+  const kb = motion.prog(t, bAt, 0.3, 'outBack');
+  badge.style.transform = `scale(${motion.lerp(2.2, 1, kb)}) rotate(${motion.lerp(-18, 6, kb)}deg)`;
+  badge.style.opacity = t >= bAt ? 1 : 0;
+});
+</script></body></html>

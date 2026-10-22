@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- ANOTAÇÕES À MÃO (layer: front): setas, círculos, sublinhados e palavras escritas à mão em vermelho, por cima
+     do vídeo, cada uma no seu tempo (ex.: "bruto", "erro", "só isso!").
+     params: marks: [{kind: "arrow"|"circle"|"underline"|"text", from: [x,y], to: [x,y] (0..1 da tela), text, at (s),
+             size (px, texto), color}], color (padrão #E63B2E) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>.note { position: absolute; transform: translate(-50%, -50%) rotate(-6deg); white-space: nowrap;
+  text-shadow: 0 3px 0 rgba(255,255,255,.85), 0 6px 18px rgba(0,0,0,.35); }</style></head>
+<body><svg id="s" style="position:absolute;inset:0"></svg>
+<script type="module">
+import motion from '/lib/runtime.js';
+import { handMark } from '/lib/fx.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const svg = document.getElementById('s'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+const color = p.color || '#E63B2E';
+const items = (p.marks || [{ kind: 'text', text: 'só isso!', to: [0.5, 0.3] }]).map((m, i) => {
+  const at = typeof m.at === 'number' ? m.at : 0.2 + i * 0.6;
+  const to = [(m.to || [0.5, 0.5])[0] * W, (m.to || [0.5, 0.5])[1] * H];
+  const from = m.from ? [m.from[0] * W, m.from[1] * H] : [to[0] + 220, to[1] - 220];
+  let draw = null, note = null;
+  if (m.kind !== 'text') draw = handMark(svg, m.kind || 'arrow', from, to, m.color || color, 11);
+  if (m.text) {
+    note = document.createElement('div'); note.className = 'note hand'; note.textContent = m.text;
+    note.style.fontSize = (m.size || 110) + 'px'; note.style.color = m.color || color;
+    const at2 = m.kind === 'text' ? to : m.kind === 'circle' ? [(from[0] + to[0]) / 2, Math.min(from[1], to[1]) - 40] : from;
+    // texto sempre dentro da tela (centro limitado às margens seguras)
+    const half = Math.min((String(m.text).length * (m.size || 110) * 0.22), W * 0.42);
+    note.style.left = Math.min(Math.max(at2[0], half + 50), W - half - 50) + 'px';
+    note.style.top = at2[1] - (m.kind === 'text' || m.kind === 'circle' ? 0 : 70) + 'px';
+    document.body.appendChild(note);
+  }
+  return { m, at, draw, note };
+});
+motion.onFrame((t) => {
+  const fade = 1 - motion.prog(t, D - 0.3, 0.3);
+  for (const it of items) {
+    if (it.draw) { it.draw(motion.prog(t, it.at, 0.45, 'inOutQuad')); it.draw.el.style.opacity = fade; }
+    if (it.note) {
+      const k = motion.prog(t, it.at + (it.draw ? 0.3 : 0), 0.3, 'outBack');
+      it.note.style.opacity = Math.min(k * 2, 1) * fade;
+      it.note.style.transform = `translate(-50%, -50%) rotate(-6deg) scale(${0.6 + 0.4 * k})`;
+    }
+  }
+});
+</script></body></html>

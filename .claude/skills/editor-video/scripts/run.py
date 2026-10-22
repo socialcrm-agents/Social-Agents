@@ -7,6 +7,8 @@
   run.py plan <projeto>         só replaneja (após mudar estilo/overrides)
   run.py render <projeto>       replaneja e renderiza uma nova versão
   run.py styles                 lista os estilos
+  run.py variacoes <projeto> [--ganchos 3]      uma versão por gancho (grave 3 ganchos seguidos + o corpo)
+  run.py curta <projeto> [--segundos 30 15]     versões curtas terminando em fim de frase
 
 Correções por texto: use edit.py (aplica a mudança e renderiza a próxima versão).
 """
@@ -14,12 +16,14 @@ Correções por texto: use edit.py (aplica a mudança e renderiza a próxima ver
 from __future__ import annotations
 
 import argparse
+import json
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-from common import STYLES_DIR, EditorError, load_json, log, main_guard, probe, project_paths, require_tools, save_json
+from common import (STYLES_DIR, EditorError, load_json, load_style, log, main_guard, probe, project_paths,
+                    require_tools, save_json)
 
 HERE = Path(__file__).resolve().parent
 VIDEO_EXT = {".mp4", ".mov", ".m4v", ".mkv", ".webm"}
@@ -87,12 +91,66 @@ def cmd_plan(a) -> None:
     project = Path(a.project).resolve()
     step("analyze.py", project)
     step("plan.py", project)
+    step("conectores.py", project)
 
 
 def cmd_render(a) -> None:
     project = Path(a.project).resolve()
     cmd_plan(a)
     step("render.py", project)
+
+
+def _temp_render(project: Path, tweak, label: str) -> Path | None:
+    """Renderiza uma variação sem mexer de vez no projeto (o project.json volta ao original no fim)."""
+    import shutil
+    paths = project_paths(project)
+    backup = paths["project"].read_text(encoding="utf-8")
+    try:
+        proj = load_json(paths["project"])
+        tweak(proj)
+        save_json(paths["project"], proj)
+        for script in ("analyze.py", "plan.py", "render.py"):
+            step(script, project)
+        last = load_json(paths["project"])["version"]
+        src = next(paths["renders"].glob(f"v{last}_*.mp4"))
+        dst = paths["renders"] / f"{label}.mp4"
+        shutil.copy2(src, dst)
+        log(f"   -> {dst}")
+        return dst
+    finally:
+        version = load_json(paths["project"])["version"]
+        orig = json.loads(backup)
+        orig["version"] = version
+        save_json(paths["project"], orig)
+
+
+def cmd_variacoes(a) -> None:
+    """Você gravou N ganchos seguidos e depois o corpo: gera uma versão por gancho (para testar qual vende)."""
+    import analyze
+    project = Path(a.project).resolve()
+    paths = project_paths(project)
+    words = load_json(paths["transcript"])["words"]
+    proj = load_json(paths["project"])
+    drop, _ = analyze.analyze(words, load_style(proj["style"], proj.get("brand")), proj.get("overrides", {}))
+    kept = [w for i, w in enumerate(words) if i not in drop]
+    sents, cur = [], []
+    for w in kept:
+        cur.append(w["w"])
+        if w["w"].endswith((".", "!", "?")):
+            sents.append(" ".join(cur))
+            cur = []
+    hooks = sents[:a.ganchos]
+    log("Ganchos encontrados:\n" + "\n".join(f"  {n}. {h}" for n, h in enumerate(hooks, 1)))
+    for n, hook in enumerate(hooks, 1):
+        others = [h for h in hooks if h != hook]
+        _temp_render(project, lambda p, o=others: p["overrides"].setdefault("cuts", []).extend(o), f"gancho{n}")
+
+
+def cmd_curta(a) -> None:
+    """Versões curtas (ex.: 30 s e 15 s) que terminam em fim de frase, mantendo gancho e fechamento."""
+    project = Path(a.project).resolve()
+    for s in a.segundos:
+        _temp_render(project, lambda p, s=s: p.__setitem__("target_duration", s), f"curta_{s}s")
 
 
 def cmd_styles(_a) -> None:
@@ -119,8 +177,15 @@ def main() -> None:
     for name in ("all", "plan", "render"):
         sub.add_parser(name).add_argument("project")
     sub.add_parser("styles")
+    v = sub.add_parser("variacoes", help="uma versão por gancho gravado")
+    v.add_argument("project")
+    v.add_argument("--ganchos", type=int, default=3)
+    c = sub.add_parser("curta", help="versões curtas terminando em fim de frase")
+    c.add_argument("project")
+    c.add_argument("--segundos", type=int, nargs="+", default=[30, 15])
     a = ap.parse_args()
-    {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "styles": cmd_styles}[a.cmd](a)
+    {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "styles": cmd_styles,
+     "variacoes": cmd_variacoes, "curta": cmd_curta}[a.cmd](a)
 
 
 if __name__ == "__main__":

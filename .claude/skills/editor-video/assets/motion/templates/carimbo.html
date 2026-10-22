@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- CARIMBO (layer: front): bate na tela com tremida (ex.: "EDITOR DEMITIDO", "PRONTO PRA EDITAR", "EXEMPLO").
+     params: text, color (#E63B2E), x, y (0..1), size (px), rot (graus), at (s) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>.stamp { mix-blend-mode: normal !important; background: rgba(255,255,255,.12); text-shadow: 0 2px 0 rgba(255,255,255,.4); }</style></head>
+<body><script type="module">
+import motion from '/lib/runtime.js';
+import { stamp } from '/lib/fx.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const fn = stamp(document.body, p.text || 'FEITO', p.color || '#E63B2E');
+const el = document.querySelector('.stamp');
+motion.onFrame((t) => {
+  fn(t, p.at ?? 0.05, (p.x ?? 0.5) * W, (p.y ?? 0.32) * H, p.size || 120, p.rot ?? -8);
+  el.style.opacity = Math.min(parseFloat(el.style.opacity || 0), 1 - motion.prog(t, D - 0.25, 0.25));
+});
+</script></body></html>
