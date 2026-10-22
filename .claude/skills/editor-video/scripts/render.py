@@ -160,6 +160,26 @@ def place_behind(tl: dict, stats: list[dict] | None) -> tuple[list[dict], list[d
     return behind, front
 
 
+def prepare_fonts(tl: dict, work: Path) -> Path:
+    """work/fonts = fontes da skill + fontes da marca (libass e o servidor de motion leem daqui)."""
+    from common import load_brand
+    fdir = work / "fonts"
+    if fdir.is_symlink():
+        fdir.unlink()
+    fdir.mkdir(exist_ok=True)
+    brand = load_brand(tl.get("brand"))
+    files = list(FONTS_DIR.glob("*.[ot]tf"))
+    if brand:
+        import assets
+        assets.register_fonts(brand.get("fonts", []), Path(brand["_dir"]))
+        files += [Path(brand["_dir"]) / f["file"] for f in brand.get("fonts", [])]
+    for src in files:
+        dst = fdir / src.name
+        if not dst.exists():
+            dst.symlink_to(src.resolve())
+    return fdir
+
+
 def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: list, front: list,
             out: Path, preset: str, motion_clips: list | None = None) -> None:
     motion_clips = motion_clips or []
@@ -202,7 +222,8 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         import assets
         cta_top = g["type"] == "cta" and \
             max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > assets.SAFE_BOTTOM - 220
-        graphic_png(g["type"], g["text"], tl["style"], tl["graphics_cfg"], png, top=cta_top)
+        gcfg = {**tl["graphics_cfg"], "logo_position": g.get("position"), "logo_opacity": g.get("opacity", 0.85)}
+        graphic_png(g["type"], g["text"], tl["style"], gcfg, png, top=cta_top)
         inputs += ["-loop", "1", "-t", f"{g['t1'] - g['t0']:.3f}", "-i", str(png)]
         gfx.append((n_in, g))
         n_in += 1
@@ -311,9 +332,6 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
 
     graph = work / "graph.txt"
     graph.write_text(";\n".join(f), encoding="utf-8")
-    fonts_link = work / "fonts"
-    if not fonts_link.exists():
-        fonts_link.symlink_to(FONTS_DIR, target_is_directory=True)
     args = [*inputs, "-filter_complex_script", "graph.txt", "-map", "[vout]", "-map", "[aout]",
             "-t", f"{total:.3f}", "-r", str(FPS), "-c:v", "libx264", "-preset", preset, "-crf", "19",
             "-profile:v", "high", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
@@ -348,6 +366,7 @@ def main() -> None:
     assets.set_format(W, H)
     t_start = time.time()
     work = paths["work"]
+    prepare_fonts(tl, work)
     has_face = face_for_shots(tl, work)
     log(f"   rosto detectado: {'sim' if has_face else 'não'}")
     aroll = render_shots(tl, work, "veryfast")

@@ -27,6 +27,7 @@ Operações:
   --zoom off|on|suave|forte      intensidade dos zooms
   --music ARQUIVO[:volume]       trilha (com ducking automático sob a voz)
   --format 9:16|16:9|1:1|4:5     formato de saída (Reels/Shorts, YouTube/aula, feed)
+  --brand SLUG|nenhuma           aplica o kit de marca (cores, fontes, logo, CTAs, correções de palavras)
   --motion JSON|@arquivo.json    animação: {"template": "moldura", "at": "trecho falado", "dur": 5, "params": {...}}
                                  (lista em references/motion.md; "at" dentro de params aceita palavra falada)
   --motion-remove N              remove a N-ésima animação pedida
@@ -69,6 +70,7 @@ def main() -> None:
     ap.add_argument("--zoom", choices=["off", "on", "suave", "forte"])
     ap.add_argument("--music")
     ap.add_argument("--format", choices=["9:16", "16:9", "1:1", "4:5"])
+    ap.add_argument("--brand", help="aplica o kit de marca brands/<slug> (ou 'nenhuma')")
     ap.add_argument("--motion", action="append", default=[])
     ap.add_argument("--motion-remove", action="append", type=int, default=[])
     ap.add_argument("--icons", choices=["on", "off"])
@@ -137,7 +139,7 @@ def main() -> None:
         proj["broll"].append(item)
         done.append(f"novo B-roll {item['id']}: {p.name}")
     if a.caption_size:
-        base = ov.get("caption", {}).get("size") or load_style(proj["style"])["captions"]["size"]
+        base = ov.get("caption", {}).get("size") or load_style(proj["style"], proj.get("brand"))["captions"]["size"]
         s = a.caption_size
         size = int(base * (1 + float(s[:-1]) / 100)) if s.endswith("%") else int(s)
         ov.setdefault("caption", {})["size"] = size
@@ -147,7 +149,7 @@ def main() -> None:
         ov.setdefault("caption", {})["y"] = min(a.caption_y, 1470)
         done.append(f"legenda y={min(a.caption_y, 1470)}")
     if a.zoom:
-        st = load_style(proj["style"])["zoom"]
+        st = load_style(proj["style"], proj.get("brand"))["zoom"]
         ov["zoom"] = {"off": {"off": True}, "on": {}, "suave": {"punch": 1 + (st["punch"] - 1) * 0.5, "push": st["push"] * 0.5},
                       "forte": {"punch": 1 + (st["punch"] - 1) * 1.5, "push": st["push"] * 1.5 + 0.02}}[a.zoom]
         done.append(f"zoom {a.zoom}")
@@ -156,6 +158,10 @@ def main() -> None:
         ov["music"] = {"path": str(Path(path).expanduser().resolve()), "volume": float(vol or 0.12)}
         done.append(f"trilha {Path(path).name}")
 
+    if a.brand:
+        from common import load_brand
+        proj["brand"] = None if a.brand == "nenhuma" else (load_brand(a.brand) and a.brand)
+        done.append(f"marca: {a.brand}")
     if a.format:
         proj["format"] = a.format
         done.append(f"formato {a.format}")

@@ -14,6 +14,7 @@ from pathlib import Path
 SKILL_DIR = Path(__file__).resolve().parent.parent
 FONTS_DIR = SKILL_DIR / "assets" / "fonts"
 STYLES_DIR = SKILL_DIR / "styles"
+BRANDS_DIR = SKILL_DIR / "brands"
 MODELS_DIR = Path(os.environ.get("EDITOR_VIDEO_MODELS", Path.home() / ".cache" / "editor-video" / "models"))
 
 W, H, FPS = 1080, 1920, 30
@@ -85,12 +86,43 @@ def save_json(path: Path, data) -> None:
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def load_style(name: str) -> dict:
+def load_brand(slug: str | None) -> dict:
+    """Kit de marca (brands/<slug>/brand.json): cores, fontes, logo, voz, CTAs, correções de palavras."""
+    if not slug:
+        return {}
+    path = BRANDS_DIR / slug / "brand.json"
+    if not path.exists():
+        names = ", ".join(p.name for p in BRANDS_DIR.iterdir() if (p / "brand.json").exists()) if BRANDS_DIR.exists() else ""
+        raise EditorError(f"Marca '{slug}' não existe em brands/. Disponíveis: {names or 'nenhuma'}")
+    brand = load_json(path)
+    brand["_dir"] = str(path.parent)
+    return brand
+
+
+def _deep_merge(base: dict, extra: dict) -> dict:
+    out = dict(base)
+    for k, v in extra.items():
+        out[k] = _deep_merge(out[k], v) if isinstance(v, dict) and isinstance(out.get(k), dict) else v
+    return out
+
+
+def load_style(name: str, brand: str | dict | None = None) -> dict:
+    """Estilo base + identidade da marca (cores de destaque, fontes e ajustes por estilo definidos no brand.json)."""
     path = STYLES_DIR / f"{name}.json"
     if not path.exists():
         names = ", ".join(p.stem for p in STYLES_DIR.glob("*.json"))
         raise EditorError(f"Estilo '{name}' não existe. Disponíveis: {names}")
-    return load_json(path)
+    style = load_json(path)
+    b = load_brand(brand) if isinstance(brand, str) else (brand or {})
+    if not b:
+        return style
+    accent = (b.get("colors") or {}).get("accent")
+    if accent:
+        style["graphics"]["accent"] = accent
+        style["captions"]["emph_color"] = accent
+        if style["captions"].get("highlight", "none") != "none":
+            style["captions"]["highlight"] = accent
+    return _deep_merge(style, (b.get("styles") or {}).get(name, {}))
 
 
 def norm(word: str) -> str:

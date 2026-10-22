@@ -182,7 +182,7 @@ def main() -> None:
     tr = load_json(paths["transcript"])
     if not tr:
         raise EditorError("transcript.json não encontrado. Rode transcribe.py.")
-    style = load_style(proj["style"])
+    style = load_style(proj["style"], proj.get("brand"))
     words = tr["words"]
     drop, report = analyze(words, style, proj.get("overrides", {}))
     keep = [i for i in range(len(words)) if i not in drop]

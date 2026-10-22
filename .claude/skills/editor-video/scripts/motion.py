@@ -104,7 +104,8 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
         return out
     job = {"page": page, "out": str(out), "w": w, "h": h, "fps": fps, "duration": round(t1 - t0, 3), "params": params,
            "opaque": item.get("layer") == "full", "webgl": item.get("webgl", item.get("template") in WEBGL),
-           "roots": {"/": str(MOTION_DIR), "/fonts/": str(FONTS_DIR), "/work/": str(work)}}
+           "roots": {"/": str(MOTION_DIR), "/fonts/": str(work / "fonts" if (work / "fonts").is_dir() else FONTS_DIR),
+                     "/work/": str(work)}}
     job_file = mdir / f"job_{sig}.json"
     job_file.write_text(json.dumps(job, ensure_ascii=False), encoding="utf-8")
     proc = subprocess.run(["node", str(RENDERER), str(job_file)], capture_output=True, text=True)

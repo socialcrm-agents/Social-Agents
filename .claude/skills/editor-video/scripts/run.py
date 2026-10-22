@@ -49,6 +49,9 @@ def collect(items: list[str], exts: set[str]) -> list[Path]:
 
 def cmd_new(a) -> None:
     project = Path(a.project).resolve()
+    if a.brand:
+        from common import load_brand
+        load_brand(a.brand)  # falha cedo se a marca não existir
     paths = project_paths(project)
     if paths["project"].exists() and not a.force:
         raise EditorError(f"{project} já existe. Use --force para recriar.")
@@ -66,7 +69,7 @@ def cmd_new(a) -> None:
               **({} if p.suffix.lower() in IMAGE_EXT else {"duration": probe(p)["duration"]})}
              for n, p in enumerate(collect(a.broll, VIDEO_EXT | IMAGE_EXT), 1)]
     save_json(paths["project"], {
-        "style": a.style, "format": a.format, "clips": clips, "broll": broll, "version": 0,
+        "style": a.style, "format": a.format, "brand": a.brand, "clips": clips, "broll": broll, "version": 0,
         "overrides": {"word_fixes": {}, "cuts": [], "restores": [], "behind_add": [], "behind_remove": [],
                       "emphasis_add": [], "broll_at": [], "broll_remove": [], "caption": {}, "zoom": {},
                       "hook": a.hook, "cta": a.cta, "behind_enabled": None, "notes": []},
@@ -107,6 +110,7 @@ def main() -> None:
     n.add_argument("--clips", nargs="+", required=True)
     n.add_argument("--broll", nargs="*", default=[])
     n.add_argument("--style", default="reels_viral")
+    n.add_argument("--brand", default=None, help="kit de marca em brands/<slug> (cores, fontes, logo, voz, CTAs)")
     n.add_argument("--hook", default=None)
     n.add_argument("--cta", default=None)
     n.add_argument("--format", default="9:16", choices=["9:16", "16:9", "1:1", "4:5"],

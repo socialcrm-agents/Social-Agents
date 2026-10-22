@@ -13,7 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from common import FORMATS, EditorError, load_json, load_style, log, main_guard, norm, project_paths, save_json
+from common import FORMATS, EditorError, load_brand, load_json, load_style, log, main_guard, norm, project_paths, save_json
 
 STOP = set("""a o as os um uma uns umas de do da dos das em no na nos nas num numa para pra pro por com sem que se
 e ou mas como quando onde eu tu ele ela nos vos eles elas voce voces te me lhe isso isto aquilo esse essa este esta
@@ -184,8 +184,15 @@ def main() -> None:
     tr = load_json(paths["transcript"])
     if not edl:
         raise EditorError("edl.json não encontrado. Rode analyze.py.")
-    style = load_style(proj["style"])
-    ov = proj.get("overrides", {})
+    style = load_style(proj["style"], proj.get("brand"))
+    ov = dict(proj.get("overrides", {}))
+    brand = load_brand(proj.get("brand"))
+    # padrões da marca: correções de palavras, CTA por estilo, ícones próprios (o pedido do usuário vence)
+    ov["word_fixes"] = {**brand.get("word_fixes", {}), **ov.get("word_fixes", {})}
+    if not ov.get("cta"):
+        cta = brand.get("cta", {})
+        ov["cta"] = cta.get(proj["style"]) or cta.get("default")
+    ICON_WORDS.update({norm(k): v for k, v in brand.get("icon_words", {}).items()})
     words_src = tr["words"]
     clips = {c["id"]: c for c in proj["clips"]}
     fw, fh = FORMATS[proj.get("format", "9:16")]
@@ -352,6 +359,10 @@ def main() -> None:
             n += 1
     if g["progress_bar"]:
         graphics.append({"type": "progress", "text": "", "t0": 0.0, "t1": total})
+    logo = brand.get("logo", {})
+    if logo.get("watermark") and logo.get("file"):
+        graphics.append({"type": "logo", "text": str(Path(brand["_dir"]) / logo["file"]), "t0": 0.0, "t1": total,
+                         "position": logo.get("position", "top-right"), "opacity": logo.get("opacity", 0.85)})
     if g["cta"]:
         graphics.append({"type": "cta", "text": ov.get("cta") or DEFAULT_CTA[style["name"]], "t0": round(cta_start, 3), "t1": total})
 
@@ -386,7 +397,7 @@ def main() -> None:
         "shots": plan_shots, "words": words, "captions": {"cfg": cap, "pages": cap_pages},
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
         "sfx": sfx, "grade": style["grade"], "audio": style["audio"],
-        "music": ov.get("music"), "motion": motion,
+        "music": ov.get("music") or brand.get("music"), "motion": motion, "brand": proj.get("brand"),
     })
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "
         f"{len(behind)} atrás da pessoa | {len(broll)} B-roll | {len(graphics)} gráficos | {len(motion)} motion | {len(sfx)} SFX")

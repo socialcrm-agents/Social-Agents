@@ -167,8 +167,16 @@ def behind_ass(tl: dict, items: list[dict], out: Path) -> None:
 
 # ---------- gráficos PNG ----------
 
+def register_fonts(fonts: list[dict], base: Path) -> None:
+    """Fontes da marca (brand.json -> fonts: [{family, file, italic}]) passam a valer nos gráficos."""
+    for f in fonts or []:
+        FONT_FILES[(f["family"], bool(f.get("italic")))] = str((base / f["file"]).resolve())
+        WIDTH_FACTOR.setdefault(f["family"], f.get("width_factor", 0.6))
+
+
 def _font(name: str, size: int, italic: bool = False) -> ImageFont.FreeTypeFont:
-    return ImageFont.truetype(str(FONTS_DIR / FONT_FILES.get((name, italic), FONT_FILES[(name, False)])), size)
+    file = FONT_FILES.get((name, italic)) or FONT_FILES.get((name, False)) or FONT_FILES[("Poppins", False)]
+    return ImageFont.truetype(str(FONTS_DIR / file), size)  # caminho absoluto (marca) ignora FONTS_DIR
 
 
 def _wrap(draw, text, font, max_w) -> list[str]:
@@ -243,6 +251,17 @@ def graphic_png(kind: str, text: str, style: str, g: dict, out: Path, top: bool 
         d.rectangle((x0, y0, x0 + 8, y0 + h), fill=_rgb(accent))
         for n, l in enumerate(lines):
             d.text((x0 + 36, y0 + 14 + n * 78), l, font=font, fill=_rgb(fg))
+    elif kind == "logo":
+        # marca d'água: logo pequena num canto da zona segura (text = caminho do arquivo da logo)
+        mark = Image.open(text).convert("RGBA")
+        lw = int(W * 0.16)
+        mark = mark.resize((lw, int(mark.height * lw / mark.width)), Image.LANCZOS)
+        alpha = mark.getchannel("A").point(lambda v: int(v * g.get("logo_opacity", 0.85)))
+        mark.putalpha(alpha)
+        pos = g.get("logo_position") or "top-right"
+        x = W - SAFE_SIDE - lw - 20 if "right" in pos else SAFE_SIDE + 20
+        y = SAFE_TOP + 10 if "top" in pos else SAFE_BOTTOM - mark.height - 10
+        img.alpha_composite(mark, (int(x), int(y)))
     elif kind == "chapter":
         font = _font("DM Serif Display", 150, italic=True)
         d.text((SAFE_SIDE + 20, SAFE_TOP + 10), text, font=font, fill=_rgb(accent, 235))
