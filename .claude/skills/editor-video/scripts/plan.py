@@ -41,6 +41,7 @@ ICON_WORDS = {
 # padrões de cada template: camada e se usa os quadros reais da pessoa
 MOTION_DEFAULTS = {
     "moldura": {"layer": "full", "needs_video": True}, "camadas": {"layer": "full", "needs_video": True},
+    "quadrinho": {"layer": "full", "needs_video": True},
     "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
     "mapa": {"layer": "front"}, "infografico": {"layer": "front"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},
@@ -406,6 +407,31 @@ def main() -> None:
     # palavra gigante não aparece por cima de animação de tela cheia
     fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]
+    # faixas de texto (gancho, CTA, título) somem durante animação de tela cheia: a animação redesenha o quadro
+    # inteiro e o texto por cima atrapalha. Fica o maior pedaço livre (mín. 0,6 s); o CTA que ficaria todo
+    # coberto vai para dentro da animação (params.cta), quando ela aceita.
+    kept = []
+    for gr in graphics:
+        if gr["type"] not in ("hook", "cta", "lower_third", "chapter") or not fulls:
+            kept.append(gr)
+            continue
+        free, start = [], gr["t0"]
+        for a, b in sorted(fulls):
+            if b <= start or a >= gr["t1"]:
+                continue
+            if a > start:
+                free.append((start, a))
+            start = max(start, b)
+        if start < gr["t1"]:
+            free.append((start, gr["t1"]))
+        best = max(free, key=lambda w: w[1] - w[0], default=None)
+        if best and best[1] - best[0] >= 0.6:
+            kept.append({**gr, "t0": round(best[0], 3), "t1": round(best[1], 3)})
+        elif gr["type"] == "cta":
+            for m in motion:
+                if m.get("layer") == "full" and m["t0"] < gr["t1"] and m["t1"] > gr["t0"]:
+                    m["params"].setdefault("cta", gr["text"])
+    graphics = kept
 
     # 9) efeitos sonoros (sutis, abaixo da voz)
     s = style["sfx"]

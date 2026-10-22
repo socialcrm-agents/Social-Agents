@@ -201,7 +201,9 @@ def snapshots(aroll: Path, tl: dict, mdir: Path, work: Path, n: int) -> list[dic
 def _page_bytes(page: str, work: Path) -> bytes:
     """Conteúdo da página entra no cache: editar o HTML força um novo render do clipe."""
     path = work / page[len("/work/"):] if page.startswith("/work/") else MOTION_DIR / page.lstrip("/")
-    return path.read_bytes() if path.exists() else b""
+    # a biblioteca comum (lib/*.js, *.css) também entra: mudar uma ilustração refaz os clipes que a usam
+    lib = b"".join(f.read_bytes() for f in sorted((MOTION_DIR / "lib").glob("*.*")))
+    return (path.read_bytes() if path.exists() else b"") + lib
 
 
 def hand_track(aroll: Path, fps: int, w: int = 1080, h: int = 1920) -> list:

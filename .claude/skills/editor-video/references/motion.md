@@ -52,6 +52,14 @@ Pedido via `edit.py <projeto> --motion '<json>'` (ou `--motion @arquivo.json` co
 | `tabela` | front | Comparação em 2 colunas | `left`, `right`, `rows[{l, r, at}]` |
 | `cronometro` | front | Relógio contando até o tempo dito | `seconds`, `label` |
 | `luz` | front | Vazamento de luz / clarão | `kind`, `color` |
+| `quadrinho` | full (usa vídeo) | Pessoa vai para um painel de história em quadrinhos; painéis com ilustrações animadas do que ela fala; balão, onomatopeia e botão de CTA no estilo quadrinho | `paineis[{ilustracao, rotulo, at}]` (até 3) ou `{imagem}` para foto realista, `balao`, `onomatopeia`, `cta`, `fundo`, `fundo2` |
+
+Ilustrações prontas (`lib/ilustracoes.js`, desenhadas no código, sem custo e sem direitos de terceiros):
+`menta`, `frutas` (tutti-frutti), `dente` (escova e brilho), `casa` (casa 3D se montando), `brilho`. Para um
+assunto sem ilustração, use `{imagem: "arquivo.png"}` no painel: uma foto do cliente ou uma imagem gerada
+(realista) a partir dos conectores. Ilustração nova = mais uma função em `lib/ilustracoes.js`.
+Durante animações de tela cheia, as faixas de gancho/CTA/título somem; se o CTA ficaria todo coberto, ele
+entra como botão dentro do `quadrinho` (`params.cta`).
 
 Exemplos (os mesmos dos anúncios de referência):
 - "Me coloca numa moldura do lado direito e do lado esquerdo explica a receita": `moldura` com `items`.
