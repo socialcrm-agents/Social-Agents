@@ -2,7 +2,7 @@
 <!-- PALAVRAS EMPILHANDO (layer: front): lista de palavras que se monta no centro, uma por vez, no tempo da fala
      ("MOTION / LETTERING / IMAGENS / EFEITOS"). A palavra ativa ganha destaque (degradê com textura); as anteriores
      ficam brancas.
-     params: itens: [{text, at}], y (centro vertical, fração; padrão 0.5), size (px, padrão 84), accent, accent2 -->
+     params: itens: [{text, at}], y (centro vertical, fração; padrão 0.62 = peito), size (px, padrão 84), accent, accent2 -->
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
 <style>
   #list { position: absolute; left: 0; right: 150px; display: flex; flex-direction: column; align-items: center; }
@@ -25,7 +25,7 @@ const items = (p.itens || []).map((it, i) => {
   return { el, at: typeof it.at === 'number' ? it.at : 0.25 + i * 0.5 };
 });
 const total = items.length * size * 1.02;
-list.style.top = (H * (p.y ?? 0.5) - total / 2) + 'px';
+list.style.top = (H * (p.y ?? 0.62) - total / 2) + 'px';  // altura do peito: não cobre o rosto
 const stripes = `repeating-linear-gradient(115deg, ${a1} 0 10px, ${a2} 10px 20px)`;
 motion.onFrame((t) => {
   const out = motion.prog(t, D - 0.3, 0.3);

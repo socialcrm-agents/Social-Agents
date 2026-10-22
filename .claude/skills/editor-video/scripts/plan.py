@@ -417,6 +417,10 @@ def main() -> None:
     # palavra gigante não aparece por cima de animação de tela cheia
     fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]
+    # palavra automática atrás da pessoa cede lugar a texto grande pedido no mesmo instante (não sobrepõe)
+    textos = [(m["t0"] - 0.3, m["t1"] + 0.3) for m in motion
+              if m.get("template") in ("palavra", "manchete", "etiqueta", "pergunta", "empilha", "final")]
+    behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in textos)]
     # faixas de texto (gancho, CTA, título) somem durante animação de tela cheia: a animação redesenha o quadro
     # inteiro e o texto por cima atrapalha. Fica o maior pedaço livre (mín. 0,6 s); o CTA que ficaria todo
     # coberto vai para dentro da animação (params.cta), quando ela aceita.

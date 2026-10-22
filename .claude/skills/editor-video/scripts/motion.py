@@ -132,7 +132,10 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
         head = head_position(work, t0, t1, w, h)
         size = params.setdefault("size", 340)
         if head["top"] * h < 220 + size * 0.75:
+            # sem espaço acima da cabeça: vai para a frente, no alto, e a cena recua (desce) para abrir espaço
             item["layer"] = "front"
+            item["zona"] = "topo"
+            item["libera"] = int(220 + size * 0.95)
             params["y"] = round(220 / h, 3)
         else:
             params["y"] = round(max(head["top"] * h - size * 0.75, 220) / h, 3)

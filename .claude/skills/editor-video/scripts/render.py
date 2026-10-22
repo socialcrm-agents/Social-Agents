@@ -113,6 +113,35 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
     return aroll
 
 
+# quanto do alto do quadro (px, em 1920) cada elemento de topo precisa livre
+LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560}
+
+
+def recuo_windows(motions: list[dict], stats: list | None) -> list[dict]:
+    """Trechos em que um card/manchete no topo bateria na cabeça: a cena encolhe (s < 1) e desce.
+
+    s é o menor encolhimento que deixa o topo da cabeça abaixo do espaço que o elemento precisa (mín. 0,62)."""
+    if not stats:
+        return []
+    out = []
+    for m in motions:
+        if m.get("zona") != "topo":
+            continue
+        a, b = int(m["t0"] * FPS), int(m["t1"] * FPS)
+        tops = sorted(st["top"] for st in stats[a:b] if st.get("top") is not None)
+        if not tops:
+            continue
+        top = tops[len(tops) // 10]  # a cabeça mais alta do trecho (percentil 10)
+        need = m.get("libera") or (m["params"].get("y", 230) + m["params"].get("altura", 600) + 60
+                                   if m.get("template") == "player" else LIBERA.get(m.get("template"), 560))
+        need = need * H / 1920
+        if top >= need:
+            continue
+        s = max(0.62, min(1.0, (H - need) / max(H - top, 1)))
+        out.append({"t0": m["t0"], "t1": m["t1"], "s": round(s, 3)})
+    return out
+
+
 def fit_behind(tl: dict, behind: list[dict]) -> tuple[list[dict], list[dict]]:
     """Garante que ~70% da palavra fique visível acima da cabeça, dentro da zona segura.
 
@@ -335,6 +364,18 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
             f.append(f"[{cur}][{lbl}]overlay=0:0:enable='between(t,{t0:.3f},{t1:.3f})'[v{lbl}]")
         cur = f"v{lbl}"
 
+    if tl.get("recuo"):
+        # recuo: a cena encolhe e desce (ancorada embaixo) para abrir o alto do quadro para card/manchete,
+        # com o próprio quadro ampliado, desfocado e escurecido preenchendo o fundo
+        k_expr = "+".join(f"{1 - r['s']:.3f}*clip((t-{r['t0']:.3f})/0.35,0,1)*clip(({r['t1']:.3f}-t)/0.35,0,1)"
+                          for r in tl["recuo"])
+        sc = f"(1-({k_expr}))"
+        f.append(f"[{cur}]split[rc1][rc2]")
+        f.append(f"[rc2]scale={int(W * 1.25) // 2 * 2}:-2,crop={W}:{H},boxblur=28:2,eq=brightness=-0.22:saturation=0.8[rcb]")
+        f.append(f"[rc1]scale=w='2*trunc({W}*{sc}/2)':h='2*trunc({H}*{sc}/2)':eval=frame[rcf]")
+        f.append(f"[rcb][rcf]overlay=x='(W-w)/2':y='H-h':eval=frame,format=yuv420p[vrc]")
+        cur = "vrc"
+
     for k, (idx, m) in enumerate((i, m) for i, m in motion_idx if m.get("layer") in ("front", "full")):
         motion_in(idx, m, f"mf{k}")
         f.append(f"[{cur}][mf{k}]overlay=0:0:eof_action=pass:enable='between(t,{m['t0']:.3f},{m['t1']:.3f})'[vm{k}]")
@@ -428,7 +469,7 @@ def main() -> None:
     etapa("planos")
     mask, stats = None, None
     motions = tl.get("motion", [])
-    needs_mask = any(m.get("needs_video") or m.get("layer") == "behind" for m in motions)
+    needs_mask = any(m.get("needs_video") or m.get("layer") == "behind" or m.get("zona") == "topo" for m in motions)
     if (tl["behind"] and has_face) or needs_mask:
         from vision import person_mask
         mask = work / "mask.mp4"
@@ -449,6 +490,9 @@ def main() -> None:
         with ThreadPoolExecutor(max_workers=2) as pool:
             clips = list(zip(motions, pool.map(lambda m: render_clip(m, project, aroll, mask, tl, hands), motions)))
     etapa("motion")
+    tl["recuo"] = recuo_windows(motions, stats)
+    if tl["recuo"]:
+        log(f"   recuo (pessoa desce para abrir o topo): {len(tl['recuo'])} trecho(s)")
     behind, front = place_behind(tl, stats)
     behind, moved = fit_behind(tl, behind)
     front += moved
