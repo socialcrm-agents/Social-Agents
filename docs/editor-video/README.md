@@ -18,6 +18,7 @@ bruto.mp4 ─► transcribe (Parakeet, pt-BR, tempo por palavra)
 | [licencas.md](licencas.md) | Licenças das referências e de cada dependência, checklist para vender |
 | [limitacoes.md](limitacoes.md) | O que funciona no Claude Code e o que não funciona |
 | [teste-real.md](teste-real.md) | Teste com vídeo real: antes/depois, números, o que foi corrigido |
+| [../COMO-USAR.md](../COMO-USAR.md) | Como chamar na conversa, instalar no computador, velocidade e como vender |
 | [comparativo-me-ia.md](comparativo-me-ia.md) | O que os anúncios do ME.IA mostram vs. o que a Skill faz |
 | [concorrentes.md](concorrentes.md) | Concorrentes: páginas (inferidas) e efeitos dos anúncios, o que replicar |
 | [../../.claude/skills/editor-video/references/catalogo.md](../../.claude/skills/editor-video/references/catalogo.md) | Os 46 itens do catálogo do Marcel mapeados para a Skill |

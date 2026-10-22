@@ -108,3 +108,22 @@ Bugs encontrados e corrigidos nesta rodada:
 Teste de 10 s no estilo Anúncio com infográfico: legenda em caixa no rodapé, infográfico à esquerda, CTA na
 altura do corpo, barra de progresso. Fonte vertical recortada para horizontal (só teste; para YouTube grave na
 horizontal).
+
+---
+
+# Rodada 4: velocidade
+
+Mesmo projeto (vídeo de 30,3 s, 16 planos, 4 animações), render do zero, CPU de 4 núcleos:
+
+| Etapa | Antes | Depois | O que mudou |
+|---|---|---|---|
+| planos (cortes + zoom) | 22,4 s | 7,3 s | um ffmpeg por plano em paralelo; intermediário `ultrafast` crf 13 (quase sem perda) |
+| máscara da pessoa | 12,9 s | 12,4 s | igual |
+| animações | 40,0 s | 28,7 s | duas por vez; extração de quadros (imagem, recorte, fundo) em paralelo |
+| composição final | 38,5 s | 27,5 s | `veryfast` crf 18 no lugar de `medium` crf 19: mesma qualidade visível, arquivo ~9% maior |
+| **total** | **120 s** | **84 s** | |
+| re-render após correção de texto | 42 s | 31 s | |
+
+Quadro a quadro conferido lado a lado: imagem idêntica. `--max` volta ao `medium` para arquivo final de YouTube.
+Na conversa, a seção "0c. Velocidade" da skill faz o Claude juntar todas as correções num render só, rodar em
+segundo plano e não reler arquivos à toa.

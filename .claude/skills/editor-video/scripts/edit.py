@@ -5,7 +5,7 @@ O Claude lê a correção em linguagem natural ("tira o 'é isso' do começo, le
 e chama este script com as operações equivalentes. Cada operação é gravada em
 project.json -> overrides, então persiste nas próximas versões e em troca de estilo.
 
-  edit.py <projeto> [operações...] [--note "texto original do usuário"] [--no-render] [--draft]
+  edit.py <projeto> [operações...] [--note "texto original do usuário"] [--no-render] [--draft | --max]
 
 Operações:
   --cut "trecho falado"          remove o trecho (todas as palavras, na ordem)
@@ -83,6 +83,7 @@ def main() -> None:
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
+    ap.add_argument("--max", action="store_true", help="compressão mais lenta, arquivo menor")
     a = ap.parse_args()
 
     project = Path(a.project).resolve()
@@ -211,7 +212,7 @@ def main() -> None:
     log("Alterações: " + ("; ".join(done) or "(só anotação)"))
     if a.no_render:
         return
-    for script, extra in (("analyze.py", []), ("plan.py", []), ("render.py", ["--draft"] if a.draft else [])):
+    for script, extra in (("analyze.py", []), ("plan.py", []), ("render.py", ["--draft"] if a.draft else (["--max"] if a.max else []))):
         if subprocess.run([sys.executable, str(HERE / script), str(project), *extra]).returncode:
             raise EditorError(f"{script} falhou")
 

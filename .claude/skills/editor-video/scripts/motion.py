@@ -49,17 +49,20 @@ def extract_frames(aroll: Path, mask: Path | None, grade: str, t0: float, t1: fl
         shutil.rmtree(d, ignore_errors=True)
         d.mkdir()
     dur = t1 - t0
-    ffmpeg(["-ss", f"{t0:.3f}", "-i", str(aroll), "-t", f"{dur:.3f}", "-vf", f"{grade},fps={fps}",
-            "-q:v", "3", str(plate / "%05d.jpg")])
+    jobs = [["-ss", f"{t0:.3f}", "-i", str(aroll), "-t", f"{dur:.3f}", "-vf", f"{grade},fps={fps}",
+             "-q:v", "3", str(plate / "%05d.jpg")]]
     if mask:
-        ffmpeg(["-ss", f"{t0:.3f}", "-i", str(aroll), "-ss", f"{t0:.3f}", "-i", str(mask), "-t", f"{dur:.3f}",
-                "-filter_complex", f"[0:v]{grade},fps={fps},format=rgba[g];"
-                                   f"[1:v]fps={fps},format=gray,erosion,erosion,gblur=sigma=1.5[m];"
-                                   "[g][m]alphamerge", "-compression_level", "1", str(cut / "%05d.png")])
-        ffmpeg(["-ss", f"{t0:.3f}", "-i", str(aroll), "-ss", f"{t0:.3f}", "-i", str(mask), "-t", f"{dur:.3f}",
-                "-filter_complex", f"[0:v]{grade},fps={fps},format=gbrp,split[g1][g2];[g2]gblur=sigma=45[bl];"
-                                   f"[1:v]fps={fps},format=gray,dilation,dilation,dilation,gblur=sigma=10,format=gbrp[m];"
-                                   "[g1][bl][m]maskedmerge,format=yuv420p", "-q:v", "3", str(bg / "%05d.jpg")])
+        jobs.append(["-ss", f"{t0:.3f}", "-i", str(aroll), "-ss", f"{t0:.3f}", "-i", str(mask), "-t", f"{dur:.3f}",
+                     "-filter_complex", f"[0:v]{grade},fps={fps},format=rgba[g];"
+                                        f"[1:v]fps={fps},format=gray,erosion,erosion,gblur=sigma=1.5[m];"
+                                        "[g][m]alphamerge", "-compression_level", "1", str(cut / "%05d.png")])
+        jobs.append(["-ss", f"{t0:.3f}", "-i", str(aroll), "-ss", f"{t0:.3f}", "-i", str(mask), "-t", f"{dur:.3f}",
+                     "-filter_complex", f"[0:v]{grade},fps={fps},format=gbrp,split[g1][g2];[g2]gblur=sigma=45[bl];"
+                                        f"[1:v]fps={fps},format=gray,dilation,dilation,dilation,gblur=sigma=10,format=gbrp[m];"
+                                        "[g1][bl][m]maskedmerge,format=yuv420p", "-q:v", "3", str(bg / "%05d.jpg")])
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=len(jobs)) as pool:  # as três extrações são independentes
+        list(pool.map(ffmpeg, jobs))
     count = len(list(plate.glob("*.jpg")))
     info = {"count": count, "has_cut": bool(mask)}
     (out / "done.json").write_text(json.dumps(info))

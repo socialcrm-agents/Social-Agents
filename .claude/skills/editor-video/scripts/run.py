@@ -97,7 +97,7 @@ def cmd_plan(a) -> None:
 def cmd_render(a) -> None:
     project = Path(a.project).resolve()
     cmd_plan(a)
-    step("render.py", project)
+    step("render.py", project, *(f"--{k}" for k in ("draft", "max") if getattr(a, k, False)))
 
 
 def _temp_render(project: Path, tweak, label: str) -> Path | None:
@@ -175,7 +175,11 @@ def main() -> None:
                    help="9:16 Reels/TikTok/Shorts, 16:9 YouTube/aula/podcast, 1:1 ou 4:5 feed")
     n.add_argument("--force", action="store_true")
     for name in ("all", "plan", "render"):
-        sub.add_parser(name).add_argument("project")
+        sp = sub.add_parser(name)
+        sp.add_argument("project")
+        if name != "plan":
+            sp.add_argument("--draft", action="store_true", help="prévia rápida (qualidade menor)")
+            sp.add_argument("--max", action="store_true", help="compressão mais lenta, arquivo menor")
     sub.add_parser("styles")
     v = sub.add_parser("variacoes", help="uma versão por gancho gravado")
     v.add_argument("project")

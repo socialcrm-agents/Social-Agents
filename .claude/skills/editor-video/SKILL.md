@@ -28,8 +28,26 @@ Se existir `SK/brands/<slug>/` para o cliente (ex.: `omarcelprado`), crie o proj
 `brand.md` antes de escrever qualquer gancho, texto de tela ou CTA**: tom de voz, CTAs, o que evitar, padrões de
 edição aprovados, paleta e o vídeo de referência. O `brand.json` aplica sozinho cores, legenda em duas fontes, CTA
 padrão, correções de palavras do ASR, velocidade (×1,15), pausas curtas e o mapa de gatilhos da marca
-(`triggers.json`). Cliente novo: copie `brands/omarcelprado/` como modelo e preencha com o material dele.
+(`triggers.json`). Cliente novo: copie `brands/_modelo/` para `brands/<slug>/` e preencha com o material dele.
 Consulte também `SK/references/catalogo.md` (tudo que o editor faz) em toda edição.
+
+## 0c. Velocidade (siga sempre)
+
+O que deixa a edição lenta na conversa é o Claude ler tudo, olhar quadro a quadro e renderizar a cada ajuste.
+Regras:
+1. **Uma rodada de decisão, um render.** Junte todas as correções da leitura de `qa/takes.md` num único
+   `edit.py ... --no-render` e renderize uma vez (`run.py render`). Nunca renderize entre correções.
+2. **Renders em segundo plano** (Bash com `run_in_background`) e responda ao usuário enquanto roda; não fique
+   consultando o progresso.
+3. **Não repita etapas**: transcrição, A-roll, máscara e animações ficam em cache. Mudou só texto, legenda,
+   gancho ou CTA? O render reaproveita tudo (~1x a duração do vídeo).
+4. **Leia pouco**: `transcript.txt` e `qa/takes.md` uma vez cada; não abra JSON grande nem o código dos scripts
+   para editar normalmente. QA = a folha `qa/vN_*_cortes.jpg` + no máximo 3 quadros.
+5. **Prévia**: para o usuário aprovar ritmo e cortes antes do acabamento, `render.py <projeto> --draft`.
+   `--max` só quando ele pedir arquivo de máxima qualidade (YouTube/arquivo).
+6. O render imprime `tempos:` por etapa; se algo estiver lento, diga qual etapa e por quê.
+
+Referência (CPU de 4 núcleos, vídeo de 30 s com 4 animações): primeiro render ~85 s, re-render após correção ~30 s.
 
 ## 1. Intake
 
@@ -99,7 +117,8 @@ PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v
   editar esse arquivo à mão e rodar só `PY SK/scripts/render.py <projeto>` para casos que os comandos não cobrem.
 - O render imprime quantas palavras ficaram ATRÁS da pessoa e quantas foram para a FRENTE: atrás só acontece com
   rosto detectado e cabeça estável; sem pessoa (tela, mão, produto), a palavra vira título animado na frente.
-- Render final ~2x a duração do vídeo em CPU de 4 núcleos. `--draft` em `render.py` é mais rápido.
+- Render final ~2-3x a duração do vídeo em CPU de 4 núcleos (motion incluso); re-render após correção ~1x.
+  `--draft` (prévia) é mais rápido; `--max` comprime melhor (mais lento).
 
 ## 3b. Mídia dos conectores e versões
 

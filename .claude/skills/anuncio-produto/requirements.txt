@@ -1,0 +1,5 @@
+# Python >= 3.10. Instale com: python3 -m pip install -r requirements.txt
+numpy>=1.26
+pillow>=10.0
+sherpa-onnx>=1.12        # vozes offline (Kokoro, Piper) e transcrição da voz do cliente (Parakeet)
+onnxruntime>=1.17        # recorte do produto (IS-Net)

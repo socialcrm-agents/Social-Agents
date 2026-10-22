@@ -5,12 +5,13 @@ Etapas: rastreio de rosto -> planos com zoom animado -> A-roll contínuo -> más
 pessoa (se houver palavras atrás) -> legendas/gráficos/SFX -> um único grafo ffmpeg
 (cor, texto atrás da pessoa, B-roll, gráficos, legendas, mixagem e loudness) -> QA.
 
-Uso: render.py <projeto> [--draft]   (--draft: preset rápido para revisar)
+Uso: render.py <projeto> [--draft | --max]   (--draft: prévia rápida; --max: compressão mais lenta, arquivo menor)
 """
 
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import statistics
 import subprocess
@@ -74,8 +75,8 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
     d = work / "shots"
     shutil.rmtree(d, ignore_errors=True)
     d.mkdir(parents=True)
-    files = []
-    for n, sh in enumerate(tl["shots"]):
+
+    def one(n: int, sh: dict) -> Path:
         speed = sh.get("speed", 1.0)
         tl_dur = sh["t1"] - sh["t0"]              # duração na timeline (já em quadros inteiros)
         dur = tl_dur * speed                      # trecho do bruto que vira esse plano
@@ -91,8 +92,14 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
                 "-af", f"{atempo}aresample=48000,afade=t=in:d=0.012,afade=t=out:st={max(tl_dur - 0.02, 0):.3f}:d=0.02,"
                 f"apad,atrim=0:{tl_dur:.4f}",  # áudio com a duração exata do plano: sem deriva entre som e imagem
                 "-frames:v", str(round(tl_dur * FPS)),
-                "-c:v", "libx264", "-preset", preset, "-crf", "15", "-c:a", "pcm_s16le", str(out.with_suffix(".mkv"))])
-        files.append(out.with_suffix(".mkv"))
+                "-c:v", "libx264", "-preset", preset, "-crf", "13", "-threads", "2",
+                "-c:a", "pcm_s16le", str(out.with_suffix(".mkv"))])
+        return out.with_suffix(".mkv")
+
+    # um processo ffmpeg por plano, vários ao mesmo tempo (cada um usa pouco a CPU sozinho)
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=max(2, (os.cpu_count() or 4))) as pool:
+        files = list(pool.map(lambda a: one(*a), enumerate(tl["shots"])))
     lst = d / "list.txt"
     lst.write_text("".join(f"file '{f.name}'\n" for f in files), encoding="utf-8")
     ffmpeg(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(aroll)])
@@ -366,7 +373,7 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
     graph = work / "graph.txt"
     graph.write_text(";\n".join(f), encoding="utf-8")
     args = [*inputs, "-filter_complex_script", "graph.txt", "-map", "[vout]", "-map", "[aout]",
-            "-t", f"{total:.3f}", "-r", str(FPS), "-c:v", "libx264", "-preset", preset, "-crf", "19",
+            "-t", f"{total:.3f}", "-r", str(FPS), "-c:v", "libx264", "-preset", preset, "-crf", "19" if preset == "medium" else "18",
             "-profile:v", "high", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-ar", "48000",
             "-movflags", "+faststart", str(out.resolve())]
     # caminhos relativos (behind.ass, captions.ass, fonts) são resolvidos dentro de work/
@@ -387,7 +394,9 @@ def qa(out: Path, tl: dict, qa_dir: Path, name: str) -> dict:
 
 def main() -> None:
     project = Path(sys.argv[1]).resolve()
-    preset = "ultrafast" if "--draft" in sys.argv else "medium"
+    # final: veryfast/crf 18 tem a mesma qualidade visível do medium/crf 19 e codifica ~40% mais rápido
+    # (Instagram e TikTok recomprimem de qualquer jeito); --max usa medium para arquivo de arquivo/YouTube
+    preset = "ultrafast" if "--draft" in sys.argv else ("medium" if "--max" in sys.argv else "veryfast")
     paths = project_paths(project)
     proj = load_json(paths["project"])
     tl = load_json(paths["timeline"])
@@ -398,11 +407,20 @@ def main() -> None:
     import assets
     assets.set_format(W, H)
     t_start = time.time()
+    tempos: list[tuple[str, float]] = []
+
+    def etapa(nome: str, _t=[t_start]) -> None:
+        agora = time.time()
+        tempos.append((nome, agora - _t[0]))
+        _t[0] = agora
+
     work = paths["work"]
     prepare_fonts(tl, work)
     has_face = face_for_shots(tl, work)
     log(f"   rosto detectado: {'sim' if has_face else 'não'}")
-    aroll = render_shots(tl, work, "veryfast")
+    etapa("rosto")
+    aroll = render_shots(tl, work, "ultrafast")  # intermediário: rápido e quase sem perda (crf 13)
+    etapa("planos")
     mask, stats = None, None
     motions = tl.get("motion", [])
     needs_mask = any(m.get("needs_video") or m.get("layer") == "behind" for m in motions)
@@ -416,12 +434,16 @@ def main() -> None:
         else:
             stats = person_mask(aroll, mask, W, H, FPS)
             save_json(cache, stats)
+    etapa("máscara")
     clips = []
     if motions:
         from motion import hand_track, render_clip
         hands = hand_track(aroll, FPS, W, H) if any(m.get("hand") for m in motions) else None
-        for m in motions:
-            clips.append((m, render_clip(m, project, aroll, mask, tl, hands)))
+        # duas animações por vez: enquanto uma abre o Chromium ou extrai quadros, a outra usa a CPU
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            clips = list(zip(motions, pool.map(lambda m: render_clip(m, project, aroll, mask, tl, hands), motions)))
+    etapa("motion")
     behind, front = place_behind(tl, stats)
     behind, moved = fit_behind(tl, behind)
     front += moved
@@ -438,18 +460,23 @@ def main() -> None:
     name = f"v{v}_{tl['style']}"
     out = paths["renders"] / f"{name}.mp4"
     paths["renders"].mkdir(parents=True, exist_ok=True)
+    etapa("palavras atrás")
     compose(tl, project, aroll, mask, behind, front, out, preset, clips)
+    etapa("composição final")
     vdir = paths["versions"] / f"v{v}"
     vdir.mkdir(parents=True, exist_ok=True)
     save_json(vdir / "timeline.json", tl)
     save_json(vdir / "project.json", proj)
     save_json(paths["project"], proj)
     report = qa(out, tl, paths["qa"], name)
+    etapa("QA")
     report.update(version=v, file=str(out), seconds=round(time.time() - t_start, 1),
-                  behind_used=[b["text"] for b in behind], behind_front=[b["text"] for b in front])
+                  behind_used=[b["text"] for b in behind], behind_front=[b["text"] for b in front],
+                  tempos={n: round(s, 1) for n, s in tempos})
     save_json(vdir / "qa.json", report)
     log(f"OK: {out} ({report['duration']}s, {report['lufs']} LUFS, render {report['seconds']}s)")
     log(f"   contato dos cortes: {report['sheet']}")
+    log("   tempos: " + " | ".join(f"{n} {s:.1f}s" for n, s in tempos if s >= 0.05))
 
 
 if __name__ == "__main__":

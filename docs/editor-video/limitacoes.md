@@ -25,7 +25,8 @@
 - O conector do Google Drive só entrega arquivos de até ~6 MB (resposta em base64). Vídeos maiores precisam ser
   enviados direto para a sessão, ou rodar a skill localmente no Claude Code apontando para a pasta do Drive
   sincronizada no computador. **Por isso o teste usou seu vídeo de 6 MB e não os clipes de câmera.**
-- Não há GPU aqui: recorte da pessoa e render rodam em CPU (~2,2x a duração do vídeo).
+- Não há GPU aqui: recorte da pessoa e render rodam em CPU. Vídeo de 30 s com 4 animações: ~85 s no 1º render,
+  ~30 s depois de uma correção (cache de A-roll, máscara e animações). O render imprime o tempo de cada etapa.
 
 **Edição**
 - "Melhor tomada" é decidida por texto (repetição e similaridade), não por expressão facial, energia da voz ou
@@ -46,8 +47,8 @@
   elaboradas, a evolução natural é um módulo HTML -> vídeo (HyperFrames, Apache-2.0).
 
 **Motion graphics (HTML/3D)**
-- Render em CPU: animações CSS/SVG a 10-25 quadros/s, Three.js (estúdio 3D, objeto 3D) a 2-7 quadros/s. Um Reels
-  de 25 s com 5 animações levou ~3,5 min aqui; há cache por clipe.
+- Render em CPU: animações CSS/SVG a 10-25 quadros/s, Three.js (estúdio 3D, objeto 3D) a 2-7 quadros/s. Duas
+  animações renderizam ao mesmo tempo; há cache por clipe.
 - Recorte da pessoa é o MediaPipe selfie (rápido, não perfeito): cabelo fino e bordas podem ficar serrilhados;
   na camada "fundo" de `camadas` a área da pessoa vira desfoque (não há fundo limpo real).
 - `estudio3d` troca o fundo por um cenário sintético; não reconstrói o ambiente real.
