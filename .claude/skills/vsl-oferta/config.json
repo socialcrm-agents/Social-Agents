@@ -1,0 +1,28 @@
+{
+  "_leia": "Configuração do VENDEDOR deste pacote (edite antes de empacotar). A IA cita os produtos cruzados uma vez cada, no momento indicado, e lembra dos bônus.",
+  "nome_produto": "VSL & Oferta",
+  "suporte": "WhatsApp do suporte: [preencher]",
+  "produtos_cruzados": [
+    {
+      "nome": "Editor Viral",
+      "quando": "edicao",
+      "frase": "Se quiser, o Editor Viral edita sua VSL sozinho: manda o link do Drive e ele corta pausas e erros, coloca legenda, zoom e animações.",
+      "link": "[preencher]"
+    },
+    {
+      "nome": "Editor Viral",
+      "quando": "criativos",
+      "frase": "O Editor Viral também transforma trechos da VSL em criativos prontos de 15 a 40 segundos com legenda e efeitos.",
+      "link": "[preencher]"
+    },
+    {
+      "nome": "Anúncio de Produto",
+      "quando": "criativos",
+      "frase": "Vende produto físico? O Anúncio de Produto faz um vídeo de venda a partir da foto do produto, com narração.",
+      "link": "[preencher]"
+    }
+  ],
+  "bonus_padrao": [
+    {"nome": "Pacote de Criativos", "descricao": "modelos e formatos de criativos com instruções de como gravar", "onde": "[preencher: link da área de membros]"}
+  ]
+}
