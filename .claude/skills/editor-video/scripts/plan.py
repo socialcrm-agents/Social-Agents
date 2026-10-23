@@ -142,6 +142,57 @@ def resolve_cues(obj, words: list[dict], t0: float, t1: float):
     return out
 
 
+
+def motion_sfx(motion: list[dict], k: float = 1.0) -> list[dict]:
+    """Design de som das animações: cada entrada tem um som e cada ação dentro dela (digitar, marcar, riscar,
+    clicar) tem o seu. k escala tudo (estilo: sfx.motion). Fica abaixo da voz (o mix aplica o ducking)."""
+    out = []
+
+    def add(kind, t, gain):
+        out.append({"type": kind, "t": round(max(t, 0), 3), "gain": round(gain * k, 3)})
+
+    def rel(m, v, default):
+        return m["t0"] + (v if isinstance(v, (int, float)) else default)
+
+    for m in motion:
+        tp, p, t0, t1 = m.get("template"), m.get("params", {}), m["t0"], m["t1"]
+        if tp in (None, "icone", "vendas", "luz"):
+            continue
+        if m.get("layer") != "full":
+            add("whoosh", t0 - 0.08, 0.3)
+        if tp == "pergunta":
+            add("click", t0 + 0.1, 0.5)
+            add("ding", rel(m, p.get("ate_at"), (t1 - t0) * 0.7), 0.35)
+        elif tp in ("checklist", "empilha", "dividida", "moldura", "tela_ia"):
+            for it in p.get("items") or p.get("itens") or p.get("steps") or []:
+                if isinstance(it, dict) and isinstance(it.get("at"), (int, float)):
+                    add("ding" if tp in ("checklist", "empilha") else "click", t0 + it["at"], 0.3)
+        elif tp in ("palavra", "final"):
+            add("boom", t0 + 0.05, 0.45)
+        elif tp == "manchete":
+            add("pop", t0 + 0.05, 0.4)
+            if p.get("riscar"):
+                add("glitch", rel(m, p.get("riscar_at"), (t1 - t0) * 0.6), 0.4)
+        elif tp == "proibido":
+            add("glitch", rel(m, p.get("x_at"), (t1 - t0) * 0.5), 0.45)
+        elif tp == "carimbo":
+            add("boom", rel(m, p.get("at"), 0.05), 0.4)
+        elif tp == "botao_cta":
+            add("riser", t0 - 0.6, 0.3)
+            add("click", rel(m, p.get("click_at"), min(1.4, t1 - t0 - 0.6)), 0.55)
+        elif tp == "infografico":
+            for st in p.get("stats", []):
+                add("tick", rel(m, st.get("at"), 0.2), 0.35)
+                add("ding", rel(m, st.get("at"), 0.2) + 0.9, 0.25)
+        elif tp == "comentario":
+            add("click", rel(m, p.get("digitar_ate"), (t1 - t0) * 0.6), 0.45)
+        elif tp in ("notificacao", "etiqueta", "player", "tomadas", "giro", "tabela"):
+            add("pop", t0 + 0.15, 0.35)
+        elif tp in ("hud", "pontos", "recorte", "maos", "transcricao", "editor_ia", "visor"):
+            add("tick", t0 + 0.1, 0.3)
+            add("tick", t0 + 0.35, 0.25)
+    return out
+
 def resolve_overlaps(items: list[dict]) -> list[dict]:
     """Animações de tela cheia têm prioridade: a anterior termina quando a próxima começa, e as de camada
     (front/behind) são cortadas para fora das janelas de tela cheia."""
@@ -493,6 +544,8 @@ def main() -> None:
             ev = m["params"].get("every", 0.45)
             sfx += [{"type": "venda", "t": round(m["t0"] + 0.15 + i * ev, 3), "gain": 0.5}
                     for i in range(len(m["params"].get("items", [])))]
+    if s.get("motion", 1.0):
+        sfx += motion_sfx(motion, float(s.get("motion", 1.0)))
     sfx += trig_sfx
     sfx.sort(key=lambda x: x["t"])
 

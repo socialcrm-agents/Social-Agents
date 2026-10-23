@@ -200,6 +200,10 @@ crespo com fundo da mesma cor, pouca luz — teste 2 s e olhe), ou o vídeo é d
 
 ## 8b. O que o editor já resolve sozinho (não brigue com isso)
 
+- **Som**: toda animação ganha som próprio (whoosh na entrada, clique ao digitar/clicar, ding a cada item
+  marcado, boom na palavra gigante e no carimbo, glitch no risco/X, riser antes do botão, ticks na visão
+  computacional). Meta: 1 som a cada ~1–2 s num criativo. Mais forte/fraco: `"motion": 1.3` em `sfx` do estilo.
+
 - Elementos do alto (`pergunta`, `manchete`, `etiqueta`, `infografico`, `carimbo`, `checklist`, `player`,
   `proibido`, `tomadas`, `palavra` sem espaço) fazem a pessoa **recuar** (descer e encolher) enquanto estão na tela.
 - Dois textos do alto no mesmo instante: o anterior sai quando o próximo entra.
