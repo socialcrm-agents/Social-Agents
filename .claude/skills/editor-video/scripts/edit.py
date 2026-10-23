@@ -210,8 +210,10 @@ def main() -> None:
             if "template" not in req and "page" not in req:
                 raise EditorError("--motion precisa de 'template' (ou 'page' para composição própria)")
             lista = ov.setdefault("motion", [])
-            if req.get("id") and any(r.get("id") == req["id"] for r in lista):
-                lista[:] = [req if r.get("id") == req["id"] else r for r in lista]
+            # id explícito ou implícito (m<n> = n-ésimo pedido, o mesmo id que aparece na timeline)
+            pos = next((k for k, r in enumerate(lista) if str(r.get("id") or f"m{k + 1}") == str(req.get("id"))), None)
+            if req.get("id") and pos is not None:
+                lista[pos] = req
                 done.append(f"motion {req['id']} substituído")
                 continue
             if req in lista:

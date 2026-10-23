@@ -114,6 +114,17 @@ class PedidosIdempotentes(unittest.TestCase):
             util.rodar("edit.py", proj, "--motion", json.dumps(self.REQ), "--no-render")
         self.assertEqual(len(ler(proj / "project.json")["overrides"]["motion"]), antes + 1)
 
+    def test_motion_com_id_implicito_substitui_sem_duplicar(self):
+        proj = util.preparar("pro2")
+        tl = util.planejar(proj)
+        antes = len(ler(proj / "project.json")["overrides"]["motion"])
+        util.rodar("edit.py", proj, "--motion", json.dumps({**self.REQ, "id": "m2"}), "--no-render")
+        reqs = ler(proj / "project.json")["overrides"]["motion"]
+        self.assertEqual(len(reqs), antes)
+        self.assertEqual(reqs[1]["template"], "luz")
+        ids = [m["id"] for m in util.planejar(proj)["motion"]]
+        self.assertEqual(len(ids), len(set(ids)), f"ids repetidos: {ids}")
+
     def test_motion_com_id_substitui(self):
         proj = util.preparar("pro2")
         util.rodar("edit.py", proj, "--motion", json.dumps({**self.REQ, "id": "selo"}), "--no-render")
