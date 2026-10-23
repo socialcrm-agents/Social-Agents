@@ -94,6 +94,13 @@ class Patches(unittest.TestCase):
         util.rodar("edit.py", proj, "--patch-clear", alvo, "--no-render")
         self.assertIn(alvo, [g["id"] for g in util.planejar(proj)["graphics"]])
 
+    def test_patch_clear_e_remove_juntos_removem(self):
+        proj = util.preparar("pro2")
+        alvo = util.planejar(proj)["graphics"][0]["id"]
+        util.rodar("edit.py", proj, "--patch", f"{alvo}.text=X", "--no-render")
+        util.rodar("edit.py", proj, "--patch-clear", alvo, "--patch-remove", alvo, "--no-render")
+        self.assertNotIn(alvo, [g["id"] for g in util.planejar(proj)["graphics"]])
+
     def test_patch_orfao_avisa_e_fica_guardado(self):
         proj = util.preparar("pro2")
         util.planejar(proj)
@@ -102,6 +109,20 @@ class Patches(unittest.TestCase):
         r = util.rodar("plan.py", proj)
         self.assertIn("sem elemento correspondente", r.stdout)
         self.assertTrue(any(p.get("id") == "nao_existe" for p in ler(proj / "project.json")["overrides"]["patches"]))
+
+
+class TemposInternos(unittest.TestCase):
+    def test_animacao_adiada_mantem_itens_na_palavra(self):
+        """Achado do QA do Creative Studio: checklist adiado pelo texto anterior marcava os itens fora da fala."""
+        import plan
+        a = {"template": "palavra", "layer": "behind", "t0": 13.26, "t1": 14.86, "params": {}}
+        b = {"template": "checklist", "layer": "front", "zona": "topo", "t0": 14.04, "t1": 17.04,
+             "params": {"items": [{"text": "Menta", "at": 1.22}, {"text": "Tutti", "at": 1.86}]}}
+        out = plan.resolve_overlaps([a, b])
+        c = next(m for m in out if m["template"] == "checklist")
+        self.assertAlmostEqual(c["t0"], 14.86)
+        self.assertAlmostEqual(c["t0"] + c["params"]["items"][0]["at"], 14.04 + 1.22, places=2)
+        self.assertAlmostEqual(c["t0"] + c["params"]["items"][1]["at"], 14.04 + 1.86, places=2)
 
 
 class PedidosIdempotentes(unittest.TestCase):

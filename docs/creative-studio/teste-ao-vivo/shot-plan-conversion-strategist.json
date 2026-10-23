@@ -1,0 +1,5 @@
+{"agente":"conversion-strategist","cenas":[{"cena":"c1","t0":0.0,"t1":2.6,"acoes":[{"tipo":"patch","alvo_id":"m1",
+"comando":["--patch","m1.params.linhas=[\"MENTOS UP2U\",\"POR R$ 15\"]","--patch","m1.params.destaque=[\"R$ 15\"]","--patch","m1.params.sub=NA PROMOÇÃO"],
+"justificativa":"Preço (dito na fala e no brief) no primeiro segundo: motivo para parar o dedo; a voz só entra em 1,28 s.",
+"risco":"preço aparece de novo no m3 (8,9 s); 3ª linha pode empurrar a cabeça","suportado":true}]}],
+"observacoes":"Gancho atual só nomeia o produto. Vídeo ja_editado: o texto de tela carrega o gancho."}

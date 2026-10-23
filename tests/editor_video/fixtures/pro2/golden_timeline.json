@@ -276,6 +276,10 @@
   }
  ],
  "music": null,
+ "revisao": {
+  "patches_aplicados": 0,
+  "zoom_sig": "bb9080463be2e308"
+ },
  "sfx": [
   {
    "gain": 0.27999999999999997,

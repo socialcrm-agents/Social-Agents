@@ -57,3 +57,14 @@ Arquivos do projeto ficam em `<projeto>/creative/`. Validar qualquer um:
 python -m unittest tests/creative_studio/test_creative_studio.py -v
 python -m unittest discover -s tests/editor_video -v
 ```
+
+## Teste ao vivo (2026-10-23)
+
+Fluxo completo no anúncio real do Mentos (`teste-ao-vivo/`): brief → 2 especialistas em paralelo (estratégia c1,
+arte c2) → plano aprovado com 1 conflito resolvido → editor sênior com dry-run → prévia → QA reprovou com 5 falhas
+→ rodada 2 → QA aprovado → render final (só trechos recodificados) → relatório. Todos os JSON validados.
+O fluxo achou 4 defeitos do editor (corrigidos com teste; ver `teste-ao-vivo/relatorio-v18.md`).
+
+Observação: nesta sessão os agentes foram criados com ela já aberta, então foram executados com as instruções de
+cada arquivo `.claude/agents/<nome>.md` por um agente genérico (o `subagent_type` por nome só existe em sessão
+aberta depois da instalação; aí as restrições de ferramentas do frontmatter passam a valer pelo próprio Claude Code).

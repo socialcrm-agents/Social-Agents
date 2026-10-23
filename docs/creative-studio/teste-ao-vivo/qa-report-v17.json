@@ -1,0 +1,64 @@
+{
+ "versao": 17,
+ "arquivo": "renders/v17_pro_clean.mp4",
+ "aprovado": true,
+ "metricas": {
+  "duracao_s": 17.37,
+  "lufs": -14.3,
+  "quadros": 521,
+  "miss": 7,
+  "render_s": 32.6
+ },
+ "checks": [
+  {
+   "area": "visual",
+   "item": "m2 'OLHA AQUI' inteiro, seta no pote",
+   "status": "ok",
+   "tempo": 5.2,
+   "alvo_id": "m2",
+   "evidencia": "creative/r2_5.2.jpg"
+  },
+  {
+   "area": "visual",
+   "item": "legenda sem colisão (g_cta removido, m5 removido)",
+   "status": "ok",
+   "tempo": 14.5,
+   "evidencia": "creative/r2_14.5.jpg"
+  },
+  {
+   "area": "sincronismo",
+   "item": "checklist marca Menta e Tutti-frutti na fala",
+   "status": "ok",
+   "tempo": 15.4,
+   "alvo_id": "m6",
+   "evidencia": "r2_15.4.jpg (Menta), r2_15.95.jpg (Tutti-frutti entrando)"
+  },
+  {
+   "area": "visual",
+   "item": "botão m7 abaixo da boca",
+   "status": "ok",
+   "tempo": 16.6,
+   "alvo_id": "m7",
+   "evidencia": "r2_16.6.jpg"
+  },
+  {
+   "area": "visual",
+   "item": "base do botão ~1488 px (zona segura 1470)",
+   "status": "alerta",
+   "tempo": 16.6,
+   "alvo_id": "m7",
+   "evidencia": "r2_16.6.jpg",
+   "correcao": [
+    "--patch",
+    "m7.params.y=1380"
+   ]
+  },
+  {
+   "area": "comercial",
+   "item": "CTA único no fim (D07); gancho com preço dito (D05)",
+   "status": "ok",
+   "tempo": 16.0
+  }
+ ],
+ "observacoes": "QA focado do diretor nas 5 falhas da v16 (quality-director). Alerta aceito: 18 px abaixo do limite, sem cobrir interface do app."
+}

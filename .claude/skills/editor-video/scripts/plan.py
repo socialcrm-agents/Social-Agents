@@ -127,19 +127,24 @@ def find_word(words: list[dict], phrase: str, after: float = 0.0) -> dict | None
     return None
 
 
-def resolve_cues(obj, words: list[dict], t0: float, t1: float):
-    """Troca valores "at": "palavra" (e chaves *_at) pelo tempo relativo ao início do clipe."""
+def resolve_cues(obj, words: list[dict], t0: float, t1: float, fixes: dict | None = None):
+    """Troca valores "at": "palavra" (e chaves *_at) pelo tempo relativo ao início do clipe.
+    A âncora passa pelas mesmas correções de palavra da legenda (pedido feito com a grafia do ASR continua valendo)."""
     if isinstance(obj, list):
-        return [resolve_cues(x, words, t0, t1) for x in obj]
+        return [resolve_cues(x, words, t0, t1, fixes) for x in obj]
     if not isinstance(obj, dict):
         return obj
     out = {}
     for k, v in obj.items():
         if (k == "at" or k.endswith("_at")) and isinstance(v, str):
             hit = find_word(words, v, t0)
+            if not hit and fixes:
+                hit = find_word(words, " ".join(fix_word(x, fixes) for x in v.split()), t0)
+            if not (hit and hit["t0"] < t1):
+                log(f"   aviso: âncora '{v}' não encontrada dentro da animação ({t0:.1f}-{t1:.1f}s); usando 0,5 s")
             out[k] = round(min(max(hit["t0"] - t0, 0), t1 - t0), 3) if hit and hit["t0"] < t1 else 0.5
         else:
-            out[k] = resolve_cues(v, words, t0, t1)
+            out[k] = resolve_cues(v, words, t0, t1, fixes)
     return out
 
 
@@ -194,6 +199,16 @@ def motion_sfx(motion: list[dict], k: float = 1.0) -> list[dict]:
             add("tick", t0 + 0.35, 0.25)
     return out
 
+def _desloca_cues(obj, atraso: float):
+    """Tempos relativos ("at", "*_at") recuam `atraso` segundos quando o início da animação é adiado."""
+    if isinstance(obj, list):
+        return [_desloca_cues(x, atraso) for x in obj]
+    if not isinstance(obj, dict):
+        return obj
+    return {k: (round(max(v - atraso, 0.0), 3) if (k == "at" or k.endswith("_at")) and isinstance(v, (int, float))
+                and not isinstance(v, bool) else _desloca_cues(v, atraso)) for k, v in obj.items()}
+
+
 def resolve_overlaps(items: list[dict]) -> list[dict]:
     """Animações de tela cheia têm prioridade: a anterior termina quando a próxima começa, e as de camada
     (front/behind) são cortadas para fora das janelas de tela cheia."""
@@ -223,7 +238,10 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
             if b["t0"] - a["t0"] >= 1.0:
                 a["t1"] = b["t0"]          # o anterior sai quando o próximo entra
             else:
+                atraso = a["t1"] - b["t0"]
                 b["t0"] = a["t1"]          # o anterior ficaria curto demais: o próximo espera ele sair
+                # os tempos internos (item marcado, clique, digitação) são relativos ao início: continuam na palavra
+                b["params"] = _desloca_cues(b.get("params", {}), atraso)
     out = [m for m in out if m["t1"] - m["t0"] >= 1.0 or m.get("layer") == "full"]
     return sorted(out, key=lambda m: m["t0"])
 
@@ -236,11 +254,15 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
         if str(n) in removidos or rid in removidos:
             continue
         hit = find_word(words, req["at"]) if isinstance(req.get("at"), str) else None
+        if isinstance(req.get("at"), str) and not hit and ov.get("word_fixes"):
+            hit = find_word(words, " ".join(fix_word(x, ov["word_fixes"]) for x in req["at"].split()))
         if isinstance(req.get("at"), str) and not hit:
             log(f"   aviso: motion {n} ({req.get('template')}): trecho '{req['at']}' não foi falado no corte final; ignorado")
             continue
         t0 = round(max((hit["t0"] - 0.1) if hit else float(req.get("at", 0)), 0), 3)
         end = find_word(words, req["until"], t0) if req.get("until") else None
+        if req.get("until") and not end and ov.get("word_fixes"):
+            end = find_word(words, " ".join(fix_word(x, ov["word_fixes"]) for x in req["until"].split()), t0)
         t1 = round(min((end["t1"] + 0.2) if end else t0 + float(req.get("dur", 3.0)), total), 3)
         if t1 - t0 < min(float(req.get("dur", 1.5)), 1.2) and t1 >= total - 0.05:
             t0 = round(max(t1 - min(float(req.get("dur", 1.5)), 1.5), 0), 3)  # fala no fim do vídeo: recua
@@ -249,7 +271,7 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
             continue
         item = {**MOTION_DEFAULTS.get(req.get("template", ""), {}), **{k: v for k, v in req.items() if k not in ("at", "until", "dur")}}
         item["params"] = {**MOTION_DEFAULTS.get(req.get("template", ""), {}).get("params", {}), **req.get("params", {})}
-        item.update(id=rid, t0=t0, t1=t1, params=resolve_cues(item["params"], words, t0, t1))
+        item.update(id=rid, t0=t0, t1=t1, params=resolve_cues(item["params"], words, t0, t1, ov.get("word_fixes")))
         if item["params"].get("follow") == "hand":
             item["hand"] = True
         out.append(item)

@@ -1,0 +1,20 @@
+{
+ "projeto": "/tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos",
+ "objetivo": "venda",
+ "plataforma": [
+  "tiktok",
+  "reels"
+ ],
+ "formato": "9:16",
+ "tipo": "produto",
+ "publico": "quem compra doce barato no TikTok Shop",
+ "oferta": "Mentos UP2U, 2 sabores, R$ 15 na promoção",
+ "cta": "TOQUE NO CARRINHO",
+ "ja_editado": true,
+ "pode_trocar_fundo": true,
+ "nivel": "maximo",
+ "marca": null,
+ "restricoes": [
+  "não inventar sabores, preço ou prova"
+ ]
+}

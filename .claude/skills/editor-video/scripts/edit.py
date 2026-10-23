@@ -223,6 +223,11 @@ def main() -> None:
             done.append(f"motion {req.get('template') or req.get('page')} em '{req.get('at')}' (id m{len(lista)})")
     add("motion_remove", [int(x) if str(x).isdigit() else x for x in a.motion_remove], "remover motion")
     import revisao
+    # desfazer vem antes: "--patch-clear X --patch-remove X" = limpa o que havia e remove
+    for ident in a.patch_clear:
+        antes = len(ov.get("patches", []))
+        ov["patches"] = [p for p in ov.get("patches", []) if p.get("id") != ident.strip()]
+        done.append(f"desfeitos {antes - len(ov['patches'])} patch(es) de {ident}")
     novos = []
     for spec in a.patch:
         alvo, _, val = spec.partition("=")
@@ -237,10 +242,7 @@ def main() -> None:
         done.append(f"remover elemento {ident}")
     if novos:
         ov["patches"] = revisao.juntar_patches(ov.get("patches", []), novos)
-    for ident in a.patch_clear:
-        antes = len(ov.get("patches", []))
-        ov["patches"] = [p for p in ov.get("patches", []) if p.get("id") != ident.strip()]
-        done.append(f"desfeitos {antes - len(ov['patches'])} patch(es) de {ident}")
+
     if a.icons:
         ov["icons"] = a.icons == "on"
         done.append(f"ícones automáticos: {a.icons}")

@@ -282,18 +282,18 @@
    "params": {
     "items": [
      {
-      "at": 1.22,
+      "at": 0.406,
       "text": "Menta"
      },
      {
-      "at": 0.5,
+      "at": 1.046,
       "text": "Tutti-frutti"
      }
     ],
     "title": "2 sabores"
    },
    "t0": 14.857,
-   "t1": 17.043,
+   "t1": 16.883,
    "template": "checklist",
    "zona": "topo"
   },
@@ -309,6 +309,10 @@
   }
  ],
  "music": null,
+ "revisao": {
+  "patches_aplicados": 0,
+  "zoom_sig": "bb9080463be2e308"
+ },
  "sfx": [
   {
    "gain": 0.3,
@@ -377,13 +381,13 @@
   },
   {
    "gain": 0.3,
-   "t": 15.267,
-   "type": "riser"
+   "t": 15.263,
+   "type": "ding"
   },
   {
    "gain": 0.3,
-   "t": 15.357,
-   "type": "ding"
+   "t": 15.267,
+   "type": "riser"
   },
   {
    "gain": 0.3,
@@ -392,7 +396,7 @@
   },
   {
    "gain": 0.3,
-   "t": 16.077,
+   "t": 15.903,
    "type": "ding"
   },
   {

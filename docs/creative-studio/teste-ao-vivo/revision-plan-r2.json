@@ -1,0 +1,19 @@
+{
+ "pedido": "creative-studio rodada 2: correções do QA v16 (m2 seta reposicionada, m5 removido, g_cta removido, m7 em y=1400)",
+ "operacoes": [
+  {"comando": ["--patch", "m2.params.marks.0.from=[0.70,0.17]", "--patch", "m2.params.marks.0.size=64"], "alvo_id": "m2", "motivo": "QA v16: reposicionar e reduzir a seta da anotação"},
+  {"comando": ["--patch-clear", "m5", "--patch-remove", "m5"], "alvo_id": "m5", "motivo": "\"VICIANTE\" não foi dita (D05) e fica ilegível atrás da cabeça (D01)"},
+  {"comando": ["--patch-remove", "g_cta"], "alvo_id": "g_cta", "motivo": "o botão m7 é o CTA único (D07); libera a legenda"},
+  {"comando": ["--patch", "m7.params.y=1400"], "alvo_id": "m7", "motivo": "QA v16: reposicionar o botão CTA"},
+  {"comando": ["--no-render", "--note", "creative-studio rodada 2: correções do QA v16"], "motivo": "flags da aplicação (rodadas todas as operações acima numa única chamada do edit.py)"}
+ ],
+ "dry_run": {
+  "resumo": "plano 6 HIT/0 MISS | mascara 6 HIT/0 MISS | motion 3 HIT/3 MISS | trecho 0 HIT/5 MISS | audio 0 HIT/1 MISS; 9 componentes refeitos. Pós-aplicação: plan.py OK (17.4s, 6 planos, 18 legendas, 6 motion, 14 SFX); timeline sem m5 e g_cta; m2 from [0.7,0.17] size 64; m7.params.y 1400; m6 t0 14.857 -> Menta 15.263 s, Tutti-frutti 15.903 s.",
+  "miss": ["motion m2:anotacao [4.5-5.9s]", "motion m6:checklist [14.9-16.9s]", "motion m7:botao_cta [15.9-17.4s]", "trecho 000.0-004.0", "trecho 004.0-008.0", "trecho 008.0-012.0", "trecho 012.0-016.0", "trecho 016.0-017.4", "audio mix"],
+  "hit": 15
+ },
+ "preset": "final",
+ "rollback_para": null,
+ "conflita_com_aprovadas": [],
+ "observacoes": "MISS de m6 não estava no plano (m6 não foi tocado): provavelmente a invalidação vem da sobreposição com m7 [15.9-17.4s] e da remoção de g_cta, que muda a camada de legenda/gráficos nessa janela. Os MISS de trecho (todos) e o de audio mix são esperados: a remoção de m5 (e seus SFX) e de g_cta mexe na composição e na mixagem. Nada renderizado."
+}
