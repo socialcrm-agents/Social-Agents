@@ -1,0 +1,678 @@
+{
+ "audio": {
+  "lufs": -14
+ },
+ "behind": [],
+ "behind_cfg": {
+  "alpha": "00",
+  "case": "upper",
+  "color": "#E9DDFF",
+  "enabled": true,
+  "font": "Poppins",
+  "italic": false,
+  "max": 3,
+  "size": 300
+ },
+ "brand": null,
+ "broll": [],
+ "captions": {
+  "cfg": {
+   "animation": "acumula",
+   "bold": 1,
+   "box": false,
+   "case": "keep",
+   "color": "#FFFFFF",
+   "emph_case": "upper",
+   "emph_color": "#C9B2FF",
+   "emph_font": "Poppins",
+   "emph_italic": false,
+   "emph_linha": true,
+   "emph_size": 92,
+   "font": "Poppins",
+   "highlight": "none",
+   "max_chars": 20,
+   "outline": 0,
+   "outline_color": "#000000",
+   "shadow": 4,
+   "size": 76,
+   "words_per_page": 3,
+   "y": 1150
+  },
+  "pages": [
+   {
+    "t0": 0.04,
+    "t1": 0.92,
+    "words": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "t0": 0.92,
+    "t1": 1.48,
+    "words": [
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "t0": 1.48,
+    "t1": 3.41,
+    "words": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "t0": 3.41,
+    "t1": 4.21,
+    "words": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "t0": 4.21,
+    "t1": 4.85,
+    "words": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "t0": 4.85,
+    "t1": 5.33,
+    "words": [
+     15
+    ]
+   },
+   {
+    "t0": 5.33,
+    "t1": 6.437,
+    "words": [
+     16,
+     17,
+     18
+    ]
+   },
+   {
+    "t0": 6.437,
+    "t1": 7.237,
+    "words": [
+     19,
+     20,
+     21
+    ]
+   },
+   {
+    "t0": 7.237,
+    "t1": 9.107,
+    "words": [
+     22,
+     23,
+     24
+    ]
+   },
+   {
+    "t0": 9.107,
+    "t1": 10.227,
+    "words": [
+     25,
+     26,
+     27
+    ]
+   },
+   {
+    "t0": 10.227,
+    "t1": 10.733,
+    "words": [
+     28,
+     29
+    ]
+   },
+   {
+    "t0": 10.733,
+    "t1": 11.213,
+    "words": [
+     30,
+     31
+    ]
+   },
+   {
+    "t0": 11.213,
+    "t1": 11.853,
+    "words": [
+     32,
+     33
+    ]
+   },
+   {
+    "t0": 11.853,
+    "t1": 12.333,
+    "words": [
+     34
+    ]
+   },
+   {
+    "t0": 12.333,
+    "t1": 12.853,
+    "words": [
+     35,
+     36,
+     37
+    ]
+   },
+   {
+    "t0": 12.853,
+    "t1": 14.053,
+    "words": [
+     38,
+     39,
+     40
+    ]
+   },
+   {
+    "t0": 14.053,
+    "t1": 14.9,
+    "words": [
+     41
+    ]
+   }
+  ]
+ },
+ "duration": 14.9,
+ "format": "9:16",
+ "fps": 30,
+ "fx": [
+  {
+   "t": 0,
+   "type": "whip"
+  }
+ ],
+ "grade": "eq=contrast=1.06:saturation=1.06:brightness=0.0,unsharp=5:5:0.4",
+ "graphics": [
+  {
+   "t0": 11.7,
+   "t1": 14.9,
+   "text": "TOQUE NO CARRINHO",
+   "type": "cta"
+  }
+ ],
+ "graphics_cfg": {
+  "accent": "#B794FF",
+  "chapter_numbers": false,
+  "cta": true,
+  "hook_banner": false,
+  "icons": false,
+  "lower_third": false,
+  "panel": "#000000",
+  "progress_bar": false,
+  "text": "#FFFFFF"
+ },
+ "h": 1920,
+ "motion": [
+  {
+   "layer": "full",
+   "needs_video": true,
+   "params": {
+    "cor_at": 1.48,
+    "etiqueta": "APRESENTADOR",
+    "pb": true,
+    "rotulo": "BRUTO · SEM EDIÇÃO"
+   },
+   "t0": 0,
+   "t1": 2.6,
+   "template": "visor"
+  },
+  {
+   "layer": "behind",
+   "params": {
+    "correr": true,
+    "rotulo": "POR APENAS",
+    "text": "R$ 15 REAIS"
+   },
+   "t0": 5.23,
+   "t1": 7.83,
+   "template": "palavra"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "icone": "tag",
+    "text": "PROMOÇÃO",
+    "titulo": "SÓ R$ 15"
+   },
+   "t0": 9.007,
+   "t1": 10.807,
+   "template": "etiqueta",
+   "zona": "topo"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "itens": [
+     {
+      "at": 0.38,
+      "text": "DOIS SABORES"
+     },
+     {
+      "at": 1.18,
+      "text": "MENTA"
+     },
+     {
+      "at": 1.82,
+      "text": "TUTTI-FRUTTI"
+     }
+    ]
+   },
+   "t0": 12.233,
+   "t1": 14.9,
+   "template": "empilha"
+  }
+ ],
+ "music": null,
+ "sfx": [
+  {
+   "gain": 0.27999999999999997,
+   "t": 0,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.3,
+   "t": 0.1,
+   "type": "tick"
+  },
+  {
+   "gain": 0.25,
+   "t": 0.35,
+   "type": "tick"
+  },
+  {
+   "gain": 0.3,
+   "t": 5.15,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.45,
+   "t": 5.28,
+   "type": "boom"
+  },
+  {
+   "gain": 0.3,
+   "t": 8.927,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.35,
+   "t": 9.157,
+   "type": "pop"
+  },
+  {
+   "gain": 0.3,
+   "t": 12.153,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.3,
+   "t": 12.613,
+   "type": "ding"
+  },
+  {
+   "gain": 0.3,
+   "t": 13.413,
+   "type": "ding"
+  },
+  {
+   "gain": 0.3,
+   "t": 14.053,
+   "type": "ding"
+  }
+ ],
+ "shots": [
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 1.24,
+   "out": 4.63,
+   "speed": 1.0,
+   "t0": 0.0,
+   "t1": 3.4,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 4.63,
+   "out": 7.51,
+   "speed": 1.0,
+   "t0": 3.4,
+   "t1": 6.267,
+   "zoom0": 1.1,
+   "zoom1": 1.13
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 7.51,
+   "out": 8.87,
+   "speed": 1.0,
+   "t0": 6.267,
+   "t1": 7.633,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 8.92,
+   "out": 10.37,
+   "speed": 1.0,
+   "t0": 7.633,
+   "t1": 9.067,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 10.44,
+   "out": 12.01,
+   "speed": 1.0,
+   "t0": 9.067,
+   "t1": 10.633,
+   "zoom0": 1.1,
+   "zoom1": 1.13
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 12.3,
+   "out": 13.99,
+   "speed": 1.0,
+   "t0": 10.633,
+   "t1": 12.333,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 14.2,
+   "out": 16.77,
+   "speed": 1.0,
+   "t0": 12.333,
+   "t1": 14.9,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  }
+ ],
+ "style": "pro_clean",
+ "w": 1080,
+ "words": [
+  {
+   "emph": false,
+   "t0": 0.04,
+   "t1": 0.58,
+   "w": "Gente,"
+  },
+  {
+   "emph": false,
+   "t0": 0.6,
+   "t1": 0.74,
+   "w": "eu"
+  },
+  {
+   "emph": false,
+   "t0": 0.76,
+   "t1": 0.9,
+   "w": "tô"
+  },
+  {
+   "emph": false,
+   "t0": 0.92,
+   "t1": 1.14,
+   "w": "aqui"
+  },
+  {
+   "emph": false,
+   "t0": 1.16,
+   "t1": 1.3,
+   "w": "com"
+  },
+  {
+   "emph": false,
+   "t0": 1.32,
+   "t1": 1.46,
+   "w": "esse"
+  },
+  {
+   "emph": false,
+   "t0": 1.48,
+   "t1": 2.28,
+   "w": "chiclete"
+  },
+  {
+   "emph": false,
+   "t0": 2.36,
+   "t1": 2.58,
+   "w": "da"
+  },
+  {
+   "emph": false,
+   "t0": 2.6,
+   "t1": 3.38,
+   "w": "Mentos,"
+  },
+  {
+   "emph": false,
+   "t0": 3.41,
+   "t1": 3.63,
+   "w": "dá"
+  },
+  {
+   "emph": false,
+   "t0": 3.65,
+   "t1": 3.71,
+   "w": "uma"
+  },
+  {
+   "emph": false,
+   "t0": 3.73,
+   "t1": 4.19,
+   "w": "olhadinha"
+  },
+  {
+   "emph": false,
+   "t0": 4.21,
+   "t1": 4.43,
+   "w": "aqui"
+  },
+  {
+   "emph": false,
+   "t0": 4.45,
+   "t1": 4.67,
+   "w": "como"
+  },
+  {
+   "emph": false,
+   "t0": 4.69,
+   "t1": 4.83,
+   "w": "ele"
+  },
+  {
+   "emph": false,
+   "t0": 4.85,
+   "t1": 5.31,
+   "w": "é."
+  },
+  {
+   "emph": false,
+   "t0": 5.33,
+   "t1": 5.55,
+   "w": "Esse"
+  },
+  {
+   "emph": false,
+   "t0": 5.57,
+   "t1": 6.267,
+   "w": "chiclete"
+  },
+  {
+   "emph": false,
+   "t0": 6.277,
+   "t1": 6.417,
+   "w": "está"
+  },
+  {
+   "emph": false,
+   "t0": 6.437,
+   "t1": 6.577,
+   "w": "à"
+  },
+  {
+   "emph": true,
+   "t0": 6.597,
+   "t1": 6.977,
+   "w": "venda"
+  },
+  {
+   "emph": false,
+   "t0": 6.997,
+   "t1": 7.217,
+   "w": "por"
+  },
+  {
+   "emph": false,
+   "t0": 7.237,
+   "t1": 7.557,
+   "w": "apenas"
+  },
+  {
+   "emph": false,
+   "t0": 7.673,
+   "t1": 8.293,
+   "w": "15"
+  },
+  {
+   "emph": false,
+   "t0": 8.313,
+   "t1": 9.013,
+   "w": "reais."
+  },
+  {
+   "emph": false,
+   "t0": 9.107,
+   "t1": 9.247,
+   "w": "Na"
+  },
+  {
+   "emph": false,
+   "t0": 9.267,
+   "t1": 9.887,
+   "w": "promoção,"
+  },
+  {
+   "emph": false,
+   "t0": 9.907,
+   "t1": 10.207,
+   "w": "15"
+  },
+  {
+   "emph": true,
+   "t0": 10.227,
+   "t1": 10.607,
+   "w": "reais,"
+  },
+  {
+   "emph": false,
+   "t0": 10.633,
+   "t1": 10.713,
+   "w": "uma"
+  },
+  {
+   "emph": false,
+   "t0": 10.733,
+   "t1": 11.113,
+   "w": "olhadinha,"
+  },
+  {
+   "emph": false,
+   "t0": 11.133,
+   "t1": 11.193,
+   "w": "um"
+  },
+  {
+   "emph": false,
+   "t0": 11.213,
+   "t1": 11.673,
+   "w": "chiclete"
+  },
+  {
+   "emph": false,
+   "t0": 11.693,
+   "t1": 11.833,
+   "w": "muito"
+  },
+  {
+   "emph": false,
+   "t0": 11.853,
+   "t1": 12.333,
+   "w": "gostoso."
+  },
+  {
+   "emph": false,
+   "t0": 12.333,
+   "t1": 12.433,
+   "w": "Ele"
+  },
+  {
+   "emph": false,
+   "t0": 12.453,
+   "t1": 12.593,
+   "w": "tem"
+  },
+  {
+   "emph": false,
+   "t0": 12.613,
+   "t1": 12.833,
+   "w": "dois"
+  },
+  {
+   "emph": false,
+   "t0": 12.853,
+   "t1": 13.393,
+   "w": "sabores,"
+  },
+  {
+   "emph": false,
+   "t0": 13.413,
+   "t1": 13.873,
+   "w": "menta"
+  },
+  {
+   "emph": false,
+   "t0": 13.893,
+   "t1": 14.033,
+   "w": "e"
+  },
+  {
+   "emph": false,
+   "t0": 14.053,
+   "t1": 14.833,
+   "w": "tutti-frutti,"
+  }
+ ]
+}
