@@ -37,8 +37,13 @@ Windows (sem symlink obrigatório, caminhos com `pathlib`, `os.replace`).
 - **Escopo mínimo.** Avalie só as cenas que o diretor indicou (ids e janelas de tempo). Não reescreva o plano todo.
 - **Sem render completo.** Você NÃO roda `run.py render`, `run.py all`, `render.py` nem `edit.py` sem
   `--no-render`/`--dry-run`. Quem decide e dispara o render é o diretor (skill `creative-studio`).
-- **Sem executores inventados.** Proponha só ações que o editor tem (`edit.py --help`, `references/motion.md`,
-  `references/direcao.md`). Se a ação não existe, marque `"suportado": false` e explique o gap.
+- **Sem executores inventados; templates existentes primeiro.** Proponha só ações que o editor tem: o catálogo real
+  sai de `python creative/studio.py catalogo` (templates de `assets/motion/templates`, operações do `edit.py`, fx e
+  gaps; sem Bash, leia `references/motion.md`). Ids e falas das suas cenas: `python creative/studio.py cenas <proj>
+  --de T0 --ate T1`. Se a ação não existe, marque `"suportado": false` e explique o gap.
+- **Decisões anteriores do projeto.** Leia `<proj>/creative/historico.jsonl` (ou `studio.py historico <proj>`):
+  ids travados pelo usuário não se mexem; conflitos já resolvidos não se reabrem.
 - **Entrega curta e validável.** Responda com UM bloco JSON no schema indicado, sem texto antes ou depois, e
-  valide com `python creative/validar.py - <schema>` quando tiver Bash. Nada de relatórios longos.
+  confira com `python creative/studio.py verificar <proj> <seu.json> <schema>` (schema + templates + ids +
+  operações + decisões) quando tiver Bash; o diretor roda a mesma verificação em `studio.py aprovar`. Nada de relatórios longos.
 - Não convoque outros agentes.

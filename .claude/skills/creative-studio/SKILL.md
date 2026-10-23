@@ -38,41 +38,56 @@ Como convocar: ferramenta Agent com `subagent_type` = nome do especialista (ou "
 passando: objetivo, ids/janelas das cenas, caminhos (`<proj>/transcript.txt`, `<proj>/timeline.json`,
 `<proj>/creative/brief.json`, quadros a olhar) e o schema de saída esperado.
 
-## Fluxo
+## Fluxo (executável: `ST` = `PY creative/studio.py`; numa pasta qualquer, `PY CS/creative/studio.py`)
+
+O `studio.py` faz a parte que não pode depender de memória: mapa de cenas, equipe mínima, conferência das propostas
+(schema, templates existentes, ids reais, operações do `edit.py`, decisões aprovadas e travas), aplicação, histórico
+e relatório. `ST status <proj>` diz em que passo o projeto está. Tudo fica em `<proj>/creative/`; o histórico
+(`historico.jsonl`) só cresce.
 
 **1. Analisar vídeo e contexto**
 - Projeto novo: `PY SK/scripts/run.py new <proj> --clips <arquivos|link> --style pro_clean [--sem-cortes]
   [--brand slug]` → `PY SK/scripts/transcribe.py <proj>` → `PY SK/scripts/run.py plan <proj>` (planeja, não renderiza).
-- Leia `transcript.txt` e `timeline.json` (ids). Folha de contato do bruto quando precisar ver a imagem:
+- `ST iniciar <proj> --pedido "<pedido do usuário>" [--tipo anuncio --objetivo venda --cta ...]` → `brief.json`
+  validado (lê formato, clipes e `sem_cortes` → `ja_editado`/D02 do projeto). Ajuste o que souber a mais.
+- `ST cenas <proj>` (fala, tempo e elementos com id por cena). Folha de contato do bruto quando precisar ver a imagem:
   `ffmpeg -i <bruto> -vf "fps=1/2,scale=270:480,tile=6x3" -frames:v 1 <proj>/creative/bruto.jpg`.
-- Escreva `<proj>/creative/brief.json` (schema `brief`) e valide. Perguntas ao usuário só se mudarem o resultado.
+- Projeto que já passou pelo estúdio: `ST historico <proj>` antes de tudo (travas, conflitos já resolvidos).
 
-**2. Diretor define o plano** — rascunho de `decision-plan.json`: tipo, estilo, gancho, CTA e o MAPA (cena, tempo,
-fala, função, elemento) seguindo `SK/references/direcao.md` e a style bible; `convocados` com motivo e cenas.
+**2. Diretor define o plano** — `ST rascunho <proj> --pedido "..."` grava `decision-plan.json` (não aprovado) com o
+mapa das cenas, os templates que já estão na timeline e `convocados` = `ST equipe` (regra da tabela acima, em
+código). Complete gancho, CTA, função de cada cena (`SK/references/direcao.md`, style bible) e corte da equipe quem
+não for necessário. Templates disponíveis: `ST catalogo` — prefira sempre um existente.
 
-**3. Especialistas avaliam só as cenas relevantes** — cada um devolve `shot-plan` (JSON). Valide cada resposta;
-resposta inválida volta uma vez para o mesmo especialista com os erros do validador.
+**3. Especialistas avaliam só as cenas relevantes** — convoque cada um (ferramenta Agent, `subagent_type`) com as
+cenas dele (`ST cenas <proj> --de T0 --ate T1`), o brief e o schema. Cada um devolve `shot-plan`; salve em
+`<proj>/creative/sp-<agente>.json` e rode `ST verificar <proj> <arquivo> shot-plan`. Erro volta uma vez para o mesmo
+especialista com a saída do verificador.
 
-**4. Diretor resolve conflitos e aprova** — junte as propostas no `decision-plan`: um herói por momento, decisões
-aprovadas primeiro, conversão > estética quando houver empate em anúncio. Registre cada conflito
-(`conflitos[]`: descrição, opções, decisão, motivo) e cada gap. `aprovado: true` só com o plano coerente e validado.
-Mostre ao usuário o mapa em formato curto (não espere aprovação, a menos que ele tenha pedido).
+**4. Diretor resolve conflitos e aprova** — `ST aprovar <proj> <proj>/creative/sp-*.json`. Ele recusa: proposta de
+quem não foi convocado, cena fora do escopo, convocado sem proposta, comando/template/id inexistente, decisão
+aprovada ou trava violada e **conflito aberto** (mesmo id com comandos diferentes de especialistas diferentes).
+Resolva o conflito (um herói por momento, decisões aprovadas primeiro, conversão > estética em anúncio), registre em
+`decision-plan.conflitos[]`, tire a opção perdedora do shot-plan e aprove de novo. Aprovado → `aprovado.json`
+(operações na ordem) e gaps juntados. Mostre ao usuário o mapa em formato curto. Elemento que o usuário aprovou
+explicitamente: `ST travar <proj> <id> --motivo "..."` (só `ST liberar` com pedido dele).
 
-**5. Editor executa** — `senior-editor` aplica o plano com `edit.py ... --no-render` (motion.json com `id`, patches
-por id, fx, ênfases) e devolve `revision-plan` com o dry-run (HIT/MISS). MISS fora das cenas do plano = investigar
-antes de renderizar.
+**5. Editor executa** — `senior-editor` roda `ST aplicar <proj> --so-previa` (custo HIT/MISS) e `ST aplicar <proj>`
+(`edit.py --no-render` com as operações aprovadas; `--preset final` quando o próximo render for o final — o preset
+entra na chave do cache) → `revision-plan-N.json`. `observacoes` com MISS fora das cenas do
+plano = investigar antes de renderizar.
 
 **6. QA** — você renderiza a prévia: `PY SK/scripts/run.py render <proj> --draft` (inteligente: só o que mudou).
-`quality-director` devolve `qa-report` (visual, técnico, sincronismo, comercial, políticas). Falha → volte ao passo 5
-só com as correções do relatório (patches por id). No máximo 3 voltas; depois, relate o que ficou pendente.
+`quality-director` devolve `qa-report` (visual, técnico, sincronismo, comercial, políticas) → `ST qa <proj> <arquivo>`:
+falha devolve as `correcoes` (viram o shot-plan da próxima volta, passos 4-5) e conta as voltas; no máximo 3, depois
+relate o que ficou pendente.
 
 **7. Render inteligente final** — `PY SK/scripts/edit.py <proj> --note "<pedido>" --dry-run` (custo) e
 `PY SK/scripts/run.py render <proj>` (preset final; planos, máscaras e animações vêm do cache; só os trechos são
 recodificados). `--max` só se pedirem arquivo de máxima compressão.
 
-**8. Relatório final** — `<proj>/creative/relatorio-vN.md` e resposta curta: arquivo, duração, o que entrou em cada
-momento (mapa), especialistas convocados e por quê, conflitos resolvidos, QA (aprovado/pendências), custo da
-revisão (HIT/MISS de `versions/vN/revisao.json`) e gaps.
+**8. Relatório final** — `ST relatorio <proj>` → `creative/relatorio-vN.md` (mapa, equipe e motivo, conflitos,
+decisões, QA, HIT/MISS de `versions/vN/revisao.json`, gaps). Resposta curta ao usuário com o arquivo e esse resumo.
 
 ## Gaps conhecidos (não prometa; registre em `gaps[]`)
 
@@ -85,5 +100,6 @@ revisão (HIT/MISS de `versions/vN/revisao.json`) e gaps.
 
 ## Validação
 
-`PY creative/validar.py <proj>/creative/<arquivo>.json <brief|decision-plan|shot-plan|revision-plan|qa-report>`.
-Testes do fluxo: `python -m unittest tests/creative_studio/test_creative_studio.py -v`.
+`ST verificar <proj> <arquivo>.json <brief|decision-plan|shot-plan|revision-plan|qa-report>` (schema + regras) ou só o
+schema: `PY creative/validar.py <arquivo> <schema>`. Testes: `python -m unittest discover tests/creative_studio -v`
+(com render real: `EDITOR_TESTES_RENDER=1`).

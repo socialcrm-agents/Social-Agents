@@ -39,8 +39,29 @@ Para falar direto com um especialista: `@agent-art-director olha a cena de 4 a 7
 7. Render final inteligente (planos, máscaras e animações vêm do cache).
 8. Relatório: mapa, especialistas, conflitos, QA, custo (HIT/MISS) e gaps.
 
-Arquivos do projeto ficam em `<projeto>/creative/`. Validar qualquer um:
-`python creative/validar.py <arquivo.json> <brief|decision-plan|shot-plan|revision-plan|qa-report>`.
+Arquivos do projeto ficam em `<projeto>/creative/`.
+
+## O fluxo executável (`creative/studio.py`)
+
+O diretor e os especialistas usam o mesmo programa para tudo que não pode depender de memória:
+
+| Comando | Passo | O que faz |
+|---|---|---|
+| `studio.py status <proj>` | — | em que passo o projeto está e qual é o próximo |
+| `studio.py iniciar <proj> --pedido "..."` | 1 | `brief.json` validado (lê formato, clipes e sem-cortes → D02) |
+| `studio.py cenas <proj> [--de 12 --ate 16]` | 1-3 | cenas com fala, tempo e elementos (ids reais da timeline) |
+| `studio.py catalogo` | 2-3 | templates existentes, operações do `edit.py`, fx, estilos e gaps |
+| `studio.py equipe <proj> --pedido "..."` | 2 | equipe mínima (a tabela "Quem convocar" em código) |
+| `studio.py rascunho <proj> --pedido "..."` | 2 | `decision-plan.json` inicial com o mapa e os convocados |
+| `studio.py verificar <proj> <json> <schema>` | 3 | schema + template existe + id existe + operação existe + fx + âncora falada uma vez na cena + D02/D07 + travas |
+| `studio.py aprovar <proj> sp-*.json` | 4 | recusa conflito aberto, escopo violado, convocado sem proposta; grava `aprovado.json` |
+| `studio.py aplicar <proj> [--so-previa] [--preset draft\|final]` | 5 | `edit.py --no-render` com o aprovado, dry-run antes, `revision-plan-N.json` |
+| `studio.py qa <proj> <qa-report.json>` | 6 | registra o QA, devolve as correções e conta as voltas (máx. 3) |
+| `studio.py relatorio <proj>` | 8 | `relatorio-vN.md` com mapa, equipe, conflitos, QA, HIT/MISS e gaps |
+| `studio.py historico <proj>` · `travar/liberar <proj> <id> --motivo` | — | histórico do projeto e elementos travados pelo usuário |
+
+`<proj>/creative/historico.jsonl` só cresce: cada início, rascunho, aprovação (com conflitos e gaps), aplicação, QA,
+trava e relatório fica registrado. Elemento travado não pode ser mexido por nenhuma proposta até o usuário liberar.
 
 ## Regras da equipe
 
@@ -54,7 +75,8 @@ Arquivos do projeto ficam em `<projeto>/creative/`. Validar qualquer um:
 ## Testes
 
 ```
-python -m unittest tests/creative_studio/test_creative_studio.py -v
+python -m unittest discover -s tests/creative_studio -v      # contrato + fluxo executável na fixture real
+EDITOR_TESTES_RENDER=1 python -m unittest discover -s tests/creative_studio -v   # + os 8 passos com render real
 python -m unittest discover -s tests/editor_video -v
 ```
 
