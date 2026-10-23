@@ -109,7 +109,7 @@ def check_render() -> bool:
     if not shutil.which("node"):
         print("STATUS node MISSING -> https://nodejs.org (LTS)")
         return False
-    root = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True).stdout.strip() if shutil.which("npm") else ""
+    root = subprocess.run([shutil.which("npm"), "root", "-g"], capture_output=True, text=True).stdout.strip() if shutil.which("npm") else ""  # npm.cmd no Windows
     probe = subprocess.run(["node", "-e", "const path=require('path');for (const p of ['playwright','playwright-core',"
                             "'/opt/node-tools/node_modules/playwright', path.join(process.argv[1],'playwright')])"
                             "{try{require(p);process.exit(0)}catch{}};process.exit(1)", root], capture_output=True)

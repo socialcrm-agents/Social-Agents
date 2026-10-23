@@ -31,6 +31,12 @@ servem.
 
 ## Instalar no seu computador (uma vez)
 
+**Windows, sem terminal:** gere `python3 tools/pacote_windows.py` → `dist/Editor-Viral-Windows-AAAA-MM-DD.zip`.
+O cliente extrai, dá dois cliques em `INSTALAR.bat` (instala Git, Python, ffmpeg, Node, Playwright, as bibliotecas e
+os modelos, e copia as skills para `%USERPROFILE%\.claude\skills`) e usa no app do Claude no modo **Code** (ícone
+`</>`), com a pasta dos vídeos aberta. No modo conversa (balãozinho) a skill aparece, mas não edita.
+
+
 1. Instale o Claude Code (app desktop ou `npm install -g @anthropic-ai/claude-code`), o Python 3.10+, o ffmpeg e o
    Node.js 18+.
 2. Baixe este repositório e rode:
