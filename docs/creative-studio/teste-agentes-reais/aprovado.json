@@ -1,0 +1,33 @@
+{
+ "versao_plano": 1,
+ "operacoes": [
+  {
+   "comando": [
+    "--motion",
+    "{\"template\": \"objeto3d\", \"at\": \"olhadinha, um chiclete\", \"until\": \"um chiclete\", \"layer\": \"front\", \"id\": \"m8\", \"params\": {\"text\": \"MENTOS\", \"color\": \"#B794FF\", \"follow\": \"hand\", \"size\": 0.8}}"
+   ],
+   "motivo": "art-director c3: Buraco de 11,98 a 13,26 s sem herói em 'dá uma olhadinha, um chiclete' = gatilho produto na mão (receita Produto: objeto3d seguindo a mão); troca a cada 2-3 s (D09)."
+  },
+  {
+   "comando": [
+    "--patch-remove",
+    "g_cta"
+   ],
+   "motivo": "art-director c4: card CTA em cima de GOSTOSO (m5): dois heróis; o botao_cta m7 já é o CTA forte dos últimos 3 s (D07)",
+   "alvo_id": "g_cta"
+  }
+ ],
+ "janelas": [
+  [
+   10.48,
+   14.13
+  ],
+  [
+   14.14,
+   17.33
+  ]
+ ],
+ "shot_plans": [
+  "<proj>/creative/sp-art-director.json"
+ ]
+}
