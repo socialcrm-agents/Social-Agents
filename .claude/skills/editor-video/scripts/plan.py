@@ -117,13 +117,14 @@ def shots(segments, words, style) -> list[dict]:
     return out
 
 
-def find_word(words: list[dict], phrase: str, after: float = 0.0) -> dict | None:
-    """Primeira ocorrência do trecho falado (1+ palavras) a partir de `after` segundos."""
+def find_word(words: list[dict], phrase: str, after: float = 0.0, ultima: bool = False) -> dict | None:
+    """Primeira ocorrência do trecho falado (1+ palavras) a partir de `after` segundos.
+    Devolve a primeira palavra do trecho (início) ou, com ultima=True, a última (onde o trecho termina)."""
     target = [n for n in (norm(x) for x in phrase.split()) if n]
     seq = [norm(w["w"]) for w in words]
     for i in range(len(seq) - len(target) + 1):
-        if words[i]["t0"] >= after - 0.05 and seq[i:i + len(target)] == target:
-            return words[i]
+        if target and words[i]["t0"] >= after - 0.05 and seq[i:i + len(target)] == target:
+            return words[i + len(target) - 1] if ultima else words[i]
     return None
 
 
@@ -230,6 +231,9 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
                     m["t1"] = f["t0"]
         if m["t1"] - m["t0"] >= 1.0:
             out.append(m)
+        elif not m.get("auto"):
+            log(f"   aviso: motion {m.get('id', '')} ({m.get('template')}): ficou com {m['t1'] - m['t0']:.2f}s "
+                f"(< 1 s) depois de abrir espaço para outra animação; ignorado")
     # dois textos grandes no alto ao mesmo tempo disputam o mesmo espaço: o anterior termina quando o próximo entra
     topo = sorted((m for m in out if m.get("layer") != "full" and (m.get("zona") == "topo" or m.get("template") == "palavra")),
                   key=lambda m: m["t0"])
@@ -242,6 +246,10 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
                 b["t0"] = a["t1"]          # o anterior ficaria curto demais: o próximo espera ele sair
                 # os tempos internos (item marcado, clique, digitação) são relativos ao início: continuam na palavra
                 b["params"] = _desloca_cues(b.get("params", {}), atraso)
+    for m in out:
+        if m["t1"] - m["t0"] < 1.0 and m.get("layer") != "full" and not m.get("auto"):
+            log(f"   aviso: motion {m.get('id', '')} ({m.get('template')}): {m['t1'] - m['t0']:.2f}s (< 1 s, mínimo "
+                f"de leitura); ignorado — estenda o 'until' ou o 'dur'")
     out = [m for m in out if m["t1"] - m["t0"] >= 1.0 or m.get("layer") == "full"]
     return sorted(out, key=lambda m: m["t0"])
 
@@ -260,9 +268,11 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
             log(f"   aviso: motion {n} ({req.get('template')}): trecho '{req['at']}' não foi falado no corte final; ignorado")
             continue
         t0 = round(max((hit["t0"] - 0.1) if hit else float(req.get("at", 0)), 0), 3)
-        end = find_word(words, req["until"], t0) if req.get("until") else None
+        # "until" = onde o trecho termina: a animação vai até a ÚLTIMA palavra dele
+        end = find_word(words, req["until"], t0, ultima=True) if req.get("until") else None
         if req.get("until") and not end and ov.get("word_fixes"):
-            end = find_word(words, " ".join(fix_word(x, ov["word_fixes"]) for x in req["until"].split()), t0)
+            end = find_word(words, " ".join(fix_word(x, ov["word_fixes"]) for x in req["until"].split()), t0,
+                            ultima=True)
         t1 = round(min((end["t1"] + 0.2) if end else t0 + float(req.get("dur", 3.0)), total), 3)
         if t1 - t0 < min(float(req.get("dur", 1.5)), 1.2) and t1 >= total - 0.05:
             t0 = round(max(t1 - min(float(req.get("dur", 1.5)), 1.5), 0), 3)  # fala no fim do vídeo: recua

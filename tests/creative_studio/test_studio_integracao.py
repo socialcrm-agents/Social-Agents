@@ -131,6 +131,23 @@ class FluxoExecutavel(unittest.TestCase):
         bom = self.gravar("c.json", shot("art-director", "c3", 10.48, 14.13, mo("dá uma olhadinha, um")))
         self.assertIn("OK", cli("verificar", self.p, bom, "shot-plan").stdout)
 
+    def test_animacao_curta_demais_e_recusada_e_until_vai_ate_a_ultima_palavra(self):
+        """2º achado do senior-editor real: < 1 s o plan.py descartava calado; 'until' parava na 1ª palavra."""
+        def mo(**kw):
+            return acao("motion", ["--motion", json.dumps({"template": "objeto3d", "id": "m8",
+                                                            "params": {"text": "MENTOS"}, **kw}, ensure_ascii=False)])
+        curta = self.gravar("d.json", shot("art-director", "c3", 10.48, 14.13, mo(at="olhadinha, um", dur=0.6)))
+        self.assertIn("menos de 1 s", cli("verificar", self.p, curta, "shot-plan", ok=False).stdout)
+        ok = self.gravar("e.json", shot("art-director", "c3", 10.48, 14.13,
+                                        mo(at="olhadinha, um chiclete", until="um chiclete")))
+        self.assertIn("OK", cli("verificar", self.p, ok, "shot-plan").stdout)
+        util.rodar("edit.py", self.proj, *json.loads((self.proj / "creative" / "e.json").read_text(encoding="utf-8"))
+                   ["cenas"][0]["acoes"][0]["comando"], "--no-render")
+        m8 = next(m for m in util.planejar(self.proj)["motion"] if m["id"] == "m8")
+        fim_chiclete = next(w["t1"] for w in self.tl["words"] if w["t0"] > 12 and studio.norm(w["w"]) == "chiclete")
+        self.assertAlmostEqual(m8["t1"], fim_chiclete + 0.2, places=2)
+        self.assertGreaterEqual(m8["t1"] - m8["t0"], 1.0)
+
     # --- passos 4-5: aprovação, conflito e aplicação real
     def test_conflito_aberto_trava_e_resolvido_aplica_com_edit_py(self):
         m = self.alvo(12, 16)

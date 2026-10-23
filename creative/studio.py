@@ -77,11 +77,14 @@ def norm(palavra: str) -> str:
     return re.sub(r"[^a-z0-9%$]", "", "".join(c for c in p if not unicodedata.combining(c)))
 
 
-def ocorrencias(words: list[dict], trecho: str) -> list[float]:
-    """Instantes em que o trecho é falado (o editor ancora na PRIMEIRA ocorrência)."""
+def ocorrencias(words: list[dict], trecho: str, depois: float = 0.0, ultima: bool = False) -> list[float]:
+    """Instantes em que o trecho é falado (o editor ancora na PRIMEIRA ocorrência); ultima=True dá o fim da última
+    palavra de cada ocorrência (é assim que o editor resolve o 'until')."""
     alvo = [n for n in (norm(x) for x in trecho.split()) if n]
     seq = [norm(w["w"]) for w in words]
-    return [round(words[i]["t0"], 2) for i in range(len(seq) - len(alvo) + 1) if alvo and seq[i:i + len(alvo)] == alvo]
+    return [round(words[i + len(alvo) - 1]["t1"] if ultima else words[i]["t0"], 2)
+            for i in range(len(seq) - len(alvo) + 1)
+            if alvo and words[i]["t0"] >= depois - 0.05 and seq[i:i + len(alvo)] == alvo]
 
 
 def ler(p: Path, padrao=None):
@@ -338,6 +341,18 @@ def verificar(proj: Path, dado: dict, schema: str, cat: dict | None = None) -> t
                         elif not j0 - 0.5 <= occ[0] <= j1 + 0.5:
                             erros.append(f"{cena}: âncora ambígua '{at}' é falada em {occ} s e o editor usa a 1ª "
                                          f"({occ[0]} s), fora da cena {j0}-{j1} s — use um trecho que só exista nela")
+                        else:
+                            # mesma conta do plan.py: início 0,1 s antes da âncora; fim na última palavra do
+                            # 'until' (+0,2 s) ou 'dur' (3 s); menos de 1 s o editor descarta
+                            t0 = max(occ[0] - 0.1, 0)
+                            fim = ocorrencias(tl.get("words", []), item["until"], t0, ultima=True) \
+                                if isinstance(item.get("until"), str) else []
+                            t1 = min(fim[0] + 0.2 if fim else t0 + float(item.get("dur", 3.0)), dur)
+                            if isinstance(item.get("until"), str) and not fim:
+                                erros.append(f"{cena}: 'until' '{item['until']}' não é falado depois de '{at}'")
+                            elif t1 - t0 < 1.0:
+                                erros.append(f"{cena}: a animação ficaria com {t1 - t0:.2f} s ({t0:.2f}-{t1:.2f}); "
+                                             f"menos de 1 s o editor descarta — estenda o 'until' ou use 'dur'")
                     if item.get("id") in trav:
                         erros.append(f"{cena}: '{item['id']}' está travado pelo usuário")
             if flag == "--fx" and val.split("@", 1)[0] not in cat["fx"]:
