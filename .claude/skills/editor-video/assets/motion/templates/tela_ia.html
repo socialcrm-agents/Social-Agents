@@ -1,0 +1,187 @@
+<!doctype html>
+<!-- TELA DE IA ANIMADA (layer: full) — bloco prioridade 1 da referência do Marcel.
+     Uma tela de chat de IA em cima de fundo branco quente com sombra de persiana: saudação, cursor clicando no +,
+     arquivo entrando, pedido digitado e enviado, resposta digitando, carimbo e anotações à mão.
+     Interface genérica (sem logo/marca de nenhuma empresa de IA).
+     params:
+       name ("André"), greeting ("Boa tarde, André"), assistant ("IA"), accent ("#E63B2E")
+       steps: lista em ordem, cada um com at (s ou palavra falada):
+         {do:"attach", file:"editor-profissional.zip"}      cursor clica no + e o arquivo entra
+         {do:"type", text:"edita pra mim"}                   digita no campo
+         {do:"send"}                                         cursor clica em enviar; vira mensagem
+         {do:"reply", text:"Pronto! Aprendi..."}             resposta digitando
+         {do:"stamp", text:"PRONTO PRA EDITAR", color}       carimbo
+         {do:"mark", kind:"arrow"|"circle"|"underline", target:"plus"|"send"|"chip"|"last"|"reply", label:"só isso!"}
+       Sem steps: sequência padrão da referência. -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #app { position: absolute; background: #fffdf9; border-radius: 40px; border: 2px solid #e7dfd1;
+         box-shadow: 0 50px 120px rgba(80,60,30,.22), 0 6px 18px rgba(80,60,30,.10); overflow: hidden; color: #1d1b18; }
+  #bar { position: absolute; left: 0; right: 0; top: 0; height: 96px; display: flex; align-items: center; gap: 16px;
+         padding: 0 36px; border-bottom: 2px solid #efe8dc; font-weight: 700; font-size: 32px; color: #6b6255; }
+  .spark { width: 48px; height: 48px; color: #d9773b; }
+  #greet { position: absolute; left: 0; right: 0; text-align: center; font-family: 'DM Serif Display'; font-size: 78px;
+           display: flex; align-items: center; justify-content: center; gap: 22px; }
+  #greet .spark { width: 72px; height: 72px; }
+  #msgs { position: absolute; left: 40px; right: 40px; display: flex; flex-direction: column; gap: 26px; }
+  .user { align-self: flex-end; max-width: 78%; background: #efe8dc; border-radius: 30px; padding: 22px 30px;
+          font-size: 40px; font-weight: 700; }
+  .bot { display: flex; gap: 20px; font-size: 40px; line-height: 1.25; font-weight: 700; }
+  .bot .spark { flex: 0 0 auto; margin-top: 4px; }
+  #input { position: absolute; left: 36px; right: 36px; border: 2px solid #e3dbcd; border-radius: 34px; background: #fff;
+           box-shadow: 0 10px 30px rgba(80,60,30,.08); }
+  #field { position: absolute; left: 32px; right: 32px; top: 26px; font-size: 40px; font-weight: 700; color: #1d1b18; }
+  #field.ph { color: #b3aa9c; }
+  .chip { display: inline-flex; align-items: center; gap: 14px; background: #f6f1e8; border: 2px solid #e3dbcd;
+          border-radius: 18px; padding: 12px 20px; font-size: 32px; font-weight: 700; margin-bottom: 12px; }
+  .chip .ic { width: 52px; height: 52px; border-radius: 12px; background: #E63B2E; color: #fff; display: grid; place-items: center; }
+  .chip .ic svg { width: 32px; height: 32px; stroke: #fff; }
+  .btn { position: absolute; bottom: 22px; width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; }
+  .btn svg { width: 40px; height: 40px; }
+  #plus { left: 22px; border: 2px solid #e3dbcd; color: #6b6255; }
+  #send { right: 22px; background: #d9773b; color: #fff; }
+  #marks { position: absolute; inset: 0; z-index: 40; }
+  .note { position: absolute; z-index: 41; font-size: 84px; transform: translate(-50%, -50%) rotate(-6deg); white-space: nowrap; }
+  .caret { display: inline-block; width: 4px; height: 44px; background: #1d1b18; vertical-align: -6px; margin-left: 3px; }
+</style></head>
+<body>
+<div class="warm-bg"></div><div class="blinds"></div>
+<div id="app">
+  <div id="bar"><div class="spark icon"></div><span>Nova conversa</span></div>
+  <div id="greet"><div class="spark icon"></div><span id="greetText"></span></div>
+  <div id="msgs"></div>
+  <div id="input"><div id="field"></div>
+    <div id="plus" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></div>
+    <div id="send" class="btn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div>
+  </div>
+</div>
+<svg id="marks"></svg><div class="grain"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+import { cursor, handMark, stamp, typed } from '/lib/fx.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const name = p.name || 'André';
+const steps = (p.steps && p.steps.length ? p.steps : [
+  { do: 'attach', file: 'editor-profissional.zip', at: 0.9 },
+  { do: 'mark', kind: 'arrow', target: 'chip', label: 'só isso!', at: 1.6 },
+  { do: 'type', text: 'edita meu vídeo como um profissional', at: 2.0 },
+  { do: 'send', at: 3.6 },
+  { do: 'reply', text: 'Pronto! Aprendi. Manda o bruto que eu edito.', at: 4.0 },
+  { do: 'stamp', text: 'PRONTO PRA EDITAR', at: 5.4 },
+]).map((s, i) => ({ ...s, at: typeof s.at === 'number' ? s.at : 0.6 + i * 0.9 })).sort((a, b) => a.at - b.at);
+
+// geometria (funciona em 9:16 e 16:9)
+const app = document.getElementById('app');
+const aw = Math.min(W * 0.88, 1180), ah = Math.min(H * 0.64, 1250);
+app.style.cssText += `left:${(W - aw) / 2}px;top:${(H - ah) / 2 - H * 0.02}px;width:${aw}px;height:${ah}px`;
+const input = document.getElementById('input'), inputH = 230;
+input.style.top = `${ah - inputH - 36}px`; input.style.height = `${inputH}px`;
+const greet = document.getElementById('greet'); greet.style.top = `${ah * 0.3}px`;
+document.getElementById('greetText').textContent = p.greeting || `Boa tarde, ${name}`;
+const msgs = document.getElementById('msgs'); msgs.style.top = '130px';
+motion.waitFor(motion.icon('sparkle').then((s) => document.querySelectorAll('.spark').forEach((e) => (e.innerHTML = s))));
+const fileIcon = motion.waitFor(motion.icon('file-archive'));
+
+const field = document.getElementById('field');
+const curFn = cursor(document.body);
+const svg = document.getElementById('marks'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+const center = (el) => { const r = el.getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2, r]; };
+
+// monta a linha do tempo de mensagens e cliques
+let attachStep = null, typeStep = null;
+const sends = [], replies = [], path = [], markSteps = [], stamps = [];
+for (const s of steps) {
+  if (s.do === 'attach') { attachStep = s; path.push({ at: s.at, target: 'plus', click: true }); }
+  if (s.do === 'type') typeStep = s;
+  if (s.do === 'send') { sends.push({ at: s.at, text: typeStep ? typeStep.text : '', file: attachStep && attachStep.at < s.at ? attachStep.file : null });
+                         path.push({ at: s.at, target: 'send', click: true }); typeStep = null; attachStep = null; }
+  if (s.do === 'reply') replies.push(s);
+  if (s.do === 'mark') markSteps.push(s);
+  if (s.do === 'stamp') stamps.push({ s, fn: stamp(document.body, s.text || 'FEITO', s.color || p.accent || '#E63B2E') });
+}
+// recria o estado para descobrir digitação pendente no campo em cada t
+function fieldState(t) {
+  let text = '', file = null;
+  for (const s of steps) {
+    if (s.at > t) break;
+    if (s.do === 'attach') file = s.file;
+    if (s.do === 'type') text = typed(s.text, t, s.at);
+    if (s.do === 'send') { text = ''; file = null; }
+  }
+  return { text, file };
+}
+let fileSvg = '';
+fileIcon.then((x) => (fileSvg = x));
+const chipHtml = (f) => `<div class="chip"><div class="ic">${fileSvg}</div>${f}</div>`;
+const msgEls = [];
+for (const m of sends) { const el = document.createElement('div'); el.className = 'user'; msgs.appendChild(el); msgEls.push({ kind: 'user', m, el }); }
+for (const r of replies) { const el = document.createElement('div'); el.className = 'bot'; el.innerHTML = '<div class="spark icon"></div><div class="txt"></div>'; msgs.appendChild(el); msgEls.push({ kind: 'bot', m: r, el }); }
+msgEls.sort((a, b) => a.m.at - b.m.at).forEach((x) => msgs.appendChild(x.el));
+const marks = markSteps.map((s) => ({ s, draw: null, note: null }));
+
+function renderState(t) {
+  const kIn = motion.prog(t, 0, 0.5, 'outCubic');
+  app.style.transform = `translateY(${(1 - kIn) * 80}px) scale(${0.96 + 0.04 * kIn})`;
+  app.style.opacity = kIn;
+  // campo de texto
+  const st = fieldState(t);
+  const caret = st.text && Math.floor(t * 2.5) % 2 === 0 ? '<span class="caret"></span>' : '';
+  field.className = st.text || st.file ? '' : 'ph';
+  field.innerHTML = (st.file ? chipHtml(st.file) + '<br>' : '') + (st.text ? st.text + caret : 'Como posso ajudar?');
+  // mensagens
+  let anyMsg = false;
+  for (const x of msgEls) {
+    const on = t >= x.m.at;
+    x.el.style.display = on ? '' : 'none';
+    if (!on) continue;
+    anyMsg = true;
+    const k = motion.prog(t, x.m.at, 0.35, 'outBack');
+    x.el.style.transform = `translateY(${(1 - k) * 30}px)`;
+    x.el.style.opacity = Math.min(1, k * 1.5);
+    if (x.kind === 'user') x.el.innerHTML = (x.m.file ? chipHtml(x.m.file) + '<br>' : '') + x.m.text;
+    else x.el.querySelector('.txt').textContent = typed(x.m.text, t, x.m.at + 0.25, x.m.cps || 30);
+  }
+  greet.style.opacity = anyMsg ? 0 : 1;
+  // cursor: resolve alvos pela posição real dos elementos
+  const pts = path.map((q) => {
+    const el = document.getElementById(q.target);
+    const [x, y] = el ? center(el) : [W / 2, H / 2];
+    return { at: q.at, x, y, click: q.click };
+  });
+  if (pts.length) pts.unshift({ at: Math.max(pts[0].at - 1.0, 0), x: W * 0.78, y: H * 0.86 });
+  curFn(t, pts);
+}
+
+let measured = false;
+motion.onFrame(async (t) => {
+  if (!measured) {
+    // posições das anotações medidas no instante em que cada uma aparece (igual em todas as abas do render)
+    for (const mk of marks) {
+      renderState(mk.s.at + 0.01);
+      const s = mk.s;
+      const tgt = s.target === 'last' || s.target === 'reply' ? msgs.lastElementChild
+        : s.target === 'chip' ? (field.querySelector('.chip') || msgs.querySelector('.chip')) : document.getElementById(s.target);
+      const [tx, ty, r] = tgt ? center(tgt) : [W / 2, H / 2, { left: W / 2 - 100, right: W / 2 + 100, top: H / 2 - 40, bottom: H / 2 + 40 }];
+      if (s.kind === 'circle') mk.draw = handMark(svg, 'circle', [r.left, r.top], [r.right, r.bottom]);
+      else if (s.kind === 'underline') mk.draw = handMark(svg, 'underline', [r.left, r.bottom + 12], [r.right, r.bottom + 12]);
+      else mk.draw = handMark(svg, 'arrow', [tx + 260, ty - 260], [tx + 40, ty - 40]);
+      if (s.label) {
+        mk.note = document.createElement('div'); mk.note.className = 'note hand'; mk.note.textContent = s.label;
+        mk.note.style.left = Math.min(tx + 300, W - 180) + 'px'; mk.note.style.top = ty - 330 + 'px';
+        document.body.appendChild(mk.note);
+      }
+    }
+    measured = true;
+  }
+  renderState(t);
+  // anotações à mão
+  for (const mk of marks) {
+    const s = mk.s, end = s.at + (s.dur || 1.8);
+    const vis = t < end ? 1 : 1 - motion.prog(t, end, 0.25);
+    mk.draw(motion.prog(t, s.at, 0.5, 'inOutQuad'));
+    mk.draw.el && (mk.draw.el.style.opacity = vis);
+    if (mk.note) mk.note.style.opacity = Math.min(motion.prog(t, s.at + 0.35, 0.2), vis);
+  }
+  for (const { s, fn } of stamps) fn(t, s.at, s.x ?? W / 2, s.y ?? H * 0.5, s.size || 96, s.rot ?? -8);
+});
+</script></body></html>

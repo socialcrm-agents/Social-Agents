@@ -1,0 +1,24 @@
+{
+ "pedido": "troca a palavra gigante",
+ "operacoes": [
+  {
+   "comando": [
+    "--patch",
+    "m5.params.text=VICIANTE."
+   ],
+   "alvo_id": "m5"
+  }
+ ],
+ "dry_run": {
+  "resumo": "motion 1 MISS | trecho 1 MISS",
+  "miss": [
+   "motion:m5:palavra",
+   "trecho:012.0-016.0"
+  ],
+  "hit": 24
+ },
+ "preset": "draft",
+ "custo_estimado_s": 20,
+ "rollback_para": null,
+ "conflita_com_aprovadas": []
+}

@@ -1,0 +1,26 @@
+{
+ "versao": 16,
+ "arquivo": "/tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos/renders/v16_pro_clean.mp4",
+ "aprovado": false,
+ "metricas": {"duracao_s": 17.367, "lufs": -14.3, "quadros": 521, "miss": 9, "render_s": 43.8},
+ "checks": [
+  {"area": "comercial", "item": "Gancho c1 (m1) completo e legível em 1,5 s", "status": "ok", "tempo": 1.5, "alvo_id": "m1", "evidencia": "qa_1.5.jpg: ACHADINHO / MENTOS UP2U / POR R$ 15 / NA PROMOÇÃO; rosto livre (recuo 0,73); dentro de SAFE_TOP; preço falado (D05)"},
+  {"area": "visual", "item": "Sub 'NA PROMOÇÃO' encosta na borda superior do vídeo recuado", "status": "alerta", "tempo": 1.5, "alvo_id": "m1", "evidencia": "qa_1.5.jpg / qa_2.3.jpg: sub em y~0,29 sobre a borda do quadro recuado (y~0,27); legível, só estética"},
+  {"area": "visual", "item": "Texto 'OLHA AQUI' da seta m2 cortado na borda direita (fora da zona segura)", "status": "falha", "tempo": 5.2, "alvo_id": "m2", "evidencia": "qa_5.2.jpg: 'AQUI' truncado em x=1,0; qa_5.5.jpg: texto vai de x~0,63 a ~0,99 (> 1080-60 px de SAFE_SIDE); seta aponta a tampa do pote corretamente",
+   "correcao": ["python3 /home/user/Social-Agents/.claude/skills/editor-video/scripts/edit.py /tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos --patch 'm2.params.marks.0.from=[0.70,0.17]' --patch m2.params.marks.0.size=64 --dry-run"]},
+  {"area": "sincronismo", "item": "Seta m2 × fala 'dá uma olhadinha aqui' e whoosh 4,45 s", "status": "ok", "tempo": 4.9, "alvo_id": "m2", "evidencia": "qa_4.9/5.5: seta entra em 4,53 s, fala 4,63-5,66 s"},
+  {"area": "visual", "item": "Palavra atrás m5 'VICIANTE.' ilegível (só '…ANTE.' aparece) — D01 manda sair sem espaço", "status": "falha", "tempo": 13.9, "alvo_id": "m5", "evidencia": "qa_13.9.jpg e qa_14.5.jpg: cabeça cobre 'VICI'",
+   "correcao": ["python3 /home/user/Social-Agents/.claude/skills/editor-video/scripts/edit.py /tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos --patch-remove m5 --dry-run"]},
+  {"area": "visual", "item": "Legenda colide com o CTA g_cta durante toda a janela", "status": "falha", "tempo": 14.5, "alvo_id": "g_cta", "evidencia": "qa_14.5.jpg 'Ele tem dois' e qa_15.4.jpg 'sabores, menta' escritos por cima de TOQUE NO CARRINHO (y~0,72)",
+   "correcao": ["python3 /home/user/Social-Agents/.claude/skills/editor-video/scripts/edit.py /tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos --patch-remove g_cta --patch m7.t0=14.367 --patch m7.params.click_at=2.576 --dry-run"]},
+  {"area": "visual", "item": "Botão m7 cobre a boca (rosto recuado pelo checklist m6) e esconde a legenda", "status": "falha", "tempo": 16.6, "alvo_id": "m7", "evidencia": "qa_16.6_crop.jpg: botão (y~1236-1400 px) começa logo abaixo do bigode; qa_16.2/16.6 sem legenda visível ('tutti-frutti, e é isso aí')",
+   "correcao": ["python3 /home/user/Social-Agents/.claude/skills/editor-video/scripts/edit.py /tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos --patch m7.params.y=1520 --dry-run"]},
+  {"area": "sincronismo", "item": "Checklist m6 marca na ordem errada (Tutti-frutti antes de Menta)", "status": "falha", "tempo": 15.4, "alvo_id": "m6", "evidencia": "qa_15.4.jpg: Tutti-frutti ativo e Menta vazio enquanto fala 'menta' (15,26 s); Menta só marca em 16,08 s, depois de 'tutti-frutti' (15,90 s)",
+   "correcao": ["python3 /home/user/Social-Agents/.claude/skills/editor-video/scripts/edit.py /tmp/claude-0/-home-user-Social-Agents/7eb1fe43-4ea5-5de5-856a-c08211c41e7d/scratchpad/cs_mentos --patch m6.params.items.0.at=0.41 --patch m6.params.items.1.at=1.05 --dry-run"]},
+  {"area": "comercial", "item": "CTA único por vez nos 3 s finais (D07)", "status": "alerta", "tempo": 15.867, "alvo_id": "m7", "evidencia": "g_cta (roxo, 14,17-15,87) e m7 (azul, 15,87-17,37) em sequência: não duplicam, mas são 2 linguagens visuais de CTA; resolvido pela correção de g_cta"},
+  {"area": "tecnico", "item": "Duração, quadros e loudness", "status": "ok", "tempo": null, "evidencia": "ffprobe 17,367 s, 1080x1920, 30 fps, 521 quadros; ebur128 I=-14,3 LUFS"},
+  {"area": "tecnico", "item": "MISS em revisao.json além de m1/m2", "status": "alerta", "tempo": null, "evidencia": "5 trechos + audio mix MISS (esperado só m1, m2 e trechos 0-8 s); custo de render, não de qualidade"},
+  {"area": "politicas", "item": "Sem antes/depois, promessa ou logo de terceiros adicionado", "status": "ok", "tempo": null, "evidencia": "marca só no produto real e no nome falado/brief"}
+ ],
+ "observacoes": "c1 aprovado. Reprovado por m2 (texto cortado), m5 (D01), colisão legenda×CTA e m7 sobre a boca, e ordem do m6. m7.params.y=1520 põe o botão abaixo da legenda (base 1418 px) mas passa ~130 px de SAFE_BOTTOM 1470: conferir no próximo QA; alternativa é encurtar m6 (m6.t1=15.867) para tirar o recuo. 'VICIANTE' não foi dito nem está no brief (atenção a D05/brief). Quadros em creative/qa_*.jpg."
+}

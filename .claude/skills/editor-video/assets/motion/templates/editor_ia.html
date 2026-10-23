@@ -1,0 +1,184 @@
+<!doctype html>
+<!-- EDITOR DE IA (layer: full, needs_video: true): interface de editor de vídeo com IA em fundo roxo escuro.
+     Janela "Editor IA · arquivo.mov" com a prévia do vídeo real, o pedido do usuário sendo digitado ("VOCÊ PEDE"),
+     a checklist do que a IA fez ("A IA EDITA", marcando item a item) e a linha do tempo com 4 faixas
+     (vídeo com miniaturas reais, legenda, edição, áudio) e o cursor andando. Interface genérica, sem marca.
+     params: titulo ("Editor IA"), arquivo ("vsl_maquina.mov"), pedido (texto digitado), digitar_ate (s, padrão 40%),
+             itens: [{text, at}] (padrão: Pausas cortadas, Legendas, Texto atrás), accent (#7C5CFF), accent2 (#B794FF),
+             status ("IA EDITANDO") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #bg { position: absolute; inset: 0; background: radial-gradient(120% 70% at 50% 20%, #2a1650 0%, #120a24 60%, #07040f 100%); }
+  #grid { position: absolute; inset: 0; opacity: .5;
+          background-image: linear-gradient(rgba(183,148,255,.07) 2px, transparent 2px),
+                            linear-gradient(90deg, rgba(183,148,255,.07) 2px, transparent 2px);
+          background-size: 72px 72px; }
+  #glow { position: absolute; left: 50%; top: 42%; width: 1400px; height: 1000px; margin: -500px 0 0 -700px;
+          background: radial-gradient(closest-side, rgba(124,92,255,.35), rgba(124,92,255,0)); }
+  #win { position: absolute; left: 40px; width: 890px; top: 220px; height: 828px; border-radius: 34px;
+         background: rgba(20,13,38,.94); border: 2px solid rgba(183,148,255,.35);
+         box-shadow: 0 40px 120px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08); overflow: hidden; transform-origin: 50% 60%; }
+  #head { position: absolute; left: 0; right: 0; top: 0; height: 78px; display: flex; align-items: center; gap: 12px;
+          padding: 0 26px; border-bottom: 2px solid rgba(183,148,255,.14); }
+  .dot { width: 16px; height: 16px; border-radius: 50%; }
+  #title { margin-left: 12px; font-weight: 800; font-size: 26px; color: #fff; white-space: nowrap; }
+  #title span { color: rgba(255,255,255,.45); font-weight: 700; }
+  #chip { margin-left: auto; display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-radius: 999px;
+          font-weight: 800; font-size: 19px; letter-spacing: 2px; color: #e9ddff; border: 2px solid rgba(183,148,255,.4); }
+  #chip i { width: 12px; height: 12px; border-radius: 50%; display: block; }
+  #prev { position: absolute; left: 24px; top: 98px; width: 400px; height: 420px; border-radius: 20px; overflow: hidden;
+          background: #000; border: 2px solid rgba(183,148,255,.25); }
+  #prev img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #prevtag { position: absolute; left: 14px; top: 14px; padding: 6px 12px; border-radius: 10px; background: rgba(0,0,0,.55);
+             font-weight: 800; font-size: 18px; letter-spacing: 2px; color: #fff; }
+  .card { position: absolute; left: 446px; width: 420px; border-radius: 20px; background: rgba(255,255,255,.04);
+          border: 2px solid rgba(183,148,255,.18); padding: 22px 24px; }
+  .lbl { font-weight: 800; font-size: 18px; letter-spacing: 4px; text-transform: uppercase; margin-bottom: 12px; }
+  #ask { top: 98px; height: 170px; padding-top: 18px; }
+  #askText { font-weight: 700; font-size: 29px; line-height: 1.2; color: #fff; padding-right: 56px; }
+  #caret { display: inline-block; width: 4px; height: 30px; vertical-align: -4px; margin-left: 3px; }
+  #send { position: absolute; right: 16px; bottom: 16px; width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; }
+  #send svg { width: 30px; height: 30px; }
+  #does { top: 282px; height: 236px; padding-top: 18px; }
+  .item { display: flex; align-items: center; gap: 16px; font-weight: 700; font-size: 28px; color: rgba(255,255,255,.4); margin: 10px 0; }
+  .box { width: 38px; height: 38px; border-radius: 10px; border: 3px solid rgba(183,148,255,.4); display: grid; place-items: center; flex: 0 0 auto; }
+  .box svg { width: 26px; height: 26px; }
+  #tl { position: absolute; left: 24px; right: 24px; top: 538px; height: 270px; border-radius: 20px; background: rgba(0,0,0,.25);
+        border: 2px solid rgba(183,148,255,.14); overflow: hidden; }
+  #ruler { position: absolute; left: 120px; right: 16px; top: 10px; height: 34px; }
+  .tick { position: absolute; top: 0; font-weight: 700; font-size: 16px; color: rgba(255,255,255,.4); transform: translateX(-50%); }
+  .track { position: absolute; left: 0; right: 0; height: 56px; }
+  .tname { position: absolute; left: 16px; top: 0; bottom: 0; width: 96px; display: flex; align-items: center;
+           font-weight: 800; font-size: 16px; letter-spacing: 2px; color: rgba(255,255,255,.5); }
+  .lane { position: absolute; left: 120px; right: 16px; top: 6px; bottom: 6px; }
+  .thumb { position: absolute; top: 0; bottom: 0; border-radius: 6px; overflow: hidden; background: #000; }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .clip { position: absolute; top: 4px; bottom: 4px; border-radius: 8px; font-weight: 800; font-size: 15px; color: #fff;
+          display: flex; align-items: center; justify-content: center; letter-spacing: 1px; overflow: hidden; white-space: nowrap; }
+  #wave { position: absolute; left: 0; right: 0; top: 0; bottom: 0; }
+  #play { position: absolute; top: 40px; bottom: 6px; width: 4px; border-radius: 2px; background: #fff; box-shadow: 0 0 14px rgba(255,255,255,.7); }
+  #play:before { content: ''; position: absolute; left: -9px; top: -14px; border: 11px solid transparent; border-top: 14px solid #fff; }
+</style></head>
+<body>
+<div id="bg"></div><div id="grid"></div><div id="glow"></div>
+<div id="win">
+  <div id="head"><div class="dot" style="background:#ff5f57"></div><div class="dot" style="background:#febc2e"></div>
+    <div class="dot" style="background:#28c840"></div><div id="title"></div><div id="chip"><i></i><b id="chipText"></b></div></div>
+  <div id="prev"><img id="plate"><div id="prevtag">PRÉVIA</div></div>
+  <div id="ask" class="card"><div class="lbl">Você pede</div><div id="askText"></div>
+    <div id="send"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg></div></div>
+  <div id="does" class="card"><div class="lbl">A IA edita</div><div id="items"></div></div>
+  <div id="tl"><div id="ruler"></div><div id="tracks"></div><div id="play"></div></div>
+</div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const A = p.accent || '#7C5CFF', A2 = p.accent2 || '#B794FF';
+const $ = (id) => document.getElementById(id);
+$('title').innerHTML = `${p.titulo || 'Editor IA'} <span>· ${p.arquivo || 'vsl_maquina.mov'}</span>`;
+$('chipText').textContent = p.status || 'IA EDITANDO';
+$('chip').querySelector('i').style.background = '#ff4d8d';
+document.querySelectorAll('.lbl').forEach((l) => { l.style.color = A2; });
+$('send').style.background = A;
+const pedido = String(p.pedido || 'tira as pausas, coloca legenda e texto atrás');
+const typeEnd = typeof p.digitar_ate === 'number' ? p.digitar_ate : D * 0.4;
+const itens = (p.itens && p.itens.length ? p.itens : [{ text: 'Pausas cortadas' }, { text: 'Legendas' }, { text: 'Texto atrás' }])
+  .map((it, i) => ({ ...it, at: typeof it.at === 'number' ? it.at : typeEnd + 0.35 + i * 0.45 }));
+const check = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const rows = itens.map((it) => {
+  const el = document.createElement('div'); el.className = 'item';
+  el.innerHTML = `<div class="box">${check}</div><span>${it.text}</span>`;
+  $('items').appendChild(el);
+  return { el, box: el.querySelector('.box'), svg: el.querySelector('svg'), at: it.at };
+});
+// régua
+// régua com um rótulo por segundo (até 7), sem repetir valores
+const span = Math.max(Math.ceil(D), 3), step = Math.ceil(span / 6);
+for (let s = 0; s <= span; s += step) {
+  const tk = document.createElement('div'); tk.className = 'tick';
+  tk.style.left = (s / span * 100) + '%';
+  tk.textContent = `00:${String(s).padStart(2, '0')}`;
+  if (s + step > span) tk.style.transform = 'translateX(-100%)';  // último rótulo não sai da régua
+  if (s === 0) tk.style.transform = 'none';
+  $('ruler').appendChild(tk);
+}
+// faixas
+const tracks = $('tracks');
+const mk = (name, top) => { const tr = document.createElement('div'); tr.className = 'track'; tr.style.top = top + 'px';
+  tr.innerHTML = `<div class="tname">${name}</div><div class="lane"></div>`; tracks.appendChild(tr); return tr.querySelector('.lane'); };
+const laneV = mk('VÍDEO', 40), laneL = mk('LEGENDA', 96), laneE = mk('EDIÇÃO', 152), laneA = mk('ÁUDIO', 208);
+const laneW = 890 - 48 - 120 - 16;
+// miniaturas reais do vídeo, espalhadas no tempo do clipe
+const nThumb = 8;
+const thumbs = [];
+for (let i = 0; i < nThumb; i++) {
+  const th = document.createElement('div'); th.className = 'thumb';
+  th.style.left = (i / nThumb * 100) + '%'; th.style.width = `calc(${100 / nThumb}% - 4px)`;
+  const im = document.createElement('img'); th.appendChild(im); laneV.appendChild(th);
+  const src = motion.frameSrc('plate', (i + 0.5) / nThumb * D);
+  if (src) motion.waitFor(new Promise((r) => { im.onload = r; im.onerror = r; im.src = src; }));
+  thumbs.push(th);
+}
+// legenda: blocos lilás; edição: clipes rotulados coloridos
+const capBlocks = [[0.02, 0.16], [0.2, 0.33], [0.37, 0.52], [0.56, 0.7], [0.74, 0.9]].map(([a, b]) => {
+  const c = document.createElement('div'); c.className = 'clip';
+  Object.assign(c.style, { left: a * 100 + '%', width: (b - a) * 100 + '%', background: `linear-gradient(90deg, ${A2}, ${A})` });
+  laneL.appendChild(c); return { c, a };
+});
+const edClips = [[0.04, 0.2, 'CORTE', '#ff4d8d'], [0.24, 0.42, 'ZOOM', '#7C5CFF'], [0.47, 0.63, 'TEXTO', '#2bd4c4'],
+  [0.67, 0.86, 'B-ROLL', '#f5a524']].map(([a, b, t, col]) => {
+  const c = document.createElement('div'); c.className = 'clip'; c.textContent = t;
+  Object.assign(c.style, { left: a * 100 + '%', width: (b - a) * 100 + '%', background: col });
+  laneE.appendChild(c); return { c, a };
+});
+// onda de áudio (determinística)
+const NB = 90;
+let wave = `<svg id="wave" viewBox="0 0 ${NB * 6} 68" preserveAspectRatio="none">`;
+for (let i = 0; i < NB; i++) {
+  const v = 0.25 + 0.75 * Math.abs(Math.sin(i * 0.61) * Math.cos(i * 0.23 + 1.3)) * (0.6 + 0.4 * Math.sin(i * 0.11));
+  const h = Math.max(6, v * 60);
+  wave += `<rect x="${i * 6 + 1}" y="${34 - h / 2}" width="3.6" height="${h}" rx="1.8" fill="${A2}"/>`;
+}
+laneA.innerHTML = wave + '</svg>';
+const img = $('plate');
+
+motion.onFrame(async (t) => {
+  await motion.setFrame(img, 'plate', t);
+  // entrada: sobe e cresce; saída rápida
+  const kin = motion.prog(t, 0, 0.55, 'outCubic'), kout = motion.prog(t, D - 0.32, 0.3, 'inQuad');
+  const win = $('win');
+  win.style.opacity = Math.min(kin * 1.4, 1) * (1 - kout);
+  win.style.transform = `translateY(${(1 - kin) * 160 - kout * 60}px) scale(${0.86 + 0.14 * kin - 0.04 * kout})`;
+  $('chip').querySelector('i').style.opacity = 0.35 + 0.65 * Math.abs(Math.sin(t * 4));
+  // pedido digitado
+  const n = Math.round(pedido.length * motion.clamp((t - 0.45) / Math.max(typeEnd - 0.45, 0.3)));
+  const blink = n < pedido.length || Math.floor(t * 2.4) % 2 === 0;
+  const sent = t > typeEnd + 0.15;
+  $('askText').innerHTML = `“${pedido.slice(0, n)}${n >= pedido.length ? '”' : ''}` +
+    (sent ? '' : `<span id="caret" style="background:${A2};opacity:${blink ? 1 : 0}"></span>`);
+  const pulse = sent ? 1 + 0.18 * Math.max(0, 1 - (t - typeEnd - 0.15) / 0.3) : 1;
+  $('send').style.transform = `scale(${pulse})`;
+  $('send').style.opacity = n > 0 ? 1 : 0.4;
+  // checklist
+  for (const r of rows) {
+    const k = motion.prog(t, r.at, 0.3, 'outBack');
+    const on = t >= r.at;
+    r.box.style.background = on ? A : 'transparent';
+    r.box.style.borderColor = on ? A : 'rgba(183,148,255,.4)';
+    r.box.style.transform = `scale(${on ? 0.8 + 0.2 * k : 1})`;
+    r.svg.style.opacity = on ? 1 : 0;
+    r.el.style.color = on ? '#fff' : 'rgba(255,255,255,.4)';
+  }
+  // linha do tempo: blocos entram conforme a IA "edita"; cursor anda
+  const tlIn = motion.prog(t, 0.25, 0.5, 'outCubic');
+  $('tl').style.opacity = tlIn;
+  thumbs.forEach((th, i) => { th.style.opacity = motion.prog(t, 0.3 + i * 0.05, 0.25); });
+  const edStart = itens.length ? itens[0].at : typeEnd;
+  capBlocks.forEach(({ c, a }, i) => { const k = motion.prog(t, edStart + 0.2 + i * 0.12, 0.25, 'outBack');
+    c.style.opacity = k; c.style.transform = `scaleX(${0.4 + 0.6 * k})`; c.style.transformOrigin = 'left'; });
+  edClips.forEach(({ c, a }, i) => { const k = motion.prog(t, edStart + 0.1 + i * 0.18, 0.28, 'outBack');
+    c.style.opacity = k; c.style.transform = `translateY(${(1 - k) * 20}px)`; });
+  const ph = motion.clamp(t / D);
+  $('play').style.left = (120 + ph * laneW) + 'px';
+});
+</script></body></html>

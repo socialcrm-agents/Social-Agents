@@ -1,0 +1,114 @@
+<!doctype html>
+<!-- QUADRINHO (layer: full, needs_video: true): a pessoa sai da tela cheia para um painel de história em quadrinhos
+     e, em outros painéis, ilustrações animadas mostram o que ela está falando (menta, frutas, dente, casa...).
+     params: paineis: [{ilustracao: "menta"|"frutas"|"dente"|"casa"|"brilho", rotulo: "MENTA", at: "palavra"}],
+             balao (texto do balão de fala, opcional), onomatopeia ("UAU!", opcional), accent, fundo (cor),
+             cta (botão no estilo quadrinho, ex. "TOQUE NO CARRINHO"; o plano preenche com o CTA do vídeo quando ele cai aqui),
+             imagem (opcional, por painel: {imagem: "foto.png"} usa uma imagem — ex. realista gerada — no lugar do desenho) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #bg { inset: 0; }
+  #dots { inset: 0; opacity: .22; background-image: radial-gradient(#000 22%, transparent 24%); background-size: 26px 26px; }
+  #rays { left: 50%; top: 40%; width: 3000px; height: 3000px; margin: -1500px 0 0 -1500px; opacity: .18;
+          background: repeating-conic-gradient(from 0deg, #fff 0deg 4deg, transparent 4deg 14deg); }
+  .panel { position: absolute; background: #fff; border: 12px solid #111; border-radius: 10px; overflow: hidden;
+           box-shadow: 16px 16px 0 #111; }
+  .panel .art { position: absolute; inset: 70px 6px 6px 6px; }
+  .panel img.foto { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cap { position: absolute; left: -12px; top: -12px; padding: 10px 26px 8px; background: #FFE600; border: 10px solid #111;
+         font-family: 'Anton'; font-size: 60px; letter-spacing: 1px; color: #111; z-index: 3; }
+  #person { background: #000; }
+  #person img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #balao { position: absolute; padding: 26px 36px; background: #fff; border: 10px solid #111; border-radius: 60px;
+           font-weight: 900; font-size: 52px; color: #111; max-width: 520px; text-align: center; line-height: 1.05; }
+  #balao:after { content: ''; position: absolute; left: 70px; bottom: -58px; border: 30px solid transparent;
+                 border-top: 40px solid #111; }
+  #pow { position: absolute; width: 360px; height: 280px; display: grid; place-items: center; }
+  #pow svg { position: absolute; inset: 0; }
+  #cta { position: absolute; padding: 22px 34px 18px; background: #22c55e; border: 10px solid #111; border-radius: 22px;
+         box-shadow: 10px 10px 0 #111; font-family: 'Anton'; font-size: 58px; color: #fff; letter-spacing: 1px;
+         display: flex; align-items: center; gap: 16px; white-space: nowrap; }
+  #cta .ic { width: 64px; height: 64px; }
+  #cta .ic svg { width: 100%; height: 100%; stroke: currentColor; stroke-width: 2.6; }
+  #pow span { position: relative; font-family: 'Anton'; font-size: 92px; color: #111; transform: rotate(-8deg); }
+</style></head>
+<body>
+<div id="bg" class="abs"></div><div id="rays" class="abs"></div><div id="dots" class="abs"></div>
+<div id="paineis"></div>
+<div id="person" class="panel"><img id="plate"></div>
+<div id="balao"></div><div id="pow"></div><div id="cta"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+import { ilustracao } from '/lib/ilustracoes.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const accent = p.accent || '#FFD21F';
+document.getElementById('bg').style.background = `radial-gradient(ellipse at 50% 35%, ${p.fundo || '#38bdf8'} 0%, ${p.fundo2 || '#0369a1'} 85%)`;
+const img = document.getElementById('plate'), person = document.getElementById('person');
+// painéis de ilustração no alto (1, 2 ou 3 lado a lado)
+const list = (p.paineis || [{ ilustracao: 'brilho' }]).slice(0, 3);
+const n = list.length, gap = 40, top = 210, ph = n === 1 ? 660 : 560;
+const pw = (W - 120 - 150 - gap * (n - 1)) / n;   // margem esquerda 120, direita 150 (botões do Reels/TikTok)
+const holder = document.getElementById('paineis');
+const panels = list.map((it, i) => {
+  const el = document.createElement('div'); el.className = 'panel';
+  el.style.cssText += `left:${100 + i * (pw + gap)}px;top:${top + (i % 2) * 40}px;width:${pw}px;height:${ph}px`;
+  el.innerHTML = `<div class="art"></div>${it.rotulo ? `<div class="cap">${it.rotulo}</div>` : ''}`;
+  holder.appendChild(el);
+  const art = el.querySelector('.art');
+  let upd = () => {};
+  if (it.imagem) {
+    const im = document.createElement('img'); im.className = 'foto'; art.style.inset = '0';
+    motion.waitFor(new Promise((r) => { im.onload = r; im.onerror = r; im.src = it.imagem; }));
+    art.appendChild(im);
+    upd = (t) => { im.style.transform = `scale(${1.05 + 0.06 * t / D})`; };
+  } else {
+    upd = ilustracao(it.ilustracao, art, { cor: accent });
+  }
+  // o painel entra até 2 s antes da palavra (a pessoa costuma citar o detalhe no fim da frase); nunca antes de 0,5 s
+  const at = Math.max(0.5 + i * 0.35, (it.at ?? (0.5 + i * 0.8)) - 2.0);
+  return { el, upd, at, rot: (i % 2 ? 2.5 : -2.5) };
+});
+// painel da pessoa (embaixo, à esquerda) e balão
+const fx = 90, fy = top + ph + 90, fw = 640, fh = Math.min(H * 0.765 - fy - (p.cta ? 130 : 0), 640);
+const balao = document.getElementById('balao');
+balao.textContent = p.balao || ''; balao.style.display = p.balao ? 'block' : 'none';
+balao.style.left = (fx + fw - 120) + 'px'; balao.style.top = (fy - 30) + 'px';
+const pow = document.getElementById('pow');
+if (p.onomatopeia) {
+  const pts = Array.from({ length: 24 }, (_, i) => { const r = i % 2 ? 105 : 160, a = i / 24 * Math.PI * 2;
+    return `${180 + r * Math.cos(a)},${140 + r * 0.78 * Math.sin(a)}`; }).join(' ');
+  pow.innerHTML = `<svg viewBox="0 0 360 280"><polygon points="${pts}" fill="${accent}" stroke="#111" stroke-width="10"/></svg><span>${p.onomatopeia}</span>`;
+  pow.style.left = (W - 150 - 360) + 'px'; pow.style.top = (fy + fh - 300) + 'px';
+} else pow.style.display = 'none';
+
+const cta = document.getElementById('cta');
+if (p.cta) {
+  cta.innerHTML = `<div class="ic"></div><span>${p.cta}</span>`;
+  motion.waitFor(motion.icon('shopping-cart').then((svg) => { cta.querySelector('.ic').innerHTML = svg; }));
+  cta.style.left = (fx + 40) + 'px'; cta.style.top = (fy + fh + 20) + 'px';
+  if (p.onomatopeia) pow.style.top = (fy + fh - 420) + 'px';
+} else cta.style.display = 'none';
+
+motion.onFrame(async (t) => {
+  await motion.setFrame(img, 'plate', t);
+  if (p.cta) { const c = motion.inOut(t, 0.9, D - 0.4, 0.35, 0.25, 'outBack');
+    cta.style.transform = `scale(${c * (1 + 0.04 * Math.sin(t * 8))}) rotate(-2deg)`; }
+  document.getElementById('rays').style.transform = `rotate(${t * 8}deg)`;
+  // entrada/saída: a tela cheia encolhe para o painel e volta no fim
+  const kin = motion.prog(t, 0.0, 0.55, 'inOutCubic'), kout = motion.prog(t, D - 0.55, 0.5, 'inOutCubic');
+  const k = kin * (1 - kout);
+  const x = motion.lerp(0, fx, k), y = motion.lerp(0, fy, k), w = motion.lerp(W, fw, k), h = motion.lerp(H, fh, k);
+  Object.assign(person.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px',
+    borderWidth: Math.round(12 * k) + 'px', boxShadow: `${16 * k}px ${16 * k}px 0 #111`, transform: `rotate(${-2 * k}deg)` });
+  for (const pn of panels) {
+    const a = motion.inOut(t, pn.at, D - 0.35, 0.45, 0.3, 'outBack');
+    pn.el.style.transform = `rotate(${pn.rot}deg) scale(${a})`;
+    pn.el.style.opacity = Math.min(1, a * 2);
+    pn.upd(Math.max(0, t - pn.at), a);
+  }
+  const b = motion.inOut(t, 0.7, D - 0.45, 0.35, 0.25, 'outBack');
+  balao.style.transform = `scale(${b})`; balao.style.transformOrigin = '15% 110%';
+  if (p.onomatopeia) { const q = motion.inOut(t, 0.45, D - 0.45, 0.35, 0.25, 'outBack');
+    pow.style.transform = `scale(${q * (1 + 0.05 * Math.sin(t * 9))})`; }
+});
+</script></body></html>

@@ -1,0 +1,88 @@
+<!doctype html>
+<!-- PALAVRA GIGANTE (layer: behind por padrão; cai para front se a cabeça encosta no topo): palavra em degradê atrás
+     da cabeça, entrando com desfoque ("SIM."). Modos de anúncio premium:
+       - rotulo: linha pequena espaçada acima ("UMA VSL DE" + "20–30 MIN"; "SEM ABRIR" + "NENHUM PROGRAMA")
+       - correr: true -> a palavra é maior que a tela e corre na horizontal (letreiro)
+       - contorno: true -> só o contorno (vazado); linhas: ["MÁQUINA DE", "EDIÇÃO"] -> 2 linhas correndo em sentidos opostos
+     params: text, rotulo, cores: [cima, baixo], y (topo, fração da altura; o editor calcula pela cabeça), size,
+             font ("Poppins" 900 | "Anton"), correr, contorno, linhas, sombra (false desliga) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  .ln { position: absolute; left: 0; white-space: nowrap; line-height: .9; letter-spacing: -2px; }
+  .fill { -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .outline { color: transparent; -webkit-text-stroke: 4px rgba(233,221,255,.9); }
+  #rot { position: absolute; left: 0; right: 0; text-align: center; font-weight: 800; font-size: 34px;
+         letter-spacing: 12px; color: rgba(233,221,255,.92); text-transform: uppercase; }
+</style></head>
+<body><div id="rot"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const [c1, c2] = p.cores || ['#FFFFFF', '#B794FF'];
+const font = p.font || 'Poppins', weight = font === 'Anton' ? 400 : 900;
+const texts = p.linhas && p.linhas.length ? p.linhas : [p.text || 'SIM.'];
+const top = H * (p.y ?? 0.11);
+const correr = !!(p.correr || (p.linhas && p.linhas.length > 1));
+const shadow = p.sombra === false || p.contorno ? '' : 'drop-shadow(0 10px 30px rgba(0,0,0,.45)) ';
+const lines = texts.map((txt) => {
+  const el = document.createElement('div');
+  el.className = 'ln';
+  Object.assign(el.style, { fontFamily: font, fontWeight: weight });
+  // uma <span> por letra: o degradê é vertical, então cada letra com o mesmo degradê = a palavra inteira em degradê
+  el.letters = motion.split(el, 'chars', String(txt));
+  el.letters.forEach((c) => {
+    c.className = p.contorno ? 'outline' : 'fill';
+    if (!p.contorno) c.style.backgroundImage = `linear-gradient(180deg, ${c1} 15%, ${c2} 100%)`;
+  });
+  document.body.appendChild(el);
+  return el;
+});
+// tamanho: parada cabe em 86% da largura; correndo, fica maior que a tela (efeito letreiro)
+let size = p.size || (correr ? 300 : 400);
+const fit = () => lines.forEach((l) => { l.style.fontSize = size + 'px'; });
+fit();
+const shrink = () => { if (!correr) while (Math.max(...lines.map((l) => l.offsetWidth)) > W * 0.86 && size > 120) { size -= 10; fit(); } };
+shrink();
+motion.waitFor(document.fonts.ready.then(() => { fit(); shrink(); lines.forEach((l, i) => { l.style.top = (top + i * size * 0.92) + 'px'; }); }));
+const rot = document.getElementById('rot');
+rot.textContent = p.rotulo || '';
+rot.style.top = (top - 56) + 'px';
+lines.forEach((l, i) => { l.style.top = (top + i * size * 0.92) + 'px'; });
+motion.onFrame((t) => {
+  const out = motion.exitK(t, D, 0.32);
+  const kr = motion.spring(t, 0.05, { dur: 0.5, bounce: 0.2 });
+  rot.style.opacity = motion.clamp(kr * 2) * (1 - out);
+  rot.style.transform = `translateY(${(1 - kr) * 18}px)`;
+  rot.style.letterSpacing = (12 + (1 - motion.clamp(kr)) * 18) + 'px';   // rótulo "abre" o espaçamento
+  const sweep = ((t - 0.6) / 2.4) % 1;
+  lines.forEach((l, i) => {
+    const w = l.offsetWidth;
+    let x = (W - w) / 2;
+    if (correr) {
+      const dir = i % 2 ? -1 : 1, span = Math.max(w - W, W * 0.25) + W * 0.15;
+      x = (W - w) / 2 + dir * span * (0.5 - t / D) * 0.9;   // atravessa a tela devagar
+    }
+    l.style.left = x + 'px';
+    l.style.opacity = 1;
+    l.style.filter = shadow + (out > 0 ? `blur(${out * 16}px)` : '');
+    // respiração lenta (zoom de 1 -> 1,03) depois de entrar
+    l.style.transform = correr ? `translateY(${-out * 40}px)` : `scale(${1 + 0.03 * motion.clamp((t - 0.6) / (D - 0.6)) + 0.04 * out}) translateY(${-out * 30}px)`;
+    l.style.transformOrigin = '50% 60%';
+    const L = l.letters.length;
+    l.letters.forEach((c, j) => {
+      const at = 0.06 + i * 0.12 + (correr ? j * 0.02 : Math.abs(j - (L - 1) / 2) * 0.035);  // do centro para fora
+      const k = motion.spring(t, at, { dur: 0.55, bounce: 0.22 });
+      const kp = motion.spring(t - 1 / motion.fps, at, { dur: 0.55, bounce: 0.22 });
+      const blur = Math.min(16, Math.abs(k - kp) * motion.fps * 2.4) + (k < 0.04 ? 14 : 0);
+      c.style.opacity = motion.clamp(k * 2.5) * (1 - out);
+      c.style.transform = `translateY(${(1 - k) * size * 0.35}px) scale(${1.35 - 0.35 * k})`;
+      let f = blur > 0.3 ? `blur(${blur.toFixed(1)}px)` : '';
+      if (!p.contorno && t > at + 0.55) {
+        const d = Math.abs(sweep * (L + 4) - 2 - j), b = Math.max(0, 1 - d / 1.8);
+        if (b > 0) f += ` brightness(${1 + 0.45 * b})`;
+      }
+      c.style.filter = f || 'none';
+    });
+  });
+});
+</script></body></html>

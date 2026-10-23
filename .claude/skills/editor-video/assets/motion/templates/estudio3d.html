@@ -1,0 +1,91 @@
+<!doctype html>
+<!-- ESTÚDIO 3D (layer: full, needs_video: true, webgl): troca o fundo real por um cenário 3D iluminado
+     (Three.js), com a pessoa recortada na frente, sombra de contato e luz de recorte na cor do estilo.
+     A câmera do cenário se move devagar (parallax) para parecer filmado.
+     params: accent, accent2, wall_text (letreiro na parede), mood ("noite"|"dia"), person_y (0..1, base), match (filtro CSS) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<script type="importmap">{"imports": {"three": "/vendor/three/three.module.min.js"}}</script>
+<style>
+  canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+  #shadow { position: absolute; border-radius: 50%; background: radial-gradient(closest-side, rgba(0,0,0,.55), rgba(0,0,0,0)); }
+  #person { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+</style></head>
+<body><div id="shadow"></div><img id="person">
+<script type="module">
+import * as THREE from 'three';
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h;
+const accent = new THREE.Color(p.accent || '#7c5cff'), accent2 = new THREE.Color(p.accent2 || '#00d1ff');
+const night = (p.mood || 'noite') === 'noite';
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(0.5);                      // metade da resolução: o fundo fica levemente suave e renderiza 4x mais rápido
+renderer.setSize(W, H);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(night ? '#07070c' : '#d9dde6');
+scene.fog = new THREE.Fog(scene.background, 12, 30);
+const cam = new THREE.PerspectiveCamera(55, W / H, 0.1, 100);
+
+// sala: piso que reflete pouco, parede do fundo, colunas de luz
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(40, 40),
+  new THREE.MeshStandardMaterial({ color: night ? '#15151d' : '#bfc4cf', roughness: 0.35, metalness: 0.2 }));
+floor.rotation.x = -Math.PI / 2; scene.add(floor);
+const wall = new THREE.Mesh(new THREE.PlaneGeometry(40, 14),
+  new THREE.MeshStandardMaterial({ color: night ? '#101018' : '#eef0f4', roughness: 0.9 }));
+wall.position.set(0, 7, -8); scene.add(wall);
+const strips = [];
+for (let i = -4; i <= 4; i++) {
+  const c = i % 2 ? accent : accent2;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(0.12, 6.5, 0.12), new THREE.MeshStandardMaterial({ emissive: c, emissiveIntensity: 2.2, color: '#000' }));
+  m.position.set(i * 2.1, 3.6, -7.8); scene.add(m); strips.push(m);
+}
+// prateleiras / blocos para dar profundidade
+for (let i = 0; i < 7; i++) {
+  const b = new THREE.Mesh(new THREE.BoxGeometry(1.2 + (i % 3) * 0.5, 0.9 + (i % 2), 1.2),
+    new THREE.MeshStandardMaterial({ color: night ? '#1d1e2a' : '#ffffff', roughness: 0.6 }));
+  b.position.set((i - 3) * 2.6 + (i % 2) * 0.6, 0.45 + (i % 2) * 0.5, -5.5 - (i % 3)); scene.add(b);
+}
+// bolinhas de luz desfocadas (bokeh)
+const bokeh = [];
+for (let i = 0; i < 26; i++) {
+  const m = new THREE.Mesh(new THREE.SphereGeometry(0.07 + (i % 4) * 0.03, 12, 12),
+    new THREE.MeshBasicMaterial({ color: i % 2 ? accent : accent2, transparent: true, opacity: 0.85 }));
+  m.position.set(((i * 37) % 23) - 11.5, 1 + ((i * 13) % 50) / 10, -3 - ((i * 7) % 12)); scene.add(m); bokeh.push(m);
+}
+if (p.wall_text) {
+  const cv = document.createElement('canvas'); cv.width = 2048; cv.height = 400;
+  const g = cv.getContext('2d'); g.fillStyle = '#fff'; g.font = '700 220px Poppins'; g.textAlign = 'center';
+  g.textBaseline = 'middle'; g.shadowColor = '#' + accent.getHexString(); g.shadowBlur = 60;
+  motion.waitFor(document.fonts.load('700 220px Poppins').then(() => { g.fillText(p.wall_text.toUpperCase(), 1024, 200); tex.needsUpdate = true; }));
+  const tex = new THREE.CanvasTexture(cv);
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(9, 1.75), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  sign.position.set(0, 7.4, -7.7); scene.add(sign);
+}
+scene.add(new THREE.HemisphereLight(night ? '#8890cc' : '#ffffff', night ? '#14141f' : '#8890a0', night ? 1.6 : 2.4));
+const key = new THREE.PointLight(accent, 260, 40, 1.4); key.position.set(-5, 6, 1); scene.add(key);
+const fill = new THREE.PointLight(accent2, 220, 40, 1.4); fill.position.set(6, 4, 0); scene.add(fill);
+const back = new THREE.PointLight('#ffffff', 120, 30, 1.6); back.position.set(0, 9, -4); scene.add(back);
+// faixas de luz no piso: dão profundidade e reflexo
+for (let i = -3; i <= 3; i++) {
+  const f = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 14), new THREE.MeshStandardMaterial({ emissive: i % 2 ? accent2 : accent, emissiveIntensity: 1.2, color: '#000' }));
+  f.position.set(i * 2.4, 0.01, -2); scene.add(f);
+}
+
+const person = document.getElementById('person'), shadow = document.getElementById('shadow');
+const rim = '#' + accent.getHexString();
+person.style.filter = p.match || `drop-shadow(0 0 18px ${rim}66) saturate(1.05) contrast(1.04)`;
+const baseY = (p.person_y ?? 0.98) * H;
+shadow.style.cssText = `left:${W * 0.18}px;width:${W * 0.64}px;top:${baseY - 70}px;height:140px`;
+
+motion.onFrame(async (t) => {
+  const k = t / Math.max(motion.duration, 0.01);
+  cam.position.set(Math.sin(k * 1.4) * 0.9, 3.4 + Math.sin(k * 2) * 0.15, 8.5 - k * 1.0);
+  cam.lookAt(0, 4.4, -6);
+  strips.forEach((s, i) => { s.material.emissiveIntensity = 1.8 + 0.6 * Math.sin(t * 2 + i); });
+  bokeh.forEach((b, i) => { b.position.y += Math.sin(t * 0.8 + i) * 0.002; });
+  renderer.render(scene, cam);
+  await motion.setFrame(person, 'cut', t);
+});
+</script></body></html>

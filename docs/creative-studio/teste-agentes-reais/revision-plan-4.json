@@ -1,0 +1,55 @@
+{
+ "pedido": "plano aprovado do Creative Studio",
+ "operacoes": [
+  {
+   "comando": [
+    "--motion",
+    "{\"template\": \"objeto3d\", \"at\": \"olhadinha, um chiclete\", \"until\": \"um chiclete\", \"layer\": \"front\", \"id\": \"m8\", \"params\": {\"text\": \"MENTOS\", \"color\": \"#B794FF\", \"follow\": \"hand\", \"size\": 0.8}}"
+   ],
+   "motivo": "art-director c3: Buraco de 11,98 a 13,26 s sem herói em 'dá uma olhadinha, um chiclete' = gatilho produto na mão (receita Produto: objeto3d seguindo a mão); troca a cada 2-3 s (D09)."
+  },
+  {
+   "comando": [
+    "--patch-remove",
+    "g_cta"
+   ],
+   "motivo": "art-director c4: card CTA em cima de GOSTOSO (m5): dois heróis; o botao_cta m7 já é o CTA forte dos últimos 3 s (D07)",
+   "alvo_id": "g_cta"
+  }
+ ],
+ "dry_run": {
+  "resumo": "Resumo: plano 0 HIT/6 MISS | mascara 0 HIT/6 MISS | motion 0 HIT/8 MISS | trecho 0 HIT/5 MISS | audio 0 HIT/1 MISS",
+  "miss": [
+   "plano:sc1_0",
+   "plano:sc1_2710",
+   "plano:sc1_5430",
+   "plano:sc1_8230",
+   "plano:sc1_11270",
+   "plano:sc1_14150",
+   "mascara:sc1_0",
+   "mascara:sc1_2710",
+   "mascara:sc1_5430",
+   "mascara:sc1_8230",
+   "mascara:sc1_11270",
+   "mascara:sc1_14150",
+   "motion:m1:manchete",
+   "motion:m2:maos",
+   "motion:m3:infografico",
+   "motion:m4:carimbo",
+   "motion:m8:objeto3d",
+   "motion:m5:palavra",
+   "motion:m6:checklist",
+   "motion:m7:botao_cta",
+   "trecho:000.0-004.0",
+   "trecho:004.0-008.0",
+   "trecho:008.0-012.0",
+   "trecho:012.0-016.0",
+   "trecho:016.0-017.4"
+  ],
+  "hit": 0
+ },
+ "preset": "draft",
+ "rollback_para": null,
+ "conflita_com_aprovadas": [],
+ "observacoes": "Aplicado sem render. Dry-run: m8 presente, MISS geral = primeiro render sem cache. plan.py: OK, sem aviso de trecho nao falado nem de motion descartado. timeline.json: m8 objeto3d 12,297-13,537 s (hand=true), dentro de c3; sobrepoe m5 GOSTOSO (behind) por 0,28 s; g_cta removido (graphics vazio). QA: conferir mao visivel ~12,5 s."
+}

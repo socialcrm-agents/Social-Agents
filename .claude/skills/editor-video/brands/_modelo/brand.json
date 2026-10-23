@@ -1,0 +1,18 @@
+{
+  "name": "Nome do cliente",
+  "handle": "@perfil",
+  "status": "Modelo em branco: copie esta pasta para brands/<slug-do-cliente>/ e preencha com o material dele.",
+  "colors": {"accent": "#FFD21F", "warm_white": "#F6F1E8", "ink": "#141414", "alert": "#E63B2E"},
+  "fonts": [],
+  "fonts_note": "Fontes próprias: coloque o .ttf nesta pasta e liste em fonts como {\"name\": \"Minha Fonte\", \"file\": \"MinhaFonte.ttf\"}.",
+  "logo": {"file": null, "watermark": false, "_nota": "Coloque o PNG (fundo transparente) nesta pasta, ponha o nome em file e ligue watermark."},
+  "cta": {"default": "COMENTA EU QUERO", "reels_viral": "COMENTA EU QUERO", "anuncio_conversao": "CLICA NO BOTÃO",
+          "editorial_premium": "Link na bio"},
+  "cta_keywords": ["EU QUERO"],
+  "word_fixes": {},
+  "icon_words": {},
+  "speed": 1.0,
+  "styles": {},
+  "triggers": "triggers.json",
+  "music": null
+}

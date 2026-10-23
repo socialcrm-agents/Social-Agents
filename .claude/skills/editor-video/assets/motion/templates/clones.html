@@ -1,0 +1,56 @@
+<!doctype html>
+<!-- PESSOA DUPLICADA / VÁRIAS VERSÕES (layer: full, needs_video): a pessoa vira 2-5 cópias lado a lado sobre o
+     próprio cenário, cada uma com atraso no tempo (movimento desencontrado), escala e "versão" diferente
+     (cor, P&B, contorno neon, espelhada) e rótulo opcional.
+     params: copies: [{label, look: "normal"|"pb"|"quente"|"frio"|"neon"|"sepia", delay (s), mirror (bool)}],
+             split_at (s em que as cópias saem da pessoa, default 0.3), bg ("cena"|"escuro"|"quente") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #bgimg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .cl { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 100%; }
+  .lab { position: absolute; transform: translate(-50%, 0); font-family: 'Anton'; font-size: 64px; color: #fff; padding: 6px 26px;
+         border-radius: 14px; background: rgba(0,0,0,.55); white-space: nowrap; text-transform: uppercase; }
+  .dark { background: radial-gradient(120% 80% at 50% 30%, #23262f, #07080b 75%); position: absolute; inset: 0; }
+</style></head>
+<body><img id="bgimg"><div id="layer"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const LOOKS = { normal: '', pb: 'grayscale(1) contrast(1.15)', quente: 'sepia(.35) saturate(1.4) hue-rotate(-12deg)',
+  frio: 'saturate(.8) hue-rotate(18deg) brightness(1.05)', sepia: 'sepia(.85)',
+  neon: 'drop-shadow(0 0 14px #00e5ff) drop-shadow(0 0 28px #00e5ff)' };
+const copies = p.copies && p.copies.length ? p.copies : [{ look: 'pb', delay: 0.5 }, { look: 'normal' }, { look: 'quente', delay: 0.25, mirror: true }];
+const n = copies.length;
+const bgimg = document.getElementById('bgimg');
+if (p.bg === 'escuro' || p.bg === 'quente') { bgimg.remove(); document.body.insertAdjacentHTML('afterbegin', p.bg === 'escuro' ? '<div class="dark"></div>' : '<div class="warm-bg"></div><div class="blinds"></div>'); }
+const layer = document.getElementById('layer');
+const center = Math.floor(n / 2);
+const els = copies.map((c, i) => {
+  const img = document.createElement('img'); img.className = 'cl'; layer.appendChild(img);
+  let lab = null;
+  if (c.label) { lab = document.createElement('div'); lab.className = 'lab'; lab.textContent = c.label; document.body.appendChild(lab); }
+  return { c, img, lab, i };
+});
+// a cópia central fica na frente
+els.slice().sort((a, b) => Math.abs(b.i - center) - Math.abs(a.i - center)).forEach((e) => layer.appendChild(e.img));
+const splitAt = p.split_at ?? 0.3;
+motion.onFrame(async (t) => {
+  const jobs = [];
+  if (document.body.contains(bgimg)) jobs.push(motion.setFrame(bgimg, motion.params.video.bg ? 'bg' : 'plate', t));
+  const k = motion.prog(t, splitAt, 0.7, 'outBack') * (1 - motion.prog(t, D - 0.6, 0.55, 'inOutCubic'));
+  for (const e of els) {
+    const off = e.i - center;
+    const spread = W * (n <= 3 ? 0.32 : 0.24);
+    const sc = 1 - Math.abs(off) * 0.16 * k;
+    e.img.style.transform = `translateX(${off * spread * k}px) scale(${sc}) ${e.c.mirror ? 'scaleX(-1)' : ''}`;
+    e.img.style.filter = LOOKS[e.c.look || 'normal'] || e.c.look || '';
+    e.img.style.opacity = off === 0 ? 1 : Math.min(1, k * 1.4);
+    jobs.push(motion.setFrame(e.img, 'cut', Math.max(0, t - (e.c.delay || 0) * k)));
+    if (e.lab) {
+      e.lab.style.left = W / 2 + off * spread * k + 'px'; e.lab.style.top = H * 0.78 + 'px';
+      e.lab.style.opacity = motion.prog(t, splitAt + 0.5, 0.3) * (1 - motion.prog(t, D - 0.6, 0.3));
+    }
+  }
+  await Promise.all(jobs);
+});
+</script></body></html>

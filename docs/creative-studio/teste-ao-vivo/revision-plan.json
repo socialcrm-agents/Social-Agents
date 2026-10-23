@@ -1,0 +1,16 @@
+{
+ "pedido": "creative-studio: gancho com preço (c1) e seta no produto (c2)",
+ "operacoes": [
+  {"alvo_id": "m1", "comando": ["--patch", "m1.params.linhas=[\"MENTOS UP2U\",\"POR R$ 15\"]", "--patch", "m1.params.destaque=[\"R$ 15\"]", "--patch", "m1.params.sub=NA PROMOÇÃO", "--no-render", "--note", "creative-studio: gancho com preço (c1) e seta no produto (c2)"], "motivo": "c1: preço no gancho (conversion-strategist)"},
+  {"alvo_id": "m2", "comando": ["--motion", "{\"id\": \"m2\", \"template\": \"anotacao\", \"layer\": \"front\", \"at\": \"dá uma olhadinha aqui\", \"dur\": 1.4, \"params\": {\"color\": \"#B794FF\", \"marks\": [{\"kind\": \"arrow\", \"from\": [0.82, 0.3], \"to\": [0.86, 0.5], \"text\": \"OLHA AQUI\", \"size\": 90, \"at\": 0.1}]}}", "--no-render"], "motivo": "c2: anotacao com seta substitui maos (art-director); executado na mesma chamada do m1"}
+ ],
+ "dry_run": {
+  "resumo": "plano 6/0, mascara 6/0, motion 5 HIT/2 MISS, trecho 0/5, audio 0/1; 8 componentes refeitos",
+  "miss": ["motion m1:manchete [0.0-2.6s]", "motion m2:anotacao [4.5-5.9s]", "trecho 000.0-004.0", "trecho 004.0-008.0", "trecho 008.0-012.0", "trecho 012.0-016.0", "trecho 016.0-017.4", "audio mix"],
+  "hit": 17
+ },
+ "preset": "draft",
+ "rollback_para": null,
+ "conflita_com_aprovadas": [],
+ "observacoes": "MISS de todos os trechos e do mix é pré-existente: um dry-run só com um patch no m1 também dá 5/5 trechos MISS (cache de trechos desatualizado, ex. patch m5 VICIANTE ainda não renderizado). timeline.json: m1 com linhas/destaque/sub novos (0-2.6s), m2=anotacao 4.53-5.93s, ids m1..m7 sem repetição. Conferir ponta da seta em 4,9 e 5,8 s."
+}

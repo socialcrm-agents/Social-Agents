@@ -1,0 +1,90 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "creative/revision-plan.schema.json",
+ "title": "Plano de revisão (antes do render)",
+ "type": "object",
+ "required": [
+  "pedido",
+  "operacoes",
+  "dry_run"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "pedido": {
+   "type": "string"
+  },
+  "operacoes": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "required": [
+     "comando"
+    ],
+    "properties": {
+     "comando": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "minItems": 1,
+      "description": "argumentos do edit.py/run.py DEPOIS do caminho do projeto (sem o executável e sem o projeto), ex.: [\"--patch\", \"m1.params.text=X\"]"
+     },
+     "alvo_id": {
+      "type": "string"
+     },
+     "motivo": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "dry_run": {
+   "type": "object",
+   "required": [
+    "miss"
+   ],
+   "properties": {
+    "resumo": {
+     "type": "string"
+    },
+    "miss": {
+     "type": "array",
+     "items": {
+      "type": "string"
+     }
+    },
+    "hit": {
+     "type": "integer",
+     "minimum": 0
+    }
+   }
+  },
+  "preset": {
+   "enum": [
+    "draft",
+    "final",
+    "max"
+   ]
+  },
+  "custo_estimado_s": {
+   "type": "number",
+   "minimum": 0
+  },
+  "rollback_para": {
+   "type": [
+    "integer",
+    "null"
+   ]
+  },
+  "conflita_com_aprovadas": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "observacoes": {
+   "type": "string"
+  }
+ }
+}

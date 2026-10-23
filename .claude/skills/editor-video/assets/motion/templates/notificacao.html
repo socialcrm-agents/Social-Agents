@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- NOTIFICAÇÃO NO TOPO (layer: front): banner estilo iOS descendo do topo com mola e desfoque, ícone pulando, selo
+     "feito" que carimba depois com onda. Ex. da referência: "deixa a legenda amarela" + selo "feito".
+     params: app ("Editor IA"), title, text, icon (Lucide), badge ("feito"), badge_at (s), accent, y (px do topo) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #n { position: absolute; left: 50%; width: 900px; margin-left: -450px; border-radius: 46px; padding: 28px 32px; display: flex; gap: 26px; align-items: center;
+       background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(246,244,252,.95)); color: var(--ink);
+       border: 1.5px solid rgba(255,255,255,.9); box-shadow: var(--sh-float), inset 0 1px 0 #fff; }
+  #ic { flex: 0 0 auto; width: 104px; height: 104px; border-radius: 26px; }
+  #app { font-size: 25px; font-weight: 800; color: #8D88A3; text-transform: uppercase; letter-spacing: .14em; display: flex; justify-content: space-between; }
+  #app i { font-style: normal; font-weight: 700; letter-spacing: 0; text-transform: none; }
+  #title { font-size: 40px; font-weight: 900; margin-top: 4px; letter-spacing: -.5px; }
+  #text { font-size: 34px; font-weight: 700; color: #4B4663; margin-top: 2px; }
+  #body { flex: 1; }
+  #badge { position: absolute; right: -22px; top: -34px; padding: 10px 26px; border-radius: 999px; font-weight: 900;
+           font-size: 34px; color: #fff; background: linear-gradient(135deg, #22C55E, #16A34A); text-transform: uppercase;
+           box-shadow: 0 12px 28px rgba(22,163,74,.45), inset 0 1px 0 rgba(255,255,255,.4); }
+  #badge svg { width: 32px; height: 32px; vertical-align: -6px; margin-right: 6px; stroke: #fff; stroke-width: 3; }
+</style></head>
+<body><div id="n"><div id="ic" class="ds-ico-badge"></div><div id="body"><div id="app"><span></span><i>agora</i></div><div id="title"></div><div id="text"></div></div><div id="badge"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+if (p.accent) { document.documentElement.style.setProperty('--accent', p.accent); document.documentElement.style.setProperty('--accent2', `color-mix(in srgb, ${p.accent} 60%, #fff)`); }
+const n = document.getElementById('n'), badge = document.getElementById('badge'), ic = document.getElementById('ic');
+document.querySelector('#app span').textContent = (p.app || 'Editor IA').replace(/\s*·\s*agora$/i, '');
+document.getElementById('title').textContent = p.title || 'Pedido recebido';
+document.getElementById('text').textContent = p.text || 'deixa a legenda amarela';
+motion.waitFor(motion.icon(p.icon || 'message-square-text').then((s) => (ic.innerHTML = s)));
+motion.waitFor(motion.icon('check').then((s) => (badge.innerHTML = s + (p.badge || 'feito'))));
+if (p.badge === '') badge.style.display = 'none';
+const y = p.y ?? 250, bAt = p.badge_at ?? Math.min(1.2, D * 0.5);
+motion.onFrame((t) => {
+  n.style.top = y + 'px';
+  motion.appear(n, t, 0, { from: 'down', dist: 260, scale0: 0.94, dur: 0.6, bounce: 0.22, blur: 18, t1: D, float: 3 });
+  const ki = motion.pop(t, 0.2, 0.5, 0.5);
+  ic.style.transform = `scale(${0.5 + 0.5 * ki}) rotate(${(1 - ki) * -20}deg)`;
+  const kb = motion.spring(t, bAt, { dur: 0.4, bounce: 0.5 });
+  badge.style.transform = `scale(${t >= bAt ? motion.lerp(2.2, 1, kb) : 0}) rotate(${motion.lerp(-18, 6, kb)}deg)`;
+  badge.style.opacity = t >= bAt ? motion.clamp(kb * 3) : 0;
+  const sh = motion.shake(t, bAt + 0.25, 6, 0.2);
+  n.style.marginLeft = (-450 + sh) + 'px';
+});
+</script></body></html>

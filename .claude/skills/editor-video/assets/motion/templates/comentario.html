@@ -1,0 +1,105 @@
+<!doctype html>
+<!-- COMENTÁRIO (layer: front): caixa de comentário estilo Instagram com o texto sendo digitado ("EDIT PRO") e o botão
+     de enviar pulsando; opcional, depois desliza uma notificação de direct ("André te enviou: como funciona").
+     params: texto ("EDIT PRO"), chamada (texto acima da caixa, ex. "comenta EDIT PRO"; a palavra-chave fica em
+             destaque), placeholder ("Adicione um comentário..."), digitar_ate (s; padrão 40% da duração),
+             dm: {nome: "André", texto: "como funciona", app: "DIRECT", selo: "EDIT PRO", at: s} (opcional),
+             accent ("#9B5CFF"), y (topo da caixa px, padrão 980) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #wrap { position: absolute; left: 70px; right: 160px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  #cham { font-weight: 900; font-size: 60px; color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6); white-space: nowrap; }
+  #cham b { color: #C9B2FF; }
+  #bar { width: 100%; display: flex; align-items: center; gap: 18px; padding: 16px 18px 16px 18px; border-radius: 999px;
+         background: rgba(30,20,52,.88); border: 2px solid rgba(190,170,255,.4); box-shadow: 0 20px 50px rgba(0,0,0,.45); }
+  #av { flex: 0 0 auto; width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; }
+  #av svg { width: 34px; height: 34px; stroke: #fff; }
+  #field { flex: 1; font-weight: 800; font-size: 40px; color: #fff; white-space: nowrap; overflow: hidden; }
+  #field .ph { color: rgba(255,255,255,.45); font-weight: 600; }
+  #caret { display: inline-block; width: 4px; height: 1em; margin-left: 3px; vertical-align: -.14em; background: #fff; }
+  #send { flex: 0 0 auto; width: 74px; height: 74px; border-radius: 50%; display: grid; place-items: center; }
+  #send svg { width: 38px; height: 38px; stroke: #fff; stroke-width: 2.4; }
+  #dm { position: absolute; left: 60px; right: 160px; padding: 22px 26px; border-radius: 30px;
+        background: linear-gradient(135deg, rgba(40,26,72,.95), rgba(20,12,40,.95)); border: 2px solid rgba(190,170,255,.45);
+        box-shadow: 0 24px 60px rgba(0,0,0,.5); display: flex; gap: 22px; align-items: center; }
+  #dm .meta { font-weight: 800; font-size: 22px; letter-spacing: 3px; color: rgba(220,205,255,.85); text-transform: uppercase; margin-bottom: 6px; }
+  #dm .who { font-weight: 900; font-size: 40px; color: #fff; }
+  #dm .msg { font-weight: 600; font-size: 32px; color: rgba(255,255,255,.85); }
+  #dm .msg b { color: #fff; }
+  #dm .pic { flex: 0 0 auto; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center;
+             font-weight: 900; font-size: 40px; color: #fff; border: 4px solid rgba(255,255,255,.25); }
+  #dm .selo { margin-left: auto; flex: 0 0 auto; padding: 16px 18px; border-radius: 20px; font-weight: 900; font-size: 26px;
+              color: #fff; background: rgba(124,92,255,.35); border: 2px solid rgba(190,170,255,.5); text-align: center; line-height: 1.05; }
+</style></head>
+<body><div id="wrap"><div id="cham"></div>
+  <div id="bar"><div id="av"></div><div id="field"></div><div id="send"></div></div></div>
+<div id="dm"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const accent = p.accent || '#9B5CFF';
+const wrap = document.getElementById('wrap'), cham = document.getElementById('cham'), field = document.getElementById('field');
+const av = document.getElementById('av'), send = document.getElementById('send'), dmEl = document.getElementById('dm');
+const top = p.y || 980;
+wrap.style.top = top + 'px';
+const texto = String(p.texto || 'EDIT PRO');
+const kw = texto.toUpperCase();
+if (p.chamada) {
+  const c = String(p.chamada);
+  const i = c.toUpperCase().indexOf(kw);
+  cham.innerHTML = i >= 0 ? `${c.slice(0, i)}<b>${c.slice(i, i + kw.length)}</b>${c.slice(i + kw.length)}` : c;
+} else cham.style.display = 'none';
+av.style.background = `linear-gradient(135deg, ${accent}, #5B3FD9)`;
+send.style.background = `linear-gradient(135deg, ${accent}, #E255B5)`;
+motion.waitFor(motion.icon('user').then((s) => { av.innerHTML = s; }));
+motion.waitFor(motion.icon('send').then((s) => { send.innerHTML = s; }));
+const dm = p.dm;
+if (dm) {
+  const ini = String(dm.nome || 'A').trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+  dmEl.innerHTML = `<div class="pic" style="background:linear-gradient(135deg,${accent},#E255B5)">${ini}</div>
+    <div><div class="meta">${dm.app || 'DIRECT'} · agora</div><div class="who">${dm.nome || ''}</div>
+    <div class="msg">te enviou <b>${dm.texto || 'como funciona'}</b></div></div>
+    ${dm.selo ? `<div class="selo">${dm.selo}</div>` : ''}`;
+  dmEl.style.top = (top + 150) + 'px';
+} else dmEl.style.display = 'none';
+const ate = typeof p.digitar_ate === 'number' ? p.digitar_ate : D * 0.4;
+const dmAt = dm ? (typeof dm.at === 'number' ? dm.at : Math.min(ate + 0.5, D - 0.9)) : 1e9;
+const ph = p.placeholder || 'Adicione um comentário...';
+const bar = document.getElementById('bar');
+// chamada em cascata (cada palavra/trecho vira um bloco animado)
+const chamParts = [...cham.childNodes].flatMap((nd) => {
+  if (nd.nodeType === 3) return nd.textContent.split(/(\s+)/).filter(Boolean).map((x) => ({ t: x, b: false }));
+  return [{ t: nd.textContent, b: true }];
+});
+cham.innerHTML = '';
+const chamEls = [];
+for (const part of chamParts) {
+  if (/^\s+$/.test(part.t)) { cham.appendChild(document.createTextNode(' ')); continue; }
+  const sp = document.createElement(part.b ? 'b' : 'span'); sp.textContent = part.t; sp.style.display = 'inline-block';
+  if (part.b) { sp.style.backgroundImage = `linear-gradient(90deg, #E9DDFF, ${accent})`; sp.style.color = 'transparent';
+    sp.style.webkitBackgroundClip = 'text'; sp.style.backgroundClip = 'text'; sp.style.filter = 'drop-shadow(0 6px 20px rgba(0,0,0,.45))'; }
+  cham.appendChild(sp); chamEls.push(sp);
+}
+bar.style.background = 'linear-gradient(165deg, rgba(44,30,80,.94), rgba(18,12,36,.94))';
+bar.style.boxShadow = `var(--sh-float), inset 0 1px 0 rgba(255,255,255,.18), 0 0 0 1.5px color-mix(in srgb, ${accent} 45%, transparent)`;
+motion.onFrame((t) => {
+  const out = motion.exitK(t, D, 0.3);
+  wrap.style.opacity = 1 - out;
+  wrap.style.filter = out > 0 ? `blur(${out * 10}px)` : 'none';
+  chamEls.forEach((e, i) => motion.appear(e, t, 0.05 + i * 0.07, { from: 'up', dist: 40, scale0: 0.8, dur: 0.5, bounce: 0.35, out: 0, blur: 12 }));
+  motion.appear(bar, t, 0.12, { from: 'up', dist: 60, scale0: 0.86, dur: 0.6, bounce: 0.28, out: 0, float: 3 });
+  const n = Math.round(texto.length * motion.clamp((t - 0.35) / Math.max(ate - 0.35, 0.2)));
+  const blink = Math.floor(t * 2.4) % 2 === 0 || (n > 0 && n < texto.length);
+  field.innerHTML = n === 0 ? `<span class="ph">${ph}</span>` :
+    `${texto.slice(0, Math.max(n - 1, 0)).replace(/</g, '&lt;')}<span style="display:inline-block;transform:scale(${n < texto.length ? 1.25 : 1});color:${n < texto.length ? '#E9DDFF' : '#fff'}">${texto.slice(Math.max(n - 1, 0), n).replace(/</g, '&lt;')}</span><span id="caret" style="opacity:${blink ? 1 : 0}"></span>`;
+  const done = t > ate;
+  const press = done ? motion.pop(t, ate + 0.05, 0.4, 0.55) : 0;
+  const pulse = done ? 1 + 0.06 * Math.sin((t - ate) * 8) : 1;
+  send.style.transform = `scale(${(done ? 0.85 + 0.15 * press : 0.9) * pulse}) rotate(${done ? (1 - press) * -25 : 0}deg)`;
+  send.style.boxShadow = done ? `0 0 ${22 + 14 * Math.sin((t - ate) * 8)}px ${accent}` : 'none';
+  if (dm) {
+    motion.appear(dmEl, t, dmAt, { from: 'right', dist: 140, scale0: 0.9, dur: 0.55, bounce: 0.25, t1: D, blur: 16, float: 3 });
+    wrap.style.opacity = (1 - out) * (1 - 0.5 * motion.prog(t, dmAt, 0.3));
+  }
+});
+</script></body></html>

@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- VÁRIOS CENÁRIOS (layer: full, needs_video): troca o fundo real por imagens (geradas no Canva/Moda/HF, tiradas
+     do Pinterest ou do usuário) com movimento de câmera lento, a pessoa recortada na frente, sombra de contato e
+     ajuste de cor. Cenas trocam com chicote (whip) no tempo da fala.
+     params: scenes: [{image, at (s ou palavra), label}], match (filtro CSS na pessoa), blur (px no fundo, default 2) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  .sc { position: absolute; inset: -4%; width: 108%; height: 108%; object-fit: cover; }
+  #person { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 5; }
+  #shadow { position: absolute; z-index: 4; left: 18%; width: 64%; height: 150px; bottom: -40px; border-radius: 50%;
+            background: radial-gradient(closest-side, rgba(0,0,0,.5), rgba(0,0,0,0)); }
+  #label { position: absolute; z-index: 6; left: 60px; top: 260px; font-family: 'DM Serif Display'; font-style: italic; font-size: 70px;
+           color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6); }
+</style></head>
+<body><div id="scenes"></div><div id="shadow"></div><img id="person"><div id="label"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, D = motion.duration;
+const scenes = (p.scenes || []).map((s, i) => ({ ...s, at: typeof s.at === 'number' ? s.at : i * (D / Math.max(p.scenes.length, 1)) }));
+const box = document.getElementById('scenes');
+const imgs = scenes.map((s) => { const im = document.createElement('img'); im.className = 'sc'; box.appendChild(im);
+  motion.waitFor(new Promise((r) => { im.onload = r; im.onerror = r; im.src = s.image; })); return im; });
+const person = document.getElementById('person');
+person.style.filter = p.match || 'contrast(1.04) saturate(1.05)';
+const label = document.getElementById('label');
+motion.onFrame(async (t) => {
+  let cur = 0;
+  scenes.forEach((s, i) => { if (t >= s.at) cur = i; });
+  imgs.forEach((im, i) => {
+    const s = scenes[i];
+    const kin = motion.prog(t, s.at, 0.22, 'outCubic');                 // chicote de entrada
+    const visible = i === cur || (i === cur - 1 && t < scenes[cur].at + 0.22);
+    im.style.display = visible ? '' : 'none';
+    const drift = (t - s.at) * 10;                                       // câmera lenta (Ken Burns)
+    const x = i === cur && i > 0 ? (1 - kin) * W : 0;
+    im.style.transform = `translateX(${x}px) scale(${1.02 + Math.min(drift, 60) / 1000})`;
+    im.style.filter = `blur(${(p.blur ?? 2) + (i === cur && i > 0 ? (1 - kin) * 18 : 0)}px)`;
+    im.style.zIndex = i === cur ? 2 : 1;
+  });
+  label.textContent = scenes[cur] ? scenes[cur].label || '' : '';
+  label.style.opacity = scenes[cur] ? motion.prog(t, scenes[cur].at + 0.2, 0.3) : 0;
+  await motion.setFrame(person, 'cut', t);
+});
+</script></body></html>

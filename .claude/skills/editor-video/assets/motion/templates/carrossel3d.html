@@ -1,0 +1,59 @@
+<!doctype html>
+<!-- CARROSSEL 3D (layer: full) — bloco prioridade 2 da referência: telas e clipes girando em arco em 3D sobre o
+     fundo branco quente. Cada card pode ser imagem, vídeo (vira sequência de quadros) ou o próprio vídeo ao vivo.
+     params: items: [{image: "print.png"} | {video: "clip.mp4", start: 3.0} | {self: true}],
+             radius (px, default ~1,5x a largura do card), speed (graus/s, default 28), title (texto manuscrito opcional), bg ("quente"|"escuro") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #scene { position: absolute; inset: 0; perspective: 2400px; perspective-origin: 50% 42%; }
+  #ring { position: absolute; left: 50%; top: 46%; transform-style: preserve-3d; }
+  .card { position: absolute; border-radius: 34px; overflow: hidden; background: #fff; border: 8px solid #fff;
+          box-shadow: 0 40px 80px rgba(60,40,20,.28); backface-visibility: hidden; }
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #title { position: absolute; left: 0; right: 0; text-align: center; font-size: 110px; z-index: 5; }
+  .dark { background: radial-gradient(120% 80% at 50% 30%, #23262f, #07080b 75%) !important; }
+</style></head>
+<body><div class="warm-bg" id="bg"></div><div class="blinds" id="bl"></div>
+<div id="scene"><div id="ring"></div></div><div id="title" class="hand"></div><div class="grain"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+if (p.bg === 'escuro') { document.getElementById('bg').classList.add('dark'); document.getElementById('bl').style.display = 'none'; }
+const items = p.items && p.items.length ? p.items : [{ self: true }];
+const n = Math.max(items.length, 8);
+const cw = Math.round(Math.min(W, H) * 0.46), ch = Math.round(cw * (H > W ? 16 / 9 : 9 / 16) * (H > W ? 1 : 1.0));
+const radius = p.radius || cw * n / 5.2;
+const ring = document.getElementById('ring');
+const cards = [];
+for (let i = 0; i < n; i++) {
+  const it = items[i % items.length];
+  const el = document.createElement('div'); el.className = 'card';
+  el.style.cssText += `width:${cw}px;height:${ch}px;left:${-cw / 2}px;top:${-ch / 2}px`;
+  const img = document.createElement('img'); el.appendChild(img); ring.appendChild(el);
+  if (it.image) motion.waitFor(new Promise((r) => { img.onload = r; img.onerror = r; img.src = it.image; }));
+  cards.push({ el, img, it, ang: (360 / n) * i });
+}
+const title = document.getElementById('title'); title.textContent = p.title || ''; title.style.top = H * 0.08 + 'px';
+
+motion.onFrame(async (t) => {
+  const kin = motion.prog(t, 0, 0.9, 'outCubic'), kout = motion.prog(t, D - 0.5, 0.5, 'inQuad');
+  const rot = -(p.speed ?? 28) * t;
+  ring.style.transform = `translateZ(${-radius - 900 * (1 - kin) - 600 * kout}px) rotateX(${-6}deg) rotateY(${rot}deg)`;
+  const jobs = [];
+  cards.forEach((c, i) => {
+    c.el.style.transform = `rotateY(${c.ang}deg) translateZ(${radius}px)`;
+    c.el.style.opacity = Math.min(1, kin * 1.4) * (1 - kout);
+    // só atualiza quadros dos cards voltados para a câmera (economia)
+    const facing = Math.cos(((c.ang + rot) * Math.PI) / 180) > -0.2;
+    if (!facing) return;
+    if (c.it.self) jobs.push(motion.setFrame(c.img, 'plate', t));
+    else if (c.it.frames) {
+      const k = Math.min(c.it.count - 1, Math.floor(t * motion.fps)) + 1;
+      const src = c.it.frames.replace('%05d', String(k).padStart(5, '0'));
+      if (c.img.dataset.src !== src) { c.img.dataset.src = src; c.img.src = src; jobs.push(c.img.decode().catch(() => {})); }
+    }
+  });
+  await Promise.all(jobs);
+  title.style.opacity = motion.inOut(t, 0.3, D, 0.4, 0.3);
+});
+</script></body></html>

@@ -1,0 +1,7 @@
+{
+  "_doc": "Promoção / queima: fundo escuro, preço gigante amarelo, selo de desconto girando, tremida, chicote rápido, batida forte.",
+  "fundo": "escuro", "raios": true, "brilhos": true, "contorno": true, "sombra": 0.45,
+  "fonte_titulo": "Anton", "transicao": "whip", "transicao_dur": 0.22,
+  "legenda": {"fonte": "Anton", "peso": 400, "tamanho": 96, "cor": "#ffffff", "maiusculas": true, "palavras": 2, "letras": 14, "y": 1320},
+  "musica": "batida", "musica_volume": 0.24, "sfx": true, "lufs": -13
+}

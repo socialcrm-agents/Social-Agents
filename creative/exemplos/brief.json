@@ -1,0 +1,20 @@
+{
+ "projeto": "<proj>",
+ "objetivo": "venda",
+ "plataforma": [
+  "reels",
+  "tiktok"
+ ],
+ "formato": "9:16",
+ "tipo": "produto",
+ "publico": "quem compra doce no TikTok Shop",
+ "oferta": "Mentos UP2U por R$ 15",
+ "cta": "TOQUE NO CARRINHO",
+ "ja_editado": true,
+ "pode_trocar_fundo": true,
+ "nivel": "maximo",
+ "marca": null,
+ "restricoes": [
+  "não inventar sabores"
+ ]
+}

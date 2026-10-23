@@ -1,0 +1,38 @@
+{
+  "_doc": "Mapa de gatilhos: quando algo é dito, entra um efeito e um som. Placeholders: {frase} (trecho que bateu, maiúsculo), {resto} (até 5 palavras depois), {valor}, {palavra_cta}. Marcas podem somar regras em brands/<slug>/triggers.json. Desligar: edit.py --gatilhos off.",
+  "regras": [
+    {
+      "nome": "valor em dinheiro",
+      "quando": {"dinheiro": true},
+      "efeito": {"template": "infografico", "dur": 2.4, "params": {"y": 330, "stats": [{"value": "{valor}", "decimals": "{decimais}", "prefix": "R$ ", "suffix": "{sufixo}", "label": "{resto}", "icon": "badge-dollar-sign", "at": 0.05}]}},
+      "som": "venda",
+      "intervalo_min": 5
+    },
+    {
+      "nome": "enumeração (primeiro, segundo, terceiro)",
+      "quando": {"enumeracao": true},
+      "efeito": {"template": "checklist", "params": {"title": "", "y": 300}},
+      "som": "tick"
+    },
+    {
+      "nome": "chamada para o botão",
+      "quando": {"frase": ["clica no botão", "clique no botão", "tá no botão", "toca em saiba mais", "toque em saiba mais", "clica em saiba mais", "clique em saiba mais"]},
+      "efeito": {"template": "botao_cta", "dur": 2.4, "params": {"text": "Saiba Mais", "click_at": 1.1}},
+      "som": "click"
+    },
+    {
+      "nome": "comenta a palavra",
+      "quando": {"frase": ["comenta", "comente"]},
+      "efeito": {"template": "notificacao", "dur": 2.6, "params": {"app": "Instagram · agora", "title": "Comenta {palavra_cta}", "text": "que eu te mando no direct", "icon": "message-circle", "badge": "enviado"}},
+      "som": "ding",
+      "intervalo_min": 8
+    },
+    {
+      "nome": "caso de exemplo (não real)",
+      "quando": {"palavra": ["exemplo"]},
+      "efeito": {"template": "carimbo", "dur": 1.6, "params": {"text": "EXEMPLO", "size": 90, "y": 0.22, "color": "#E63B2E"}},
+      "som": "click",
+      "intervalo_min": 10
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+<!doctype html>
+<!-- PALAVRAS EMPILHANDO (layer: front): lista de palavras que se monta no centro, uma por vez, no tempo da fala
+     ("MOTION / LETTERING / IMAGENS / EFEITOS"). A palavra ativa ganha destaque (degradê com textura); as anteriores
+     ficam brancas.
+     params: itens: [{text, at}], y (centro vertical, fração; padrão 0.62 = peito), size (px, padrão 84), accent, accent2 -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #list { position: absolute; left: 0; right: 150px; display: flex; flex-direction: column; align-items: center; }
+  .w { color: #fff; font-weight: 900; text-transform: uppercase; line-height: 1.02; letter-spacing: 1px; white-space: nowrap;
+       text-shadow: 0 6px 24px rgba(0,0,0,.5); }
+  .w.on { color: transparent; -webkit-background-clip: text; background-clip: text; text-shadow: none;
+          filter: drop-shadow(0 6px 22px rgba(0,0,0,.55)); }
+</style></head>
+<body><div id="list"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, H = motion.h, D = motion.duration;
+const a1 = p.accent || '#B794FF', a2 = p.accent2 || '#7C5CFF';
+const list = document.getElementById('list');
+const size = p.size || 84;
+const items = (p.itens || []).map((it, i) => {
+  const el = document.createElement('div'); el.className = 'w'; el.textContent = it.text;
+  el.style.fontSize = size + 'px';
+  list.appendChild(el);
+  return { el, at: typeof it.at === 'number' ? it.at : 0.25 + i * 0.5 };
+});
+const total = items.length * size * 1.02;
+list.style.top = (H * (p.y ?? 0.62) - total / 2) + 'px';  // altura do peito: não cobre o rosto
+const stripes = `repeating-linear-gradient(115deg, ${a1} 0 10px, ${a2} 10px 20px)`;
+motion.onFrame((t) => {
+  const out = motion.exitK(t, D, 0.3);
+  items.forEach((it, i) => {
+    const active = t >= it.at && (i === items.length - 1 || t < items[i + 1].at);
+    it.el.classList.toggle('on', active);
+    it.el.style.backgroundImage = active ? `${stripes}, linear-gradient(180deg, #fff, ${a1})` : '';
+    it.el.style.backgroundPosition = `${t * 60}px 0`;
+    const pulse = active ? 1 + 0.06 * Math.max(0, 1 - (t - it.at) / 0.35) : 1;
+    motion.appear(it.el, t, it.at, { from: 'up', dist: 70, scale0: 0.7, dur: 0.5, bounce: 0.4, t1: D, out: 0.3, blur: 16,
+                                     extra: `scale(${pulse * (active ? 1.04 : 0.94)})` });
+    if (!active && t >= it.at) it.el.style.opacity = (1 - out) * 0.75;
+  });
+});
+</script></body></html>

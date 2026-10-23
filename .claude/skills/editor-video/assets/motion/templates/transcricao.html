@@ -1,0 +1,193 @@
+<!doctype html>
+<!-- TRANSCRIÇÃO AO VIVO (layer: full, needs_video): "a IA ouviu palavra por palavra". A pessoa num quadro com cantos
+     de foco; um card conta os erros e pausas do bruto e vira "N cortes"; embaixo, as palavras REAIS da fala correm
+     sobre a onda de áudio com a palavra atual em destaque, e a onda do BRUTO mostra em vermelho o que foi cortado
+     (pausa, repetido) e encolhe para a duração final.
+     Dados reais (scripts/motion_dados_edicao.py): palavras, onda, bruto {peaks, cuts, raw, final}, erros, cortes.
+     params: etapa ("01 TRANSCRIÇÃO"), selo ("EDITANDO AO VIVO"), virar_at (s em que "erros" vira "cortes"; padrão 55%),
+             erros, cortes (sobrescrevem os calculados), accent (#A78BFA), alerta (#F43F5E) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  body { background: #07040f; font-family: 'Poppins'; }
+  #bg { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 30%, #2a1452 0%, #120822 45%, #06030c 100%); }
+  #grid { position: absolute; inset: 0; opacity: .14; background-image: linear-gradient(rgba(167,139,250,.35) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(167,139,250,.35) 1px, transparent 1px); background-size: 60px 60px; }
+  .mono { font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  #top { position: absolute; left: 70px; right: 150px; top: 236px; display: flex; justify-content: space-between; align-items: center;
+         font-size: 22px; color: rgba(233,225,255,.85); }
+  #rec { display: flex; align-items: center; gap: 12px; }
+  #dot { width: 14px; height: 14px; border-radius: 50%; background: #F43F5E; box-shadow: 0 0 12px #F43F5E; }
+  #etapa { padding: 6px 14px; border: 1.5px solid rgba(167,139,250,.5); border-radius: 8px; }
+  #panel { position: absolute; left: 190px; width: 620px; top: 290px; height: 600px; border-radius: 26px; overflow: hidden;
+           border: 2px solid rgba(167,139,250,.55); box-shadow: 0 30px 80px rgba(0,0,0,.6), 0 0 60px rgba(124,92,255,.25); }
+  #panel img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .br { position: absolute; width: 54px; height: 54px; border: 0 solid rgba(255,255,255,.9); }
+  #card { position: absolute; left: 230px; width: 540px; top: 735px; padding: 20px 28px 22px; border-radius: 20px;
+          background: rgba(14,8,28,.94); border: 1.5px solid rgba(167,139,250,.45); box-shadow: 0 20px 50px rgba(0,0,0,.6); }
+  #clabel { font-size: 18px; color: #F9A8D4; display: flex; align-items: center; gap: 10px; }
+  #clabel i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  #cmain { display: flex; align-items: baseline; gap: 16px; margin-top: 6px; }
+  #cnum { font-family: 'Anton'; font-size: 112px; line-height: .95; }
+  #ctxt { font-weight: 800; font-size: 46px; color: #fff; }
+  #csub { font-size: 17px; color: rgba(233,225,255,.6); margin-top: 4px; }
+  #row1 { position: absolute; left: 70px; right: 150px; top: 990px; display: flex; justify-content: space-between;
+          font-size: 17px; color: rgba(233,225,255,.6); }
+  #words { position: absolute; left: 0; top: 1128px; height: 190px; width: 100%; overflow: hidden; }
+  #track { position: absolute; left: 0; top: 40px; height: 150px; }
+  .wd { position: absolute; top: 0; height: 150px; display: flex; flex-direction: column; align-items: center; }
+  .wd .tx { font-weight: 800; font-size: 50px; color: #fff; white-space: nowrap; padding: 26px 18px 0; position: relative; z-index: 2; }
+  .wd canvas { position: relative; z-index: 2; }
+  .wd .pill { position: absolute; inset: 0; border-radius: 16px; z-index: 1; }
+  .wd .tc { position: absolute; top: -34px; left: 50%; transform: translateX(-50%); font-size: 15px; font-weight: 700; letter-spacing: 2px;
+            padding: 3px 10px; border-radius: 6px; color: #fff; white-space: nowrap; }
+  #play { position: absolute; left: 499px; width: 3px; top: 1150px; height: 330px; border-radius: 2px; z-index: 5; }
+  #play:before { content: ''; position: absolute; left: -9px; top: -6px; border: 10px solid transparent; border-top: 14px solid; border-top-color: inherit; }
+  #lbl2 { position: absolute; left: 70px; top: 1330px; font-size: 16px; color: rgba(233,225,255,.6); }
+  #raw { position: absolute; left: 70px; top: 1362px; }
+  #tags { position: absolute; left: 160px; top: 1326px; width: 860px; height: 30px; }
+  .tag { position: absolute; top: 0; padding: 3px 9px; border-radius: 6px; font-size: 14px; font-weight: 800; letter-spacing: 2px;
+         color: #fff; white-space: nowrap; transform: translateX(-50%); }
+  #dur { position: absolute; top: 1476px; font-size: 18px; font-weight: 700; color: rgba(233,225,255,.75); }
+</style></head>
+<body>
+<div id="bg"></div><div id="grid"></div>
+<div id="top" class="mono"><div id="rec"><div id="dot"></div><span id="selo"></span></div><div id="etapa"></div></div>
+<div id="panel"><img id="plate"><div class="br" id="b1"></div><div class="br" id="b2"></div><div class="br" id="b3"></div><div class="br" id="b4"></div></div>
+<div id="card"><div id="clabel" class="mono"><i></i><span id="ctit"></span></div>
+  <div id="cmain"><div id="cnum"></div><div id="ctxt"></div></div><div id="csub" class="mono"></div></div>
+<div id="row1" class="mono"><span>Linha do tempo · 30 fps</span><span id="pal"></span></div>
+<div id="words"><div id="track"></div></div><div id="play"></div>
+<div id="lbl2" class="mono">Bruto</div><div id="tags"></div><canvas id="raw" width="860" height="110"></canvas><div id="dur" class="mono"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, D = motion.duration;
+const A = p.accent || '#A78BFA', R = p.alerta || '#F43F5E';
+const img = document.getElementById('plate');
+const $ = (id) => document.getElementById(id);
+$('selo').textContent = (p.selo || 'Editando ao vivo');
+$('etapa').textContent = p.etapa || '01 Transcrição';
+$('play').style.background = '#fff'; $('play').style.borderTopColor = '#fff';
+// cantos de foco dentro do quadro
+[['b1', 'top:26px;left:26px', '5px 0 0 5px'], ['b2', 'top:26px;right:26px', '5px 5px 0 0'],
+ ['b3', 'bottom:26px;left:26px', '0 0 5px 5px'], ['b4', 'bottom:26px;right:26px', '0 5px 5px 0']].forEach(([id, pos, bw]) => {
+  $(id).style.cssText += pos + ';border-width:' + bw; });
+
+// ---------- palavras correndo sobre a onda ----------
+const onda = p.onda || [];
+const span = D + 5;  // a onda cobre de -2,5 s a D+2,5 s
+const waveAt = (a, b, n) => {   // n barras da onda entre os instantes a e b
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    const tt = a + (b - a) * (i + 0.5) / n;
+    out.push(onda[Math.max(0, Math.min(onda.length - 1, Math.floor((tt + 2.5) / span * onda.length)))] || 0.05);
+  }
+  return out;
+};
+const wrap = $('track');  // a faixa interna corre; a janela (#words) fica parada e recorta
+const mmss = (s) => { s = Math.max(0, s); const m = Math.floor(s / 60), r = s - m * 60;
+  return `00:${String(m).padStart(2, '0')}:${String(Math.floor(r)).padStart(2, '0')}:${String(Math.floor((r % 1) * 30)).padStart(2, '0')}`; };
+const words = (p.palavras || []).map((wd) => {
+  const el = document.createElement('div'); el.className = 'wd';
+  el.innerHTML = `<div class="pill"></div><div class="tx"></div><canvas height="52"></canvas><div class="tc"></div>`;
+  wrap.appendChild(el);
+  el.querySelector('.tx').textContent = wd.w;
+  return { ...wd, el, pill: el.querySelector('.pill'), tc: el.querySelector('.tc'), cv: el.querySelector('canvas') };
+});
+let x = 0;
+for (const wd of words) {
+  const tw = wd.el.querySelector('.tx').offsetWidth;
+  wd.width = Math.max(tw, 90); wd.x = x; x += wd.width + 14;
+  wd.el.style.left = wd.x + 'px'; wd.el.style.width = wd.width + 'px';
+  wd.cv.width = wd.width - 20; const g = wd.cv.getContext('2d');
+  const bars = Math.max(6, Math.floor((wd.width - 20) / 7)), vals = waveAt(wd.a, wd.b, bars);
+  vals.forEach((v, i) => { const hh = 6 + v * 40; g.fillStyle = 'rgba(233,225,255,.75)'; g.fillRect(i * 7, 26 - hh / 2, 4, hh); });
+}
+const centerOf = (wd) => wd.x + wd.width / 2;
+const PLAY = 500;
+
+// ---------- onda do bruto com os cortes ----------
+const B = p.bruto || { peaks: onda.slice(0, 120), cuts: [], raw: D, final: D };
+const raw = $('raw'), g2 = raw.getContext('2d'), RW = raw.width, RH = raw.height;
+const inCut = (f) => B.cuts.find((c) => f >= c.a && f < c.b);
+const tagsEl = $('tags');
+const tags = B.cuts.filter((c) => c.m !== 'RESPIRO').map((c) => {
+  const el = document.createElement('div'); el.className = 'tag';
+  el.textContent = c.m === 'PAUSA' ? `PAUSA ${String(c.s).replace('.', ',')} s` : 'REPETIDO';
+  el.style.background = R; el.style.left = (Math.min(Math.max((c.a + c.b) / 2 * RW, 60), RW - 150) - 90) + 'px';
+  tagsEl.appendChild(el); return { el, c };
+});
+const cutFrac = B.cuts.reduce((s, c) => s + (c.b - c.a), 0);
+function drawRaw(kCut, kShrink, t) {
+  g2.clearRect(0, 0, RW, RH);
+  const n = B.peaks.length, bw = RW / n;
+  // encolhe: trechos cortados perdem largura e o resto se junta à esquerda
+  let xx = 0;
+  for (let i = 0; i < n; i++) {
+    const f = (i + 0.5) / n, c = inCut(f);
+    const wbar = bw * (c ? 1 - kShrink : 1);
+    if (wbar < 0.3) continue;
+    const v = B.peaks[i], hh = 8 + v * (RH - 30);
+    g2.fillStyle = c && kCut > 0 ? `rgba(244,63,94,${0.35 + 0.65 * kCut})` : 'rgba(167,139,250,.85)';
+    g2.fillRect(xx, RH / 2 - hh / 2, Math.max(wbar - 2, 0.6), hh);
+    if (c && kCut > 0 && kShrink < 0.05) { g2.fillStyle = `rgba(244,63,94,${0.12 * kCut})`; g2.fillRect(xx, 0, wbar, RH); }
+    xx += wbar;
+  }
+  return xx;
+}
+
+// ---------- card que conta ----------
+const nErros = p.erros ?? B.cuts.length, nCortes = p.cortes ?? B.cuts.length;
+const virar = typeof p.virar_at === 'number' ? p.virar_at : D * 0.55;
+const fmt = (s) => String(s.toFixed(1)).replace('.', ',');
+$('cnum').style.color = A;
+
+motion.onFrame(async (t) => {
+  await motion.setFrame(img, 'plate', t);
+  const k = motion.inOut(t, 0, D, 0.35, 0.3);
+  document.body.style.opacity = 1;
+  $('panel').style.transform = `translateY(${(1 - k) * 60}px) scale(${0.94 + 0.06 * k})`;
+  $('panel').style.opacity = k;
+  $('dot').style.opacity = Math.floor(t * 2) % 2 ? 0.3 : 1;
+  $('selo').textContent = `${p.selo || 'Editando ao vivo'} ${mmss(12 + t)}`;
+  // card: erros e pausas -> cortes
+  const flip = t >= virar;
+  const kc = motion.prog(t, 0.35, 0.4, 'outBack');
+  $('card').style.transform = `translateY(${(1 - kc) * 40}px) scale(${0.9 + 0.1 * kc})`; $('card').style.opacity = kc;
+  $('clabel').querySelector('i').style.background = flip ? '#34D399' : R;
+  $('ctit').textContent = flip ? `${nCortes} cortes aplicados` : 'Análise do bruto';
+  const cnt = flip ? Math.round(nCortes * motion.prog(t, virar, 0.6)) : Math.round(nErros * motion.prog(t, 0.4, 1.0));
+  $('cnum').textContent = cnt;
+  $('ctxt').textContent = flip ? 'cortes' : 'erros e pausas';
+  $('csub').textContent = flip ? `−${fmt(B.raw - B.final)} s · duração ${fmt(B.final)} s` : `duração ${fmt(B.raw)} s`;
+  // palavras: a ativa fica no cursor
+  let ai = words.findIndex((wd) => t >= wd.a - 0.02 && t < wd.b + 0.12);
+  if (ai < 0) ai = Math.max(0, words.filter((wd) => wd.a <= t).length - 1);
+  const cur = words[ai];
+  let cx = cur ? centerOf(cur) : 0;
+  if (cur) {   // desliza suave até a próxima palavra
+    const nx = words[ai + 1];
+    if (nx && t > cur.b) cx += (centerOf(nx) - cx) * motion.clamp((t - cur.b) / Math.max(nx.a - cur.b, 0.05));
+  }
+  const kw = motion.prog(t, 0.2, 0.4);
+  wrap.style.transform = `translateX(${PLAY - cx}px)`; wrap.style.opacity = kw;
+  words.forEach((wd, i) => {
+    const on = i === ai;
+    wd.pill.style.background = on ? A : 'transparent';
+    wd.pill.style.boxShadow = on ? `0 0 30px ${A}` : 'none';
+    wd.el.querySelector('.tx').style.color = on ? '#fff' : (i < ai ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.85)');
+    wd.tc.style.display = on ? 'block' : 'none'; wd.tc.style.background = A; wd.tc.textContent = mmss(14 + wd.a);
+  });
+  const primeira = (p.primeira || 0) + ai + 1;
+  $('pal').textContent = `Palavra ${primeira} / ${p.total_palavras || words.length}`;
+  // bruto: marca os cortes um a um, depois encolhe
+  const kCut = motion.prog(t, 0.6, 0.8), kShrink = motion.prog(t, virar + 0.1, 0.8, 'inOutCubic');
+  const end = drawRaw(kCut, kShrink, t);
+  tags.forEach(({ el, c }, i) => {
+    const q = motion.prog(t, 0.7 + i * 0.12, 0.3, 'outBack') * (1 - kShrink);
+    el.style.opacity = Math.min(1, q * 1.5); el.style.transform = `translateX(-50%) scale(${0.6 + 0.4 * q})`;
+  });
+  $('dur').style.left = (70 + Math.min(end, RW) - 70) + 'px';
+  $('dur').textContent = `${fmt(B.raw + (B.final - B.raw) * kShrink)} s`;
+  $('raw').style.opacity = kw; $('lbl2').style.opacity = kw; $('row1').style.opacity = kw;
+});
+</script></body></html>

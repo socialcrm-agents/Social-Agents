@@ -1,0 +1,76 @@
+<!doctype html>
+<!-- CHECKLIST DE PROGRESSO (layer: front ou full): itens marcados um a um no tempo da fala, com barra de progresso.
+     Ex. da referência: ouvindo cada palavra, cortando pausas, melhor tomada, legenda, zoom, efeito sonoro, trilha.
+     Cada item entra em cascata; o check "estoura" com mola e brilho; contador e barra acompanham.
+     params: title, items: [{text, at (s ou palavra falada)}], accent, mode ("card"|"full"), y, tema ("claro"|"escuro") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #c { position: absolute; left: 50%; width: 820px; margin-left: -410px; padding: 40px 46px 38px; border-radius: 40px; }
+  #top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  #title { font-weight: 900; font-size: 54px; letter-spacing: -1px; line-height: 1.05; }
+  #count { font-weight: 800; font-size: 26px; padding: 8px 18px; border-radius: 999px; letter-spacing: .08em; }
+  .it { position: relative; display: flex; align-items: center; gap: 24px; font-size: 42px; font-weight: 800; padding: 14px 0; }
+  .box { position: relative; width: 60px; height: 60px; border-radius: 18px; flex: 0 0 auto; display: grid; place-items: center; }
+  .box .ok { position: absolute; inset: 0; border-radius: 18px; display: grid; place-items: center; }
+  .box .ok svg { width: 40px; height: 40px; stroke: #fff; stroke-width: 3.4; }
+  .ring { position: absolute; inset: -4px; border-radius: 22px; border: 4px solid; opacity: 0; }
+  .lbl { position: relative; }
+  #bar { position: relative; height: 14px; border-radius: 99px; margin-top: 24px; overflow: hidden; }
+  #fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 99px; }
+</style></head>
+<body><div id="bgw"></div><div id="c" class="ds-card"><div class="ds-sheen" id="sheen"></div>
+  <div id="top"><div id="title"></div><div id="count"></div></div><div id="list"></div><div id="bar"><div id="fill"></div></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, H = motion.h, D = motion.duration;
+const accent = p.accent || '#22C55E';
+const dark = p.tema === 'escuro';
+const c = document.getElementById('c');
+if (dark) c.classList.add('ds-dark');
+if (p.mode === 'full') document.getElementById('bgw').outerHTML = '<div class="warm-bg"></div><div class="blinds"></div>';
+document.getElementById('title').textContent = p.title || 'Editando seu vídeo…';
+const ink = dark ? '#fff' : '#14102B', mute = dark ? 'rgba(255,255,255,.18)' : '#E6E1F2';
+const count = document.getElementById('count');
+count.style.background = dark ? 'rgba(255,255,255,.1)' : '#F1EEFA'; count.style.color = dark ? '#fff' : '#5B5675';
+document.getElementById('bar').style.background = mute;
+const fill = document.getElementById('fill');
+fill.style.background = `linear-gradient(90deg, ${accent}, color-mix(in srgb, ${accent} 55%, #fff))`;
+fill.style.boxShadow = `0 0 18px ${accent}`;
+const defaults = ['ouvindo cada palavra', 'cortando pausas', 'melhor tomada', 'legenda', 'zoom', 'efeito sonoro', 'trilha'];
+const raw = p.items && p.items.length ? p.items : defaults.map((x) => ({ text: x }));
+const items = raw.map((it, i) => ({ ...it, at: typeof it.at === 'number' ? it.at : 0.5 + i * ((D - 1.2) / raw.length) }));
+const list = document.getElementById('list');
+let check = '';
+motion.waitFor(motion.icon('check').then((s) => (check = s)));
+const rows = items.map((it) => {
+  const el = document.createElement('div'); el.className = 'it'; el.style.color = ink;
+  el.innerHTML = `<div class="box" style="border:4px solid ${mute}"><div class="ring" style="border-color:${accent}"></div><div class="ok" style="background:${accent}"></div></div><div class="lbl"></div>`;
+  el.querySelector('.lbl').textContent = it.text;
+  list.appendChild(el); return { el, it, ok: el.querySelector('.ok'), ring: el.querySelector('.ring'), lbl: el.querySelector('.lbl') };
+});
+motion.onFrame((t) => {
+  rows.forEach((r) => { if (!r.ok.innerHTML && check) r.ok.innerHTML = check; });
+  c.style.top = (p.y ?? H * 0.22) + 'px';
+  motion.appear(c, t, 0, { from: 'down', dist: 80, scale0: 0.88, dur: 0.62, bounce: 0.26, t1: D, float: 4 });
+  let done = 0;
+  rows.forEach((r, i) => {
+    motion.appear(r.el, t, 0.12 + i * 0.07, { from: 'left', dist: 40, scale0: 1, dur: 0.5, bounce: 0.2, out: 0, blur: 8 });
+    const k = motion.pop(t, r.it.at, 0.42, 0.5);
+    if (t >= r.it.at) done++;
+    r.ok.style.transform = `scale(${t >= r.it.at ? k : 0})`;
+    r.ok.style.boxShadow = t >= r.it.at ? `0 6px 18px color-mix(in srgb, ${accent} 50%, transparent)` : 'none';
+    const rk = motion.prog(t, r.it.at, 0.5, 'outCubic');
+    r.ring.style.opacity = t >= r.it.at ? (1 - rk) * 0.9 : 0;
+    r.ring.style.transform = `scale(${1 + rk * 0.6})`;
+    r.lbl.style.opacity = t >= r.it.at ? 1 : 0.5;
+  });
+  // barra e contador suaves entre um item e outro
+  const prog = rows.reduce((a, r) => a + motion.prog(t, r.it.at, 0.45, 'outCubic'), 0) / rows.length;
+  fill.style.width = (100 * prog) + '%';
+  count.textContent = `${done}/${rows.length}`;
+  const last = rows.length ? rows[rows.length - 1].it.at : 0;
+  const sheen = document.getElementById('sheen');
+  sheen.style.opacity = t > last ? 0.8 : 0;
+  motion.shimmer(sheen, t, 2.6, last);
+});
+</script></body></html>

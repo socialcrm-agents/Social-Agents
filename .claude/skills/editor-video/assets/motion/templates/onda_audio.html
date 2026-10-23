@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- ONDA DE ÁUDIO COM CORTES (layer: front ou full): a onda do áudio BRUTO, os trechos cortados ficam vermelhos e
+     somem, e o contador de duração cai do bruto para o editado (ex.: 2:03 -> 0:40). Usa os cortes reais do projeto
+     (o render preenche params.wave automaticamente). params: title, accent, mode ("card"|"full"), y -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #c { position: absolute; left: 50%; width: 940px; background: #fffdf9; color: #1d1b18; border-radius: 40px; padding: 40px 44px;
+       box-shadow: 0 40px 100px rgba(60,40,20,.3); border: 2px solid #e7dfd1; }
+  #head { display: flex; justify-content: space-between; align-items: baseline; }
+  #title { font-family: 'DM Serif Display'; font-size: 52px; }
+  #time { font-family: 'Anton'; font-size: 92px; letter-spacing: 1px; }
+  #from { font-size: 34px; font-weight: 700; color: #9a9184; text-decoration: line-through; margin-right: 14px; }
+  canvas { display: block; margin-top: 22px; width: 852px; height: 300px; }
+  #leg { display: flex; gap: 30px; font-size: 30px; font-weight: 700; color: #6b6255; margin-top: 14px; }
+  .dot { display: inline-block; width: 22px; height: 22px; border-radius: 6px; vertical-align: -3px; margin-right: 8px; }
+</style></head>
+<body><div id="bgw"></div><div id="c"><div id="head"><div id="title"></div><div><span id="from"></span><span id="time"></span></div></div>
+<canvas id="cv" width="852" height="300"></canvas>
+<div id="leg"><span><i class="dot" style="background:#1d1b18"></i>fala que fica</span><span><i class="dot" style="background:#E63B2E"></i>pausa e erro cortados</span></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, H = motion.h, D = motion.duration;
+if (p.mode === 'full') document.getElementById('bgw').outerHTML = '<div class="warm-bg"></div><div class="blinds"></div>';
+const wave = p.wave || { peaks: Array.from({ length: 220 }, (_, i) => 0.3 + 0.6 * Math.abs(Math.sin(i * 0.37) * Math.sin(i * 0.11))),
+                         cuts: [[0.1, 0.16], [0.3, 0.42], [0.55, 0.6], [0.78, 0.9]], raw: 123, final: 40 };
+document.getElementById('title').textContent = p.title || 'Cortando o bruto';
+const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+document.getElementById('from').textContent = fmt(wave.raw);
+const cv = document.getElementById('cv'), g = cv.getContext('2d');
+const N = wave.peaks.length, cut = (x) => wave.cuts.some(([a, b]) => x >= a && x < b);
+const accent = p.accent || '#E63B2E';
+motion.onFrame((t) => {
+  const c = document.getElementById('c');
+  const k = motion.inOut(t, 0, D, 0.45, 0.3, 'outBack');
+  c.style.top = (p.y ?? H * 0.3) + 'px'; c.style.transform = `translateX(-50%) translateY(${(1 - k) * 60}px)`; c.style.opacity = Math.min(1, k * 1.5);
+  const scan = motion.prog(t, 0.5, Math.max(D * 0.45, 1), 'inOutQuad');      // playhead marca os cortes
+  const squeeze = motion.prog(t, 0.6 + D * 0.45, Math.max(D * 0.3, 0.6), 'inOutCubic');   // cortes somem e a onda encolhe
+  g.clearRect(0, 0, cv.width, cv.height);
+  const keep = wave.peaks.map((_, i) => !cut(i / N));
+  const keptN = keep.filter(Boolean).length;
+  let x = 0;
+  const full = cv.width / N, tight = cv.width / keptN;
+  for (let i = 0; i < N; i++) {
+    const isCut = !keep[i], marked = isCut && i / N <= scan;
+    const w = isCut ? full * (1 - squeeze) : motion.lerp(full, tight, squeeze);
+    const h = Math.max(6, wave.peaks[i] * (cv.height - 20)) * (isCut ? 1 - squeeze : 1);
+    g.fillStyle = marked ? accent : '#1d1b18';
+    g.globalAlpha = isCut ? 1 - squeeze : 1;
+    if (w > 0.4) g.fillRect(x + w * 0.18, (cv.height - h) / 2, Math.max(w * 0.64, 1), h);
+    x += w;
+  }
+  g.globalAlpha = 1;
+  if (scan < 1) { g.fillStyle = '#d9773b'; g.fillRect(scan * cv.width, 0, 4, cv.height); }
+  const shown = motion.lerp(wave.raw, wave.final, motion.prog(t, 0.6 + D * 0.4, Math.max(D * 0.4, 0.8), 'inOutQuad'));
+  document.getElementById('time').textContent = fmt(shown);
+  document.getElementById('time').style.color = shown < wave.raw - 0.5 ? '#1faa59' : '#1d1b18';
+});
+</script></body></html>

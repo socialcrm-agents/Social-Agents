@@ -1,0 +1,102 @@
+<!doctype html>
+<!-- RECORTE / CAMADAS VOCÊ x FUNDO (layer: full, needs_video): 1ª parte — a pessoa recortada fica tingida de lilás
+     com contorno brilhante sobre o cenário, com escala de profundidade (LONGE/FUNDO ... VOCÊ/PERTO) e rótulos
+     "VOCÊ" e "FUNDO". 2ª parte — as duas camadas se separam em 3D (placas de vidro) com "01 LIMITE DE VOCÊ",
+     "02 LIMITE DO FUNDO" e "DISTÂNCIA VOCÊ ⟷ FUNDO". No fim tudo volta ao quadro normal.
+     params: separar (true: faz a 2ª parte), corte (0..1, quando começa a separação; padrão 0.5), cor ("#9B6BFF"),
+             topo (true: faixa de status), rotulos: {voce, fundo} -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  body { background: #0b0718; font-family: 'Poppins'; }
+  #grid { position: absolute; inset: 0; opacity: 0;
+          background: radial-gradient(ellipse at 50% 30%, #2a1660 0%, #0b0718 70%),
+                      repeating-linear-gradient(90deg, rgba(183,148,255,.10) 0 2px, transparent 2px 120px); }
+  #stage { position: absolute; inset: 0; perspective: 2200px; perspective-origin: 50% 40%; }
+  .plane { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; transform-origin: 50% 50%; }
+  .plane img, .plane canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .glass { position: absolute; inset: 0; border: 4px solid rgba(201,178,255,.0); border-radius: 26px; }
+  .lab { position: absolute; padding: 10px 18px; border-radius: 10px; background: rgba(14,10,26,.85);
+         border: 2px solid rgba(201,178,255,.6); color: #fff; white-space: nowrap; }
+  .lab small { display: block; font-weight: 700; font-size: 18px; letter-spacing: 4px; opacity: .7; }
+  .lab b { font-weight: 900; font-size: 46px; letter-spacing: 1px; }
+  #scale { position: absolute; left: 70px; top: 520px; height: 560px; width: 160px; }
+  #scale .rail { position: absolute; left: 24px; top: 40px; bottom: 40px; width: 8px; border-radius: 4px;
+                 background: linear-gradient(180deg, rgba(201,178,255,.25), rgba(201,178,255,.9)); }
+  #scale .t { position: absolute; left: 0; font-weight: 700; font-size: 18px; letter-spacing: 4px; color: rgba(255,255,255,.75); }
+  #scale .m { position: absolute; left: 14px; width: 28px; height: 28px; border-radius: 6px; border: 3px solid #fff; background: rgba(14,10,26,.9); }
+  svg { position: absolute; inset: 0; }
+</style></head>
+<body><div id="grid"></div>
+<div id="stage">
+  <div class="plane" id="pbg"><img id="bg"><div class="glass" id="gbg"></div></div>
+  <div class="plane" id="pcut"><canvas id="cv" width="1080" height="1920"></canvas><div class="glass" id="gcut"></div></div>
+</div>
+<svg id="ln" width="1080" height="1920"></svg>
+<div id="scale"><div class="rail"></div>
+  <div class="t" style="top:0">LONGE</div><div class="m" id="mf" style="top:150px"></div><div class="t" style="left:54px;top:152px">FUNDO</div>
+  <div class="m" id="mv" style="top:390px"></div><div class="t" style="left:54px;top:392px">VOCÊ</div>
+  <div class="t" style="top:536px">PERTO</div></div>
+<div class="lab" id="lv"></div><div class="lab" id="lf"></div><div class="lab" id="ld"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const cor = p.cor || '#9B6BFF';
+const rot = p.rotulos || {};
+const $ = (id) => document.getElementById(id);
+const bg = $('bg'), cv = $('cv'), ctx = cv.getContext('2d');
+const separar = p.separar !== false, corte = D * (p.corte ?? 0.5);
+$('lv').innerHTML = `<small>● PERTO</small><b>${rot.voce || 'VOCÊ'}</b>`;
+$('lf').innerHTML = `<small>● LONGE</small><b>${rot.fundo || 'FUNDO'}</b>`;
+$('ld').innerHTML = `<small>DISTÂNCIA</small><b style="font-size:34px">VOCÊ ⟷ FUNDO</b>`;
+const svg = $('ln');
+svg.innerHTML = `<path id="l1" stroke="#E9DDFF" stroke-width="3" fill="none"/><path id="l2" stroke="#E9DDFF" stroke-width="3" fill="none"/>
+  <path id="l3" stroke="#E9DDFF" stroke-width="4" stroke-dasharray="4 14" stroke-linecap="round" fill="none"/>`;
+motion.onFrame(async (t) => {
+  const v = p.video || {};
+  await motion.setFrame(bg, v.bg ? 'bg' : 'plate', t);
+  const cut = await motion.frame(v.cut ? 'cut' : 'plate', t);
+  const kin = motion.prog(t, 0, 0.35, 'outCubic'), kout = motion.prog(t, D - 0.4, 0.4, 'inOutCubic');
+  // 1ª parte: tinta lilás + contorno brilhante na pessoa
+  const tint = Math.min(kin, 1 - kout) * (separar ? 1 - motion.prog(t, corte + 0.1, 0.5) * 0.85 : 1);
+  ctx.clearRect(0, 0, W, H);
+  if (cut) {
+    ctx.save();
+    ctx.shadowColor = `rgba(201,178,255,${0.95 * tint})`; ctx.shadowBlur = 38 * tint;
+    ctx.drawImage(cut, 0, 0, W, H);
+    ctx.restore();
+    ctx.globalCompositeOperation = 'source-atop';
+    ctx.fillStyle = cor; ctx.globalAlpha = 0.62 * tint;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  }
+  bg.style.filter = `brightness(${1 - 0.35 * tint}) saturate(${1 + 0.4 * tint}) hue-rotate(${-25 * tint}deg)`;
+  // 2ª parte: separação 3D das camadas
+  const ks = separar ? motion.inOut(t, corte, D, 0.7, 0.4, 'inOutCubic') : 0;
+  $('grid').style.opacity = ks;
+  const sc = 1 - 0.38 * ks;
+  $('pbg').style.transform = `translateX(${70 * ks}px) translateY(${-60 * ks}px) translateZ(${-520 * ks}px) rotateY(${-24 * ks}deg) scale(${sc})`;
+  $('pcut').style.transform = `translateX(${-110 * ks}px) translateY(${40 * ks}px) translateZ(${120 * ks}px) rotateY(${-24 * ks}deg) scale(${sc})`;
+  for (const g of ['gbg', 'gcut']) {
+    $(g).style.borderColor = `rgba(201,178,255,${0.9 * ks})`;
+    $(g).style.background = g === 'gcut' ? `rgba(155,107,255,${0.10 * ks})` : 'transparent';
+    $(g).style.boxShadow = `0 0 ${60 * ks}px rgba(155,107,255,${0.5 * ks})`;
+  }
+  // rótulos: na 1ª parte presos a VOCÊ (embaixo, à esquerda) e FUNDO (alto, à direita); na 2ª, nas placas
+  const k1 = motion.inOut(t, 0.3, separar ? corte + 0.2 : D, 0.35, 0.3) * (1 - kout);
+  const k2 = separar ? ks * (1 - kout) : 0;
+  const lv = $('lv'), lf = $('lf'), ld = $('ld');
+  const pos1 = { lv: [70, 1180], lf: [W - 150 - 290, 300] }, pos2 = { lv: [150, 520], lf: [640, 560] };
+  const mix = (a, b) => [motion.lerp(a[0], b[0], ks), motion.lerp(a[1], b[1], ks)];
+  const [vx, vy] = mix(pos1.lv, pos2.lv), [fx, fy] = mix(pos1.lf, pos2.lf);
+  Object.assign(lv.style, { left: vx + 'px', top: vy + 'px', opacity: Math.max(k1, k2) });
+  Object.assign(lf.style, { left: fx + 'px', top: fy + 'px', opacity: Math.max(k1, k2) });
+  lv.querySelector('small').textContent = ks > 0.5 ? '01 LIMITE DE' : '● PERTO';
+  lf.querySelector('small').textContent = ks > 0.5 ? '02 LIMITE DO' : '● LONGE';
+  Object.assign(ld.style, { left: '560px', top: '1300px', opacity: k2 });
+  $('l1').setAttribute('d', `M ${vx + 260} ${vy + 46} L ${vx + 380} ${vy + 46}`); $('l1').style.opacity = k1 * (1 - ks);
+  $('l2').setAttribute('d', `M ${fx + 140} ${fy + 110} L ${fx + 140} ${fy + 240}`); $('l2').style.opacity = k1 * (1 - ks);
+  $('l3').setAttribute('d', 'M 300 1400 L 540 1360'); $('l3').style.opacity = k2;
+  $('scale').style.opacity = k1 * (1 - ks);
+  $('mv').style.background = cor;
+});
+</script></body></html>

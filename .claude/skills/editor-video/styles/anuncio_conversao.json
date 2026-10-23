@@ -1,0 +1,75 @@
+{
+  "name": "anuncio_conversao",
+  "label": "Anúncio de Alta Conversão",
+  "description": "Gancho com faixa de promessa nos 3 primeiros segundos, barra de progresso, legenda em caixa com palavras de benefício em verde, B-roll em tela dividida mostrando o produto, cartão de prova e CTA final com seta.",
+  "cuts": {
+    "max_gap": 0.2,
+    "pad_in": 0.05,
+    "pad_out": 0.09,
+    "min_pause_keep": 0.0
+  },
+  "zoom": {
+    "mode": "keyword",
+    "base": 1.0,
+    "push": 0.02,
+    "punch": 1.2,
+    "punch_every": 3
+  },
+  "grade": "eq=contrast=1.08:saturation=1.12:brightness=0.02,unsharp=5:5:0.5",
+  "captions": {
+    "words_per_page": 4,
+    "max_chars": 22,
+    "case": "upper",
+    "font": "Poppins",
+    "bold": 1,
+    "size": 70,
+    "color": "#FFFFFF",
+    "outline": 0,
+    "outline_color": "#000000",
+    "shadow": 0,
+    "box": true,
+    "box_color": "#000000",
+    "box_alpha": "40",
+    "emph_font": "Poppins",
+    "emph_italic": false,
+    "emph_size": 76,
+    "emph_color": "#22E06B",
+    "highlight": "#22E06B",
+    "y": 1250,
+    "animation": "slide"
+  },
+  "behind": {
+    "enabled": true,
+    "font": "Poppins",
+    "italic": false,
+    "size": 210,
+    "color": "#22E06B",
+    "alpha": "00",
+    "max": 3,
+    "case": "upper"
+  },
+  "broll": {
+    "mode": "split",
+    "max_dur": 3.2,
+    "min_gap": 4.0
+  },
+  "graphics": {
+    "lower_third": false,
+    "chapter_numbers": false,
+    "hook_banner": true,
+    "progress_bar": true,
+    "cta": true,
+    "accent": "#22E06B",
+    "panel": "#0B0B0B",
+    "text": "#FFFFFF",
+    "icons": true
+  },
+  "sfx": {
+    "whoosh": 0.45,
+    "pop": 0.35,
+    "riser": 0.0
+  },
+  "audio": {
+    "lufs": -14
+  }
+}

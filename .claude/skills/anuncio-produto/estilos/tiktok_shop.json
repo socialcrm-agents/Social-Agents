@@ -1,0 +1,7 @@
+{
+  "_doc": "Energia de TikTok Shop: fundo na cor do produto, raios girando, brilhos, transição chicote, legenda grande com palavra ativa amarela, batida e efeitos sonoros.",
+  "fundo": "gradiente", "raios": true, "brilhos": true, "contorno": true, "sombra": 0.4,
+  "fonte_titulo": "Anton", "transicao": "whip", "transicao_dur": 0.26,
+  "legenda": {"fonte": "Poppins", "peso": 900, "tamanho": 84, "cor": "#ffffff", "maiusculas": true, "palavras": 3, "letras": 16, "y": 1330},
+  "musica": "batida", "musica_volume": 0.22, "sfx": true, "lufs": -14
+}

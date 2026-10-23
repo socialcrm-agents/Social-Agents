@@ -1,0 +1,66 @@
+<!doctype html>
+<!-- DOCUMENTÁRIO (layer: full): imagem do usuário com movimento de câmera (Ken Burns) indo até o ponto que
+     importa, e marcações desenhadas no tempo da fala (círculo, seta, pino, rótulo), com título em lower third.
+     params: image (arquivo), focus [x, y] (0..1), zoom (1.0 -> zoom final, default 1.6), title, accent,
+             marks: [{x, y, label, at (s), kind: "circle"|"arrow"|"pin"}] -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #bg { inset: 0; background: #000; overflow: hidden; }
+  #img { position: absolute; transform-origin: 0 0; }
+  #marks { position: absolute; inset: 0; }
+  .label { position: absolute; transform: translate(-50%, 0); font-weight: 800; font-size: 40px; color: #111; padding: 10px 24px;
+           border-radius: 14px; white-space: nowrap; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+  #title { position: absolute; left: 60px; top: 300px; font-family: 'DM Serif Display'; font-style: italic; font-size: 78px;
+           text-shadow: 0 6px 30px rgba(0,0,0,.7); max-width: 900px; line-height: 1.05; }
+  #bar { position: absolute; left: 60px; height: 8px; top: 280px; }
+  #vig { inset: 0; background: radial-gradient(120% 90% at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.65) 100%),
+         linear-gradient(180deg, rgba(0,0,0,.75) 0%, rgba(0,0,0,.55) 22%, rgba(0,0,0,0) 34%); }
+</style></head>
+<body><div id="bg" class="abs"><img id="img"></div><div id="vig" class="abs"></div>
+<svg id="marks" viewBox="0 0 1080 1920"></svg><div id="title"></div><div id="bar"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const accent = p.accent || '#FFE600';
+document.getElementById('marks').setAttribute('viewBox', `0 0 ${W} ${H}`);
+const img = document.getElementById('img');
+let iw = 1, ih = 1;
+motion.waitFor(new Promise((r) => { img.onload = () => { iw = img.naturalWidth; ih = img.naturalHeight; r(); }; img.src = p.image; }));
+document.getElementById('title').textContent = p.title || '';
+document.getElementById('bar').style.background = accent;
+const NS = 'http://www.w3.org/2000/svg', svg = document.getElementById('marks');
+const marks = (p.marks || []).map((m, i) => {
+  const g = document.createElementNS(NS, 'g'); svg.appendChild(g);
+  let shape;
+  if (m.kind === 'arrow') { shape = document.createElementNS(NS, 'path'); shape.setAttribute('d', 'M -260 -200 Q -150 -40 -40 -30'); }
+  else { shape = document.createElementNS(NS, 'circle'); shape.setAttribute('r', m.r || 110); }
+  shape.setAttribute('fill', 'none'); shape.setAttribute('stroke', accent); shape.setAttribute('stroke-width', 12);
+  shape.setAttribute('stroke-linecap', 'round'); g.appendChild(shape);
+  const len = shape.getTotalLength(); shape.setAttribute('stroke-dasharray', `${len} ${len}`);
+  const lab = document.createElement('div'); lab.className = 'label'; lab.textContent = m.label || '';
+  lab.style.background = accent; document.body.appendChild(lab);
+  return { m, g, shape, len, lab, at: m.at ?? 0.8 + i * 0.9 };
+});
+motion.onFrame((t) => {
+  const cover = Math.max(W / iw, H / ih);
+  const z = motion.lerp(1, p.zoom || 1.6, motion.prog(t, 0, D, 'inOutQuad'));
+  const sc = cover * z, f = p.focus || [0.5, 0.5];
+  // mantém o foco no centro conforme aproxima (sem mostrar borda preta)
+  let tx = W / 2 - f[0] * iw * sc, ty = H * 0.45 - f[1] * ih * sc;
+  tx = Math.min(0, Math.max(W - iw * sc, tx)); ty = Math.min(0, Math.max(H - ih * sc, ty));
+  img.style.transform = `translate(${tx}px, ${ty}px) scale(${sc})`;
+  for (const k of marks) {
+    const x = tx + k.m.x * iw * sc, y = ty + k.m.y * ih * sc;
+    k.g.setAttribute('transform', `translate(${x} ${y})`);
+    const kd = motion.prog(t, k.at, 0.6, 'inOutCubic');
+    k.shape.setAttribute('stroke-dashoffset', String(k.len * (1 - kd)));
+    const kl = motion.prog(t, k.at + 0.45, 0.35, 'outBack');
+    k.lab.style.left = x + 'px'; k.lab.style.top = y + (k.m.r || 110) + 30 + 'px';
+    k.lab.style.opacity = kl; k.lab.style.transform = `translate(-50%, ${(1 - kl) * 20}px)`;
+  }
+  const kt = motion.inOut(t, 0.3, D, 0.6, 0.3);
+  const title = document.getElementById('title');
+  title.style.opacity = kt; title.style.transform = `translateY(${(1 - kt) * 30}px)`;
+  document.getElementById('bar').style.width = 220 * motion.prog(t, 0.5, 0.6) + 'px';
+});
+</script></body></html>

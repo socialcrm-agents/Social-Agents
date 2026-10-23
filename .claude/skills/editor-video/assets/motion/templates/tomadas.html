@@ -1,0 +1,72 @@
+<!doctype html>
+<!-- MELHOR TOMADA (layer: front): 2 ou 3 cards de tomada no alto (miniatura, tempo, frase entre aspas, mini onda); um
+     brilho compara os cards e a melhor ganha o selo "MELHOR TOMADA ✓" enquanto as outras apagam e são riscadas.
+     Miniatura e onda saem do vídeo (scripts/motion_dados_edicao.py): `tempo` = segundo da tomada no bruto.
+     params: itens: [{rotulo ("TOMADA 1"), frase, melhor (bool), tempo (s no bruto, opcional), image (opcional)}],
+             escolha_at (s; padrão 55%), selo ("MELHOR TOMADA"), y (topo, padrão 370), accent -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #row { position: absolute; left: 60px; right: 150px; display: flex; gap: 22px; }
+  .card { position: relative; flex: 1; display: flex; gap: 16px; padding: 16px; border-radius: 20px; min-width: 0;
+          background: rgba(14,8,28,.9); border: 2px solid rgba(167,139,250,.35); box-shadow: 0 20px 50px rgba(0,0,0,.55); }
+  .card img { width: 140px; height: 180px; object-fit: cover; border-radius: 12px; flex: 0 0 auto; background: #241542; }
+  .info { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+  .hd { font-weight: 700; font-size: 18px; letter-spacing: 3px; color: rgba(233,225,255,.7); text-transform: uppercase; white-space: nowrap; }
+  .fr { font-weight: 800; font-size: 31px; line-height: 1.12; color: #fff; text-transform: uppercase; }
+  .card canvas { width: 100%; height: 44px; }
+  .strike { position: absolute; left: 14px; right: 14px; top: 50%; height: 5px; border-radius: 3px; background: #F43F5E;
+            transform-origin: left center; }
+  .selo { position: absolute; left: 50%; bottom: -30px; transform: translateX(-50%); padding: 8px 18px; border-radius: 999px;
+          font-weight: 800; font-size: 24px; letter-spacing: 2px; color: #062b1c; background: #34D399; white-space: nowrap;
+          box-shadow: 0 10px 30px rgba(52,211,153,.45); }
+  .scan { position: absolute; inset: 0; border-radius: 20px; pointer-events: none; }
+</style></head>
+<body><div id="row"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const A = p.accent || '#A78BFA';
+const row = document.getElementById('row');
+row.style.top = (p.y || 370) + 'px';  // abaixo da faixa onde o CTA do estilo pode aparecer
+const itens = (p.itens || []).slice(0, 3);
+const n = itens.length;
+const escolha = typeof p.escolha_at === 'number' ? p.escolha_at : D * 0.55;
+const mmss = (s) => `00:${String(Math.floor(s / 60)).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const cards = itens.map((it, i) => {
+  const c = document.createElement('div'); c.className = 'card';
+  c.innerHTML = `<img><div class="info"><div class="hd"></div><div class="fr"></div><canvas width="300" height="34"></canvas></div>
+    <div class="scan"></div><div class="strike"></div><div class="selo"></div>`;
+  row.appendChild(c);
+  const im = c.querySelector('img');
+  if (it.image) motion.waitFor(new Promise((r) => { im.onload = r; im.onerror = r; im.src = it.image; }));
+  c.querySelector('.hd').textContent = `${it.rotulo || 'Tomada ' + (i + 1)} · ${mmss(it.tempo ?? 30 + i * 9)}`;
+  const fr = c.querySelector('.fr'); fr.textContent = `“${it.frase || ''}”`;
+  if (n === 3) { fr.style.fontSize = '23px'; c.querySelector('img').style.width = '96px'; c.querySelector('img').style.height = '130px'; }
+  const cv = c.querySelector('canvas'), g = cv.getContext('2d'), o = it.onda || [];
+  const bars = 40, bw = cv.width / bars;
+  for (let k = 0; k < bars; k++) { const v = o[Math.floor(k / bars * o.length)] ?? 0.3, hh = 4 + v * 28;
+    g.fillStyle = 'rgba(233,225,255,.8)'; g.fillRect(k * bw, 17 - hh / 2, bw - 2, hh); }
+  c.querySelector('.selo').textContent = `${p.selo || 'Melhor tomada'} ✓`;
+  return { c, it, i };
+});
+const best = Math.max(0, itens.findIndex((it) => it.melhor));
+motion.onFrame((t) => {
+  const out = motion.prog(t, D - 0.3, 0.3);
+  for (const { c, i } of cards) {
+    const k = motion.prog(t, 0.05 + i * 0.12, 0.4, 'outBack');
+    const win = i === best, ks = motion.prog(t, escolha, 0.35, 'outBack');
+    c.style.opacity = Math.min(1, k * 1.4) * (1 - out);
+    c.style.transform = `translateY(${(1 - k) * -50}px) scale(${win ? 1 + 0.05 * ks : 1 - 0.05 * ks})`;
+    // varredura: brilho passa de card em card antes da escolha
+    const ph = ((t - 0.5) / 0.55) % n;
+    const scanOn = t > 0.5 && t < escolha && Math.floor(ph) === i;
+    c.querySelector('.scan').style.boxShadow = scanOn ? `inset 0 0 0 3px ${A}, 0 0 40px ${A}` : 'none';
+    c.style.borderColor = win && ks > 0 ? '#34D399' : 'rgba(167,139,250,.35)';
+    c.style.filter = !win && ks > 0 ? `grayscale(${ks}) brightness(${1 - 0.45 * ks})` : 'none';
+    c.querySelector('.strike').style.transform = `scaleX(${win ? 0 : motion.prog(t, escolha + 0.1, 0.3)})`;
+    const selo = c.querySelector('.selo');
+    selo.style.display = win ? 'block' : 'none';
+    selo.style.transform = `translateX(-50%) scale(${ks})`;
+  }
+});
+</script></body></html>
