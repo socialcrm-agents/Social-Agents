@@ -1,0 +1,111 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "creative/shot-plan.schema.json",
+ "title": "Plano por cena (proposta de um especialista)",
+ "type": "object",
+ "required": [
+  "agente",
+  "cenas"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "agente": {
+   "enum": [
+    "conversion-strategist",
+    "art-director",
+    "senior-editor",
+    "motion-3d-artist",
+    "sound-designer",
+    "render-engineer",
+    "quality-director"
+   ]
+  },
+  "cenas": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "cena",
+     "t0",
+     "t1",
+     "acoes"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "cena": {
+      "type": "string",
+      "minLength": 1
+     },
+     "t0": {
+      "type": "number",
+      "minimum": 0
+     },
+     "t1": {
+      "type": "number",
+      "minimum": 0
+     },
+     "acoes": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "required": [
+        "tipo",
+        "justificativa"
+       ],
+       "additionalProperties": false,
+       "properties": {
+        "tipo": {
+         "enum": [
+          "motion",
+          "patch",
+          "patch_remove",
+          "fx",
+          "cut",
+          "restore",
+          "emph",
+          "behind",
+          "broll",
+          "caption",
+          "music",
+          "style",
+          "zoom",
+          "fundo",
+          "nenhuma"
+         ]
+        },
+        "comando": {
+         "type": "array",
+         "items": {
+          "type": "string"
+         },
+         "minItems": 1,
+         "description": "argumentos do edit.py/run.py (sem o executável)"
+        },
+        "alvo_id": {
+         "type": "string"
+        },
+        "motion": {
+         "type": "object",
+         "description": "pedido para --motion (template, at, dur|until, params, id)"
+        },
+        "justificativa": {
+         "type": "string"
+        },
+        "risco": {
+         "type": "string"
+        },
+        "suportado": {
+         "type": "boolean",
+         "description": "false = gap (não existe executor)"
+        }
+       }
+      }
+     }
+    }
+   }
+  },
+  "observacoes": {
+   "type": "string"
+  }
+ }
+}

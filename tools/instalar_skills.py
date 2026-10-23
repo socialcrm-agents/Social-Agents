@@ -22,7 +22,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 SKILLS = {"editor-video": REPO / ".claude" / "skills" / "editor-video",
           "anuncio-produto": REPO / ".claude" / "skills" / "anuncio-produto",
-          "vsl-oferta": REPO / ".claude" / "skills" / "vsl-oferta"}
+          "vsl-oferta": REPO / ".claude" / "skills" / "vsl-oferta",
+          "creative-studio": REPO / ".claude" / "skills" / "creative-studio"}
 DEST = Path.home() / ".claude" / "skills"
 
 
@@ -42,6 +43,16 @@ def install(name: str, copy: bool) -> Path:
             shutil.copytree(src, dst, ignore=shutil.ignore_patterns("__pycache__"))
             copy = True
     print(f"OK: {name} -> {dst} ({'cópia' if copy else 'atalho para ' + str(src)})")
+    if name == "creative-studio":
+        # contratos dentro da skill (valem em qualquer pasta) e a equipe em ~/.claude/agents
+        if copy or not (dst / "creative").exists():
+            shutil.copytree(REPO / "creative", dst / "creative", dirs_exist_ok=True,
+                            ignore=shutil.ignore_patterns("__pycache__"))
+        agentes = Path.home() / ".claude" / "agents"
+        agentes.mkdir(parents=True, exist_ok=True)
+        for f in (REPO / ".claude" / "agents").glob("*.md"):
+            shutil.copy2(f, agentes / f.name)
+        print(f"OK: equipe Creative Studio -> {agentes} (reinicie o Claude Code para carregar os agentes)")
     return dst
 
 

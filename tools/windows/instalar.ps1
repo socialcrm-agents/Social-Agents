@@ -64,6 +64,13 @@ foreach ($s in $skills) {
   robocopy $s.FullName (Join-Path $destino $s.Name) /E /NFL /NDL /NJH /NJS /NP | Out-Null
   Ok $s.Name
 }
+$agentesOrigem = Join-Path $aqui 'agents'
+if (Test-Path $agentesOrigem) {  # equipe do Creative Studio (/creative-studio) para qualquer pasta
+  $agentesDestino = Join-Path $env:USERPROFILE '.claude\agents'
+  New-Item -ItemType Directory -Force -Path $agentesDestino | Out-Null
+  robocopy $agentesOrigem $agentesDestino /E /NFL /NDL /NJH /NJS /NP | Out-Null
+  Ok 'equipe Creative Studio (7 especialistas)'
+}
 
 Passo 4 'Bibliotecas do Python'
 & $py -m pip install --upgrade pip --quiet --disable-pip-version-check

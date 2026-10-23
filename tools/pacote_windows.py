@@ -19,7 +19,9 @@ from pathlib import Path
 from empacotar import REPO, SKILLS, files_for
 
 AQUI = Path(__file__).resolve().parent / "windows"
-PADRAO = ["editor-video", "anuncio-produto", "vsl-oferta"]
+PADRAO = ["editor-video", "anuncio-produto", "vsl-oferta", "creative-studio"]
+AGENTES = REPO / ".claude" / "agents"
+CREATIVE = REPO / "creative"
 
 LEIA_ME = """EDITOR VIRAL - INSTALAÇÃO NO WINDOWS (2 cliques)
 
@@ -62,6 +64,13 @@ def main() -> None:
                 n += 1
             if s == "editor-video":
                 z.writestr(f"skills/{s}/perfil.json", json.dumps({"perfil": "completo", "motion": True}))
+        if "creative-studio" in skills:
+            # equipe (vai para ~/.claude/agents) e contratos (dentro da skill: valem em qualquer pasta)
+            for f in sorted(AGENTES.glob("*.md")):
+                z.write(f, Path("agents") / f.name)
+            for f in sorted(CREATIVE.rglob("*")):
+                if f.is_file() and "__pycache__" not in f.parts:
+                    z.write(f, Path("skills") / "creative-studio" / "creative" / f.relative_to(CREATIVE))
         z.write(AQUI / "INSTALAR.bat", "INSTALAR.bat")
         z.write(AQUI / "instalar.ps1", "instalar.ps1")
         z.writestr("LEIA-ME.txt", LEIA_ME.format(skills=", ".join(skills)).replace("\n", "\r\n").encode("utf-8-sig"))

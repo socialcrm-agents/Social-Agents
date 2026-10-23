@@ -1,0 +1,228 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "creative/decision-plan.schema.json",
+ "title": "Plano de decisões do diretor",
+ "type": "object",
+ "required": [
+  "versao",
+  "tipo",
+  "estilo",
+  "mapa",
+  "convocados",
+  "aprovado"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "versao": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "tipo": {
+   "type": "string"
+  },
+  "estilo": {
+   "enum": [
+    "pro_clean",
+    "anuncio_conversao",
+    "reels_viral",
+    "editorial_premium"
+   ]
+  },
+  "gancho": {
+   "type": "string"
+  },
+  "cta": {
+   "type": "string"
+  },
+  "mapa": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "required": [
+     "cena",
+     "t0",
+     "t1",
+     "fala",
+     "funcao",
+     "elemento"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "cena": {
+      "type": "string",
+      "minLength": 1
+     },
+     "t0": {
+      "type": "number",
+      "minimum": 0
+     },
+     "t1": {
+      "type": "number",
+      "minimum": 0
+     },
+     "fala": {
+      "type": "string"
+     },
+     "funcao": {
+      "enum": [
+       "gancho",
+       "identificacao",
+       "dor",
+       "inimigo",
+       "virada",
+       "numero",
+       "lista",
+       "comparacao",
+       "pergunta",
+       "prova",
+       "bastidor",
+       "produto",
+       "lugar",
+       "citacao",
+       "objecao",
+       "oferta",
+       "cta",
+       "respiro"
+      ]
+     },
+     "elemento": {
+      "type": "object",
+      "required": [
+       "tipo"
+      ],
+      "properties": {
+       "tipo": {
+        "enum": [
+         "motion",
+         "fx",
+         "behind",
+         "broll",
+         "legenda",
+         "fundo",
+         "nenhum"
+        ]
+       },
+       "template": {
+        "type": "string"
+       },
+       "params": {
+        "type": "object"
+       },
+       "id": {
+        "type": "string"
+       }
+      }
+     },
+     "responsavel": {
+      "enum": [
+       "conversion-strategist",
+       "art-director",
+       "senior-editor",
+       "motion-3d-artist",
+       "sound-designer",
+       "render-engineer",
+       "quality-director",
+       "diretor"
+      ]
+     }
+    }
+   }
+  },
+  "convocados": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "agente",
+     "motivo",
+     "cenas"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "agente": {
+      "enum": [
+       "conversion-strategist",
+       "art-director",
+       "senior-editor",
+       "motion-3d-artist",
+       "sound-designer",
+       "render-engineer",
+       "quality-director"
+      ]
+     },
+     "motivo": {
+      "type": "string"
+     },
+     "cenas": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1
+      }
+     }
+    }
+   }
+  },
+  "conflitos": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "descricao",
+     "decisao",
+     "motivo"
+    ],
+    "properties": {
+     "descricao": {
+      "type": "string"
+     },
+     "opcoes": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "decisao": {
+      "type": "string"
+     },
+     "motivo": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "decisoes_respeitadas": {
+   "type": "array",
+   "items": {
+    "type": "string",
+    "minLength": 1
+   },
+   "description": "ids de approved-decisions.json"
+  },
+  "gaps": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "acao",
+     "motivo"
+    ],
+    "properties": {
+     "acao": {
+      "type": "string"
+     },
+     "motivo": {
+      "type": "string"
+     },
+     "alternativa": {
+      "type": "string"
+     }
+    }
+   }
+  },
+  "aprovado": {
+   "type": "boolean"
+  }
+ }
+}

@@ -1,0 +1,69 @@
+{
+ "versao": 1,
+ "tipo": "produto",
+ "estilo": "pro_clean",
+ "gancho": "CHICLETE MENTOS UP2U",
+ "cta": "TOQUE NO CARRINHO",
+ "mapa": [
+  {
+   "cena": "c1",
+   "t0": 0,
+   "t1": 2.6,
+   "fala": "Gente, eu tô aqui com esse chiclete da Mentos",
+   "funcao": "gancho",
+   "elemento": {
+    "tipo": "motion",
+    "template": "manchete",
+    "id": "m1"
+   },
+   "responsavel": "art-director"
+  },
+  {
+   "cena": "c4",
+   "t0": 13.2,
+   "t1": 14.9,
+   "fala": "um chiclete muito gostoso",
+   "funcao": "virada",
+   "elemento": {
+    "tipo": "motion",
+    "template": "palavra",
+    "id": "m5"
+   },
+   "responsavel": "art-director"
+  }
+ ],
+ "convocados": [
+  {
+   "agente": "art-director",
+   "motivo": "linguagem visual das cenas c1 e c4",
+   "cenas": [
+    "c1",
+    "c4"
+   ]
+  }
+ ],
+ "conflitos": [
+  {
+   "descricao": "estrategista quer preço no gancho; arte quer só o nome",
+   "opcoes": [
+    "preço",
+    "nome"
+   ],
+   "decisao": "nome no gancho, preço em c2",
+   "motivo": "um herói por momento"
+  }
+ ],
+ "decisoes_respeitadas": [
+  "D01",
+  "D02",
+  "D07"
+ ],
+ "gaps": [
+  {
+   "acao": "som de mastigar no 'gostoso'",
+   "motivo": "sem SFX avulso no editor",
+   "alternativa": "boom automático da palavra"
+  }
+ ],
+ "aprovado": true
+}

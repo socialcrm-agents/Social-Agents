@@ -1,0 +1,26 @@
+{
+ "versao": 15,
+ "arquivo": "renders/v15_pro_clean.mp4",
+ "aprovado": true,
+ "metricas": {
+  "duracao_s": 17.37,
+  "lufs": -14.4,
+  "quadros": 521,
+  "miss": 2,
+  "render_s": 22.0
+ },
+ "checks": [
+  {
+   "area": "visual",
+   "item": "rosto livre em todas as animações",
+   "status": "ok",
+   "evidencia": "quadros 2.0/9.5/14.0/16.5"
+  },
+  {
+   "area": "comercial",
+   "item": "CTA único nos 3 s finais",
+   "status": "ok",
+   "tempo": 16.0
+  }
+ ]
+}
