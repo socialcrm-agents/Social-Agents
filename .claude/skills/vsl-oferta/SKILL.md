@@ -57,7 +57,7 @@ Se ela colar uma FICHA DA OFERTA, retome da `etapa` marcada nela sem refazer nad
 | 3 | oferta | Promessa, os dois mecanismos com nome, stack, bônus, garantia, preço e ancoragem, urgência real | oferta.md | oferta em 1 tela |
 | 4 | angulos | 3 a 5 grandes ideias / ganchos possíveis; a pessoa escolhe | angulos.md | ângulo escolhido |
 | 5 | roteiro | Roteiro da VSL em blocos, com tempo; versão teleprompter | roteiro-vsl.md | roteiro.md + teleprompter |
-| 6 | pagina | Copy da página + página HTML pronta com a oferta no minuto certo; copies de apoio | pagina-vendas.md, copies.md | pagina.html + copies.md |
+| 6 | pagina | Copy da página + página HTML pronta com a oferta no minuto certo; copies de apoio; colocar no ar (Netlify, domínio, links, pixel) | pagina-vendas.md, copies.md, publicar.md | pagina.html + copies.md + página no ar |
 | 7 | gravacao | Plano de gravação por blocos, luz/áudio/enquadramento, envio pelo Drive | gravacao.md | checklist de gravação |
 | 8 | edicao | Como editar (ou mandar editar) e onde hospedar com atraso de oferta | gravacao.md | vídeo pronto + embed |
 | 9 | criativos | 10 roteiros de anúncio derivados da VSL + textos | criativos.md | criativos.md |

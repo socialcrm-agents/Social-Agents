@@ -53,6 +53,8 @@ Cole o código de incorporação (embed) do player em `vsl.embed`. Link do YouTu
 
 ## Onde publicar a página
 
+**Guia completo, passo a passo (Netlify, domínio, links, pixel, teste): `publicar.md`.** Resumo:
+
 - **Netlify Drop** (grátis): app.netlify.com/drop → arraste a pasta com o `pagina.html` renomeado para `index.html`.
 - **Hospedagem própria** (Hostinger, Locaweb…): suba como `index.html` numa pasta/domínio.
 - **WordPress / Elementor**: bloco "HTML personalizado", cole o conteúdo.

@@ -149,8 +149,16 @@ Depois de hospedar:
 ## 8. Publicar a página de vendas
 
 A página é **um arquivo HTML só**: abre com dois cliques e funciona sem servidor especial.
-- **Netlify Drop (grátis):** renomeie o arquivo para `index.html`, coloque numa pasta e arraste a pasta em
-  app.netlify.com/drop. Sai um link na hora.
+- **Netlify (grátis), passo a passo:**
+  1. Renomeie a página para `index.html` e coloque numa pasta (com `termos.html`, `privacidade.html` e as imagens).
+  2. Crie a conta em netlify.com → Sign up → "Continuar com Google".
+  3. Abra app.netlify.com/drop e arraste a **pasta inteira**. Sai um link na hora (`...netlify.app`).
+  4. Trocar o nome: Site configuration → Change site name.
+  5. Atualizar: abra o site → Deploys → arraste a pasta de novo (o link continua o mesmo).
+  6. Domínio próprio: Domain management → Add a domain → use os 4 nameservers que o Netlify mostrar no
+     Registro.br (DNS → Alterar servidores DNS). Leva de 1 a 24 h; o cadeado HTTPS é automático.
+  - "Page not found": o arquivo não se chama `index.html` ou foi arrastado só o arquivo, sem a pasta.
+  - Imagem quebrada: a imagem não está na mesma pasta ou o nome é diferente.
 - **Hospedagem própria** (Hostinger, Locaweb e outras): suba como `index.html` na pasta do domínio.
 - **WordPress / Elementor:** bloco **"HTML personalizado"** e cole o conteúdo do arquivo.
 - **Lovable:** peça para criar a página a partir do arquivo HTML ou dos textos.

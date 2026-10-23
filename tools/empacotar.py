@@ -71,15 +71,15 @@ LEIA_ME_VSL = """{nome} — como usar (escolha UM dos jeitos)
 A) Claude.ai (Projetos) — o mais fácil, sem instalar nada
   1. claude.ai → Projetos → Criar projeto (ex.: "Minha VSL").
   2. Em "Instruções do projeto", cole TODO o conteúdo de COLAR-NO-CLAUDE-OU-CHATGPT/INSTRUCOES.md.
-  3. Em "Conhecimento do projeto", envie os 12 arquivos numerados (01-ficha.md ... 12-politicas.md).
+  3. Em "Conhecimento do projeto", envie os 14 arquivos numerados (01-ficha.md ... 14-duvidas.md).
   4. Abra uma conversa nova dentro do projeto e escreva: "quero montar minha VSL".
 
 B) ChatGPT (GPT personalizado ou Projeto)
   GPT: chatgpt.com → Explorar GPTs → Criar → aba Configurar →
-     • Instruções: cole o INSTRUCOES.md   • Conhecimento: envie os 12 arquivos numerados
+     • Instruções: cole o INSTRUCOES.md   • Conhecimento: envie os 14 arquivos numerados
      • Recursos: deixe "Interpretador de código" ligado (para gerar a página e o calendário em arquivo)
      → Criar (pode deixar "Só eu").
-  Projeto: ChatGPT → Projetos → Novo projeto → Instruções (cole o INSTRUCOES.md) → Adicionar arquivos (os 12).
+  Projeto: ChatGPT → Projetos → Novo projeto → Instruções (cole o INSTRUCOES.md) → Adicionar arquivos (os 14).
   Depois escreva: "quero montar minha VSL".
 
 C) Claude Code (gera os arquivos na sua pasta: página, teleprompter, calendário)
@@ -95,7 +95,7 @@ Vídeo longo (VSL de até 30 min): suba no Google Drive e compartilhe como "Qual
 
 # arquivos de conhecimento do pacote "colar no chat" (os nomes são citados em chat/instrucoes.md)
 VSL_CONHECIMENTO = ["ficha", "diagnostico", "publico", "oferta", "angulos", "roteiro-vsl", "pagina-vendas",
-                    "copies", "gravacao", "criativos", "lancamento", "politicas"]
+                    "copies", "gravacao", "criativos", "lancamento", "politicas", "publicar"]
 
 
 def instrucoes_vsl(root: Path) -> str:
@@ -176,6 +176,8 @@ def main() -> None:
             z.writestr(f"{chat}/INSTRUCOES.md", instrucoes_vsl(root))
             for n, nome in enumerate(VSL_CONHECIMENTO, 1):
                 z.write(root / "references" / f"{nome}.md", f"{chat}/{n:02d}-{nome}.md")
+            # dúvidas de uso (instalar, Drive, Netlify, checkout): a mesma base da IA de suporte
+            z.write(REPO / "suporte" / "base-conhecimento-vsl.md", f"{chat}/{len(VSL_CONHECIMENTO) + 1:02d}-duvidas.md")
             z.writestr("LEIA-ME.txt", LEIA_ME_VSL.format(nome=json.loads(
                 (root / "config.json").read_text(encoding="utf-8")).get("nome_produto", skill)))
         if skill == "editor-video":

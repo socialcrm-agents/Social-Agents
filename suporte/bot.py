@@ -21,35 +21,12 @@ from pathlib import Path
 
 import anthropic
 
+from produtos import PRODUTOS, montar_prompt
+
 AQUI = Path(__file__).resolve().parent
 MODELO = os.environ.get("ATENDENTE_MODELO", "claude-opus-5-5")
 MAX_TURNOS = 20          # mensagens guardadas por cliente (as mais antigas saem)
 ENCAMINHAR = "[ENCAMINHAR_HUMANO]"
-PRODUTOS = {
-    "editor": {
-        "nome": "Editor Viral: Corte Viral, Pacote Motion 3D e Editor no WhatsApp",
-        "base": "base-conhecimento.md",
-        "regras": (
-            "Regras deste produto:\n"
-            "- Problema de instalação ou erro: se o cliente ainda não disse, pergunte primeiro o sistema (Mac, "
-            "Windows ou Linux) e peça um print ou o texto do erro (de preferência a saída de "
-            "`python3 scripts/setup.py`).\n"
-            "- Se ele tentou colar o zip no ChatGPT ou na conversa normal do Claude, explique com gentileza por que "
-            "não funciona e mostre o caminho certo (Claude Code, ou o Editor no WhatsApp para quem não quer "
-            "instalar nada)."),
-    },
-    "vsl": {
-        "nome": "VSL & Oferta",
-        "base": "base-conhecimento-vsl.md",
-        "regras": (
-            "Regras deste produto:\n"
-            "- Primeiro descubra onde o cliente usa o pacote (Claude.ai, ChatGPT ou Claude Code); os passos mudam.\n"
-            "- Você é o suporte, não o estrategista: não escreva oferta, roteiro nem página aqui. Mostre como "
-            "fazer isso no Projeto/GPT dele (ou como retomar com a FICHA DA OFERTA).\n"
-            "- Promessa de ganho, cura, depoimento ou garantia jurídica: não opine sobre o caso; explique a regra "
-            "da base e, se ele insistir, [ENCAMINHAR_HUMANO]."),
-    },
-}
 PRODUTO = os.environ.get("ATENDENTE_PRODUTO", "editor")
 
 _client: anthropic.Anthropic | None = None
@@ -57,12 +34,8 @@ _client: anthropic.Anthropic | None = None
 
 def system_blocks() -> list[dict]:
     """Prompt do atendente + base de conhecimento: prefixo estável, sempre igual, com cache."""
-    if PRODUTO not in PRODUTOS:
-        raise SystemExit(f"ATENDENTE_PRODUTO inválido: {PRODUTO} (opções: {', '.join(PRODUTOS)})")
-    p = PRODUTOS[PRODUTO]
-    prompt = ((AQUI / "prompt-sistema.md").read_text(encoding="utf-8")
-              .replace("{{PRODUTO}}", p["nome"]).replace("{{REGRAS_PRODUTO}}", p["regras"]))
-    base = (AQUI / p["base"]).read_text(encoding="utf-8")
+    prompt = montar_prompt(PRODUTO)
+    base = (AQUI / PRODUTOS[PRODUTO]["base"]).read_text(encoding="utf-8")
     return [{"type": "text", "text": f"{prompt}\n\n=== BASE DE CONHECIMENTO ===\n\n{base}",
              "cache_control": {"type": "ephemeral"}}]
 
