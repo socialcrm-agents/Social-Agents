@@ -107,6 +107,28 @@ Ritmo:
 
 ---
 
+## 4b. Linguagem de editor profissional (o que faz parecer caro)
+
+1. **Um herói por momento.** Em cada frase só UM elemento manda na tela; o resto (legenda, ícone) é coadjuvante.
+   Dois elementos fortes ao mesmo tempo = amador.
+2. **O elemento conversa com a pessoa.** Prefira o que interage com ela: atrás da cabeça (`palavra`), preso à mão
+   (`objeto3d`/`card_fogo` com `follow`), seguindo o rosto (`hud`), a pessoa indo para dentro do layout
+   (`moldura`, `dividida`, `quadrinho`). Card solto no meio da tela é o último recurso.
+3. **Uma linguagem visual por vídeo.** Mesmas cores (as do estilo/marca), mesmos cantos e sombras, mesma família
+   de entrada. Não misture mais de 2 cores de destaque. Varie os blocos, não o estilo.
+4. **Hierarquia de texto.** Na tela: palavra-chave grande + no máximo 4 palavras de apoio. Frase inteira só na
+   legenda. Números sempre grandes e com unidade (R$, %, dias).
+5. **Ritmo de entrada e saída.** Entra no instante exato da palavra (âncora `at` na palavra, não na frase), sai
+   antes da próxima ideia. Nada fica na tela "esquecido" depois que a fala mudou de assunto.
+6. **Câmera viva.** Todo bloco entra com um empurrão de zoom e todo impacto tem som + tremida — o editor faz isso
+   sozinho; não desligue sem motivo.
+7. **Escala certa.** Em 9:16 os cards ocupam 70–85% da largura; texto de tela nunca menor que ~44 px; nada
+   espremido no canto.
+8. **Prova visual > texto.** Se existe print, tela, produto ou resultado real, mostre (`documentario`, `player`,
+   `giro`) em vez de escrever sobre ele.
+9. **Final forte.** Os últimos 3 s sempre têm o CTA visual mais bonito do vídeo (`final` ou `botao_cta`) e um som
+   de fechamento.
+
 ## 5. Receitas por tipo de vídeo
 
 ### Comparação / "VS" (ex.: "30 aulas vs 1 método")
