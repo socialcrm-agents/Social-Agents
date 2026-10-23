@@ -26,10 +26,14 @@ const correr = !!(p.correr || (p.linhas && p.linhas.length > 1));
 const shadow = p.sombra === false || p.contorno ? '' : 'drop-shadow(0 10px 30px rgba(0,0,0,.45)) ';
 const lines = texts.map((txt) => {
   const el = document.createElement('div');
-  el.className = 'ln ' + (p.contorno ? 'outline' : 'fill');
-  el.textContent = txt;
+  el.className = 'ln';
   Object.assign(el.style, { fontFamily: font, fontWeight: weight });
-  if (!p.contorno) el.style.backgroundImage = `linear-gradient(180deg, ${c1} 15%, ${c2} 100%)`;
+  // uma <span> por letra: o degradê é vertical, então cada letra com o mesmo degradê = a palavra inteira em degradê
+  el.letters = motion.split(el, 'chars', String(txt));
+  el.letters.forEach((c) => {
+    c.className = p.contorno ? 'outline' : 'fill';
+    if (!p.contorno) c.style.backgroundImage = `linear-gradient(180deg, ${c1} 15%, ${c2} 100%)`;
+  });
   document.body.appendChild(el);
   return el;
 });
@@ -37,15 +41,20 @@ const lines = texts.map((txt) => {
 let size = p.size || (correr ? 300 : 400);
 const fit = () => lines.forEach((l) => { l.style.fontSize = size + 'px'; });
 fit();
-if (!correr) while (Math.max(...lines.map((l) => l.offsetWidth)) > W * 0.86 && size > 120) { size -= 10; fit(); }
+const shrink = () => { if (!correr) while (Math.max(...lines.map((l) => l.offsetWidth)) > W * 0.86 && size > 120) { size -= 10; fit(); } };
+shrink();
+motion.waitFor(document.fonts.ready.then(() => { fit(); shrink(); lines.forEach((l, i) => { l.style.top = (top + i * size * 0.92) + 'px'; }); }));
 const rot = document.getElementById('rot');
 rot.textContent = p.rotulo || '';
 rot.style.top = (top - 56) + 'px';
 lines.forEach((l, i) => { l.style.top = (top + i * size * 0.92) + 'px'; });
 motion.onFrame((t) => {
-  const k = motion.inOut(t, 0, D, 0.32, 0.3, 'outCubic');
-  rot.style.opacity = motion.inOut(t, 0.05, D, 0.3, 0.25);
-  rot.style.transform = `translateY(${(1 - k) * 18}px)`;
+  const out = motion.exitK(t, D, 0.32);
+  const kr = motion.spring(t, 0.05, { dur: 0.5, bounce: 0.2 });
+  rot.style.opacity = motion.clamp(kr * 2) * (1 - out);
+  rot.style.transform = `translateY(${(1 - kr) * 18}px)`;
+  rot.style.letterSpacing = (12 + (1 - motion.clamp(kr)) * 18) + 'px';   // rótulo "abre" o espaçamento
+  const sweep = ((t - 0.6) / 2.4) % 1;
   lines.forEach((l, i) => {
     const w = l.offsetWidth;
     let x = (W - w) / 2;
@@ -54,9 +63,26 @@ motion.onFrame((t) => {
       x = (W - w) / 2 + dir * span * (0.5 - t / D) * 0.9;   // atravessa a tela devagar
     }
     l.style.left = x + 'px';
-    l.style.opacity = k;
-    l.style.filter = shadow + (k < 1 ? `blur(${(1 - k) * 14}px)` : '');
-    l.style.transform = correr ? '' : `scale(${1.12 - 0.12 * k + 0.015 * Math.sin(t * 1.5)})`;
+    l.style.opacity = 1;
+    l.style.filter = shadow + (out > 0 ? `blur(${out * 16}px)` : '');
+    // respiração lenta (zoom de 1 -> 1,03) depois de entrar
+    l.style.transform = correr ? `translateY(${-out * 40}px)` : `scale(${1 + 0.03 * motion.clamp((t - 0.6) / (D - 0.6)) + 0.04 * out}) translateY(${-out * 30}px)`;
+    l.style.transformOrigin = '50% 60%';
+    const L = l.letters.length;
+    l.letters.forEach((c, j) => {
+      const at = 0.06 + i * 0.12 + (correr ? j * 0.02 : Math.abs(j - (L - 1) / 2) * 0.035);  // do centro para fora
+      const k = motion.spring(t, at, { dur: 0.55, bounce: 0.22 });
+      const kp = motion.spring(t - 1 / motion.fps, at, { dur: 0.55, bounce: 0.22 });
+      const blur = Math.min(16, Math.abs(k - kp) * motion.fps * 2.4) + (k < 0.04 ? 14 : 0);
+      c.style.opacity = motion.clamp(k * 2.5) * (1 - out);
+      c.style.transform = `translateY(${(1 - k) * size * 0.35}px) scale(${1.35 - 0.35 * k})`;
+      let f = blur > 0.3 ? `blur(${blur.toFixed(1)}px)` : '';
+      if (!p.contorno && t > at + 0.55) {
+        const d = Math.abs(sweep * (L + 4) - 2 - j), b = Math.max(0, 1 - d / 1.8);
+        if (b > 0) f += ` brightness(${1 + 0.45 * b})`;
+      }
+      c.style.filter = f || 'none';
+    });
   });
 });
 </script></body></html>

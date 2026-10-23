@@ -1,29 +1,47 @@
 <!doctype html>
-<!-- CRONÔMETRO / TEMPO (layer: front): relógio contando até o tempo dito (ex.: "pronto em 7 min"), anel de progresso.
+<!-- CRONÔMETRO / TEMPO (layer: front): relógio de vidro fumê contando até o tempo dito (ex.: "pronto em 7 min"),
+     anel de progresso em degradê com ponta brilhante e marcas de minuto; pulso quando chega.
      params: seconds (valor final mostrado, ex. 420), label ("pronto em"), accent, y (0..1), size (px) -->
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
-<style>#w { position: absolute; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
-#t { font-family: 'Anton'; color: #fff; text-shadow: 0 6px 24px rgba(0,0,0,.6); }
-#l { font-weight: 800; font-size: 40px; text-transform: uppercase; letter-spacing: 2px; color: #fff; text-shadow: 0 4px 16px rgba(0,0,0,.6); }</style></head>
-<body><div id="w"><svg id="ring"></svg><div id="l"></div></div>
+<style>#w { position: absolute; left: 50%; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+#face { position: relative; border-radius: 50%; }
+#ring { position: absolute; inset: 0; }
+#tt { position: absolute; inset: 0; display: grid; place-items: center; font-weight: 900; color: #fff; letter-spacing: -2px;
+      font-variant-numeric: tabular-nums; }
+#l { padding: 12px 28px; font-size: 26px; background: linear-gradient(165deg, rgba(40,32,70,.95), rgba(12,10,24,.95)); border: 1.5px solid rgba(255,255,255,.18); box-shadow: var(--sh-card); }</style></head>
+<body><div id="w"><div id="face" class="ds-card ds-dark"><svg id="ring" viewBox="0 0 100 100"></svg><div id="tt"></div></div><div id="l" class="ds-chip"></div></div>
 <script type="module">
 import motion from '/lib/runtime.js';
 const p = motion.params, H = motion.h, D = motion.duration;
-const size = p.size || 300, accent = p.accent || '#FFD21F', total = p.seconds ?? 420;
-const NS = 'http://www.w3.org/2000/svg', ring = document.getElementById('ring');
-ring.setAttribute('width', size); ring.setAttribute('height', size); ring.setAttribute('viewBox', '0 0 100 100');
-ring.innerHTML = `<circle cx="50" cy="50" r="44" fill="rgba(0,0,0,.45)" stroke="rgba(255,255,255,.25)" stroke-width="6"/>
-  <circle id="arc" cx="50" cy="50" r="44" fill="none" stroke="${accent}" stroke-width="6" stroke-linecap="round" transform="rotate(-90 50 50)"/>
-  <text id="tt" x="50" y="58" text-anchor="middle" font-family="Anton" font-size="24" fill="#fff"></text>`;
-const L = 2 * Math.PI * 44, arc = ring.querySelector('#arc'); arc.setAttribute('stroke-dasharray', `${L} ${L}`);
+const size = p.size || 360, accent = p.accent || '#FFD21F', total = p.seconds ?? 420;
+document.documentElement.style.setProperty('--accent', accent);
+document.documentElement.style.setProperty('--accent2', `color-mix(in srgb, ${accent} 60%, #FF5F6D)`);
+const face = document.getElementById('face'); face.style.width = face.style.height = size + 'px'; face.style.borderRadius = '50%';
+const tt = document.getElementById('tt'); tt.style.fontSize = size * 0.24 + 'px';
+const ring = document.getElementById('ring');
+let ticks = '';
+for (let i = 0; i < 60; i++) { const a = i / 60 * 2 * Math.PI, r1 = i % 5 ? 41 : 39;
+  ticks += `<line x1="${50 + r1 * Math.sin(a)}" y1="${50 - r1 * Math.cos(a)}" x2="${50 + 43 * Math.sin(a)}" y2="${50 - 43 * Math.cos(a)}" stroke="rgba(255,255,255,${i % 5 ? .18 : .45})" stroke-width="${i % 5 ? .5 : .9}"/>`; }
+ring.innerHTML = `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${accent}"/><stop offset="1" stop-color="#FF5F6D"/></linearGradient>
+  <filter id="gl"><feGaussianBlur stdDeviation="1.6"/></filter></defs>${ticks}
+  <circle cx="50" cy="50" r="46" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="4"/>
+  <circle id="arcg" cx="50" cy="50" r="46" fill="none" stroke="url(#g)" stroke-width="5" stroke-linecap="round" transform="rotate(-90 50 50)" filter="url(#gl)" opacity=".7"/>
+  <circle id="arc" cx="50" cy="50" r="46" fill="none" stroke="url(#g)" stroke-width="4" stroke-linecap="round" transform="rotate(-90 50 50)"/>
+  <circle id="dot" r="3.2" fill="#fff"/>`;
+const L = 2 * Math.PI * 46, arc = ring.querySelector('#arc'), arcg = ring.querySelector('#arcg'), dot = ring.querySelector('#dot');
+arc.setAttribute('stroke-dasharray', `${L} ${L}`); arcg.setAttribute('stroke-dasharray', `${L} ${L}`);
 document.getElementById('l').textContent = p.label || 'pronto em';
 const w = document.getElementById('w');
 motion.onFrame((t) => {
-  const k = motion.inOut(t, 0, D, 0.4, 0.3, 'outBack');
-  w.style.top = (p.y ?? 0.2) * H + 'px'; w.style.transform = `translateX(-50%) scale(${k})`;
-  const kc = motion.prog(t, 0.3, Math.max(D - 0.9, 0.6), 'outCubic');
-  arc.setAttribute('stroke-dashoffset', String(L * (1 - kc)));
+  w.style.top = (p.y ?? 0.2) * H + 'px'; w.style.marginLeft = -w.offsetWidth / 2 + 'px';
+  const dur = Math.max(D - 1.0, 0.6);
+  const kc = motion.ease.inOutCubic(motion.clamp((t - 0.35) / dur));
+  const pulse = 1 + 0.07 * Math.sin(motion.clamp((t - 0.35 - dur) / 0.35) * Math.PI);
+  motion.appear(w, t, 0, { from: 'scale', scale0: 0.5, dur: 0.6, bounce: 0.35, t1: D, extra: `scale(${pulse})` });
+  for (const a of [arc, arcg]) a.setAttribute('stroke-dashoffset', String(L * (1 - kc)));
+  const ang = kc * 2 * Math.PI;
+  dot.setAttribute('cx', 50 + 46 * Math.sin(ang)); dot.setAttribute('cy', 50 - 46 * Math.cos(ang));
   const s = Math.round(total * kc);
-  ring.querySelector('#tt').textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  tt.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 });
 </script></body></html>

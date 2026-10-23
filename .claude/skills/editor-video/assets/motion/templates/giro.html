@@ -7,7 +7,7 @@
   #stage { position: absolute; left: 50%; perspective: 2000px; }
   #card { position: relative; transform-style: preserve-3d; }
   .face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 34px; overflow: hidden; background: #fffdf9;
-          border: 8px solid #fff; box-shadow: 0 40px 80px rgba(0,0,0,.4); display: grid; place-items: center; }
+          border: 8px solid #fff; box-shadow: var(--sh-float), inset 0 1px 0 #fff; display: grid; place-items: center; }
   .face img { width: 100%; height: 100%; object-fit: cover; }
   .face .tx { font-family: 'Anton'; font-size: 120px; color: #141414; text-align: center; padding: 20px; }
   .tag { position: absolute; left: 24px; top: 24px; padding: 6px 22px; border-radius: 999px; background: #141414; color: #fff;
@@ -29,16 +29,19 @@ const html = (it, i) => (it.img ? `<img src="${it.img}">` : `<div class="tx">${i
 items.forEach((it) => it.img && motion.waitFor(motion.loadImage(it.img).catch(() => null)));
 const at = p.at ?? 0.3, every = p.every || 1.0;
 motion.onFrame((t) => {
-  const kin = motion.inOut(t, 0, D, 0.45, 0.3, 'outBack');
   stage.style.top = (p.y ?? 0.42) * H - (size * ar) / 2 + 'px';
-  stage.style.transform = `translateX(-50%) scale(${kin})`;
+  stage.style.marginLeft = -stage.offsetWidth / 2 + 'px';
+  motion.appear(stage, t, 0, { from: 'scale', scale0: 0.55, rot0: -6, dur: 0.65, bounce: 0.3, t1: D, float: 6 });
   // cada giro de 180° troca para o próximo item; a face de trás recebe o item seguinte
   const flips = Math.max(0, (t - at) / every);
-  const done = Math.floor(flips), part = motion.ease.inOutCubic(Math.min(1, (flips - done) / 0.6));
+  const done = Math.floor(flips), part = motion.springK((flips - done) * every, 0.55, 0.28);   // giro com mola
   const idx = Math.min(done, items.length - 1);
   const turning = done < items.length - 1 && t >= at;
   const ang = (turning ? done + part : Math.min(done, items.length - 1)) * 180;
   card.style.transform = `rotateY(${ang}deg) rotateX(${Math.sin(t * 1.4) * 6}deg)`;
+  // brilho passando na face durante o giro
+  const sw = turning ? Math.sin(Math.min(1, part) * Math.PI) : 0;
+  faces.forEach((f) => { f.style.filter = `brightness(${1 + 0.25 * sw})`; });
   const front = idx % 2 === 0 ? faces[0] : faces[1], back = front === faces[0] ? faces[1] : faces[0];
   front.innerHTML = html(items[idx], idx);
   if (items[idx + 1]) back.innerHTML = html(items[idx + 1], idx + 1);

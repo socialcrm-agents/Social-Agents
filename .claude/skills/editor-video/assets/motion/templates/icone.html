@@ -1,32 +1,37 @@
 <!doctype html>
-<!-- Ícone que "pula" na tela quando a palavra é dita, com rótulo opcional.
+<!-- Ícone que "pula" na tela quando a palavra é dita, com rótulo opcional: badge em degradê com brilho, entra
+     girando com mola, anel de impacto, flutua e sai desfocando.
      params: icon (nome Lucide), label, color, x, y (centro em px), size, at (cue em s) -->
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
 <style>
-  #wrap { transform-origin: center; display: flex; flex-direction: column; align-items: center; gap: 18px; }
-  #badge { border-radius: 50%; display: grid; place-items: center; box-shadow: 0 18px 50px rgba(0,0,0,.45); }
-  #badge .icon { color: #111; }
-  #label { font-weight: 800; font-size: 54px; text-transform: uppercase; text-shadow: 0 4px 16px rgba(0,0,0,.6); }
+  #wrap { display: flex; flex-direction: column; align-items: center; gap: 18px; width: 600px; }
+  #badge { position: relative; border-radius: 34%; display: grid; place-items: center; }
+  #badge .icon { color: #111; position: relative; }
+  #ring { position: absolute; inset: -8px; border-radius: 38%; border: 5px solid; }
+  #label { font-weight: 900; font-size: 52px; letter-spacing: -.5px; text-transform: uppercase; text-shadow: var(--sh-text); }
 </style></head>
-<body><div id="wrap" class="abs"><div id="badge"><div class="icon" id="ic"></div></div><div id="label"></div></div>
+<body><div id="wrap" class="abs"><div id="badge"><div id="ring"></div><div class="icon" id="ic"></div></div><div id="label"></div></div>
 <script type="module">
 import motion from '/lib/runtime.js';
 const p = motion.params;
-const size = p.size || 190, color = p.color || '#FFE600';
-const wrap = document.getElementById('wrap'), badge = document.getElementById('badge');
-badge.style.cssText = `width:${size}px;height:${size}px;background:${color}`;
-const ic = document.getElementById('ic'); ic.style.cssText = `width:${size * .55}px;height:${size * .55}px`;
-document.getElementById('label').textContent = p.label || '';
+const size = p.size || 180, color = p.color || '#FFE600';
+const wrap = document.getElementById('wrap'), badge = document.getElementById('badge'), ring = document.getElementById('ring');
+badge.style.width = badge.style.height = size + 'px';
+badge.style.background = `linear-gradient(150deg, color-mix(in srgb, ${color} 70%, #fff) 0%, ${color} 50%, color-mix(in srgb, ${color} 75%, #000) 100%)`;
+badge.style.boxShadow = `0 20px 50px rgba(0,0,0,.4), 0 0 40px color-mix(in srgb, ${color} 45%, transparent), inset 0 2px 0 rgba(255,255,255,.6)`;
+ring.style.borderColor = color;
+const ic = document.getElementById('ic'); ic.style.cssText += `;width:${size * .54}px;height:${size * .54}px`;
+const label = document.getElementById('label');
+label.textContent = p.label || '';
 motion.waitFor(motion.icon(p.icon || 'sparkles').then((svg) => { ic.innerHTML = svg; }));
 const at = p.at || 0;
 motion.onFrame((t) => {
-  const k = motion.prog(t, at, 0.45, 'outBack');
-  const out = motion.prog(t, motion.duration - 0.3, 0.3, 'inQuad');
-  const s = Math.max(k * (1 - out), 0.0001);
-  const r = (1 - motion.prog(t, at, 0.6, 'outElastic')) * -25;
-  wrap.style.left = `${(p.x ?? motion.w / 2) - 300}px`; wrap.style.width = '600px';
+  wrap.style.left = `${(p.x ?? motion.w / 2) - 300}px`;
   wrap.style.top = `${(p.y ?? 520) - size / 2}px`;
-  wrap.style.transform = `scale(${s}) rotate(${r}deg)`;
-  wrap.style.opacity = s < 0.01 ? 0 : 1;
+  motion.appear(badge, t, at, { from: 'scale', scale0: 0.2, rot0: -30, dur: 0.55, bounce: 0.45, t1: motion.duration, float: 5 });
+  motion.appear(label, t, at + 0.12, { from: 'up', dist: 26, dur: 0.5, bounce: 0.25, t1: motion.duration });
+  const rk = motion.prog(t, at + 0.15, 0.55, 'outCubic');
+  ring.style.opacity = t >= at + 0.15 ? (1 - rk) * 0.8 : 0;
+  ring.style.transform = `scale(${1 + rk * 0.55})`;
 });
 </script></body></html>

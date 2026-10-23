@@ -1,43 +1,57 @@
 <!doctype html>
-<!-- INFOGRÁFICO DE NÚMEROS (layer: front): cartões de vidro com números que contam até o valor no tempo
-     em que cada um é falado (ex.: "18 andares", "72 m²", "R$ 1,1 mi").
+<!-- INFOGRÁFICO DE NÚMEROS (layer: front): cartões de vidro fumê com números que contam até o valor no tempo
+     em que cada um é falado (ex.: "18 andares", "72 m²", "R$ 1,1 mi"). O número rola com desaceleração, dá um
+     "pulo" ao chegar e ganha brilho; o ícone entra girando.
      params: stats: [{value: 72, decimals: 0, prefix: "", suffix: " m²", label: "área", icon (Lucide), at (s)}],
-             accent, y (topo do bloco em px, default 300), align ("centro"|"esquerda") -->
+             accent, accent2, y (topo do bloco em px, default 300), align ("centro"|"esquerda"), tema ("escuro"|"claro") -->
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
 <style>
-  #list { position: absolute; display: flex; flex-direction: column; gap: 26px; }
-  .stat { display: flex; align-items: center; gap: 28px; padding: 24px 48px 24px 26px; min-width: 640px;
-          background: rgba(12,12,18,.78) !important; color: #fff; }
-  .ic { width: 110px; height: 110px; border-radius: 30px; display: grid; place-items: center; color: #111; flex: 0 0 auto; }
-  .ic .icon { width: 64px; height: 64px; }
-  .num { font-family: 'Anton'; font-size: 100px; line-height: 1; letter-spacing: 1px; white-space: nowrap; }
-  .lab { font-weight: 800; font-size: 34px; opacity: .85; text-transform: uppercase; letter-spacing: 2px; }
+  #list { position: absolute; display: flex; flex-direction: column; gap: 24px; }
+  .stat { position: relative; display: flex; align-items: center; gap: 30px; padding: 26px 54px 26px 28px; min-width: 620px;
+          border-radius: 36px; overflow: hidden; }
+  .ic { width: 116px; height: 116px; border-radius: 32px; flex: 0 0 auto; }
+  .num { font-weight: 900; font-size: 108px; line-height: .95; letter-spacing: -3px; white-space: nowrap; }
+  .lab { font-weight: 800; font-size: 28px; letter-spacing: .18em; text-transform: uppercase; opacity: .75; margin-top: 6px; }
 </style></head>
 <body><div id="list"></div>
 <script type="module">
 import motion from '/lib/runtime.js';
-const p = motion.params, W = motion.w, D = motion.duration;
-const accent = p.accent || '#22E06B';
+const p = motion.params, D = motion.duration;
+const accent = p.accent || '#22E06B', accent2 = p.accent2 || '#00C2FF';
+document.documentElement.style.setProperty('--accent', accent);
+document.documentElement.style.setProperty('--accent2', accent2);
+const claro = p.tema === 'claro';
 const list = document.getElementById('list');
 list.style.top = (p.y ?? 300) + 'px';
-if ((p.align || 'centro') === 'centro') { list.style.left = '50%'; list.style.transform = 'translateX(-50%)'; }
+const centro = (p.align || 'centro') === 'centro';
+if (centro) { list.style.left = '0'; list.style.right = '0'; list.style.alignItems = 'center'; }
 else list.style.left = '60px';
 const fmt = (v, d) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const stats = (p.stats || []).map((s, i) => {
-  const el = document.createElement('div'); el.className = 'stat glass';
-  el.innerHTML = `<div class="ic" style="background:${accent}"><div class="icon"></div></div>
-    <div><div class="num"></div><div class="lab">${s.label || ''}</div></div>`;
+  const el = document.createElement('div'); el.className = 'stat ds-card' + (claro ? '' : ' ds-dark');
+  el.innerHTML = `<div class="ds-sheen"></div><div class="ic ds-ico-badge"></div>
+    <div><div class="num ds-grad-text"></div><div class="lab"></div></div>`;
+  el.querySelector('.lab').textContent = s.label || '';
+  if (claro) el.querySelector('.num').style.backgroundImage = `linear-gradient(180deg, #14102B 30%, ${accent} 140%)`;
+  else el.querySelector('.num').style.backgroundImage = `linear-gradient(180deg, #FFFFFF 35%, color-mix(in srgb, ${accent} 70%, #fff) 120%)`;
   list.appendChild(el);
-  motion.waitFor(motion.icon(s.icon || 'sparkles').then((x) => { el.querySelector('.icon').innerHTML = x; }));
-  return { el, num: el.querySelector('.num'), s, at: s.at ?? 0.2 + i * 0.7 };
+  motion.waitFor(motion.icon(s.icon || 'sparkles').then((x) => { el.querySelector('.ic').innerHTML = x; }));
+  return { el, num: el.querySelector('.num'), ic: el.querySelector('.ic'), sheen: el.querySelector('.ds-sheen'), s,
+           at: typeof s.at === 'number' ? s.at : 0.2 + i * 0.7 };
 });
 motion.onFrame((t) => {
-  for (const { el, num, s, at } of stats) {
-    const k = motion.inOut(t, at, D, 0.5, 0.3, 'outBack');
-    el.style.opacity = Math.min(1, k * 1.5);
-    el.style.transform = `translateY(${(1 - k) * 50}px) scale(${0.9 + 0.1 * k})`;
-    const kc = motion.prog(t, at, 0.9, 'outExpo');
-    num.textContent = `${s.prefix || ''}${fmt((s.value || 0) * kc, s.decimals || 0)}${s.suffix || ''}`;
-  }
+  stats.forEach(({ el, num, ic, sheen, s, at }, i) => {
+    const cnt = 0.95;
+    const land = motion.pop(t, at + cnt, 0.4, 0.55);           // pulo quando o número chega
+    const bump = t > at + cnt ? 1 + 0.06 * Math.sin(Math.min(1, (t - at - cnt) / 0.35) * Math.PI) : 1;
+    motion.appear(el, t, at, { from: 'down', dist: 70, scale0: 0.84, dur: 0.6, bounce: 0.3, t1: D, float: 3, phase: i * 0.3,
+                               extra: `scale(${bump})` });
+    const ki = motion.pop(t, at + 0.08, 0.55, 0.45);
+    ic.style.transform = `rotate(${(1 - ki) * -35}deg) scale(${0.4 + 0.6 * ki})`;
+    num.textContent = `${s.prefix || ''}${fmt((s.value || 0) * motion.ease.outExpo(motion.clamp((t - at) / cnt)), s.decimals || 0)}${s.suffix || ''}`;
+    el.classList.toggle('ds-glow', t > at + cnt && land > 0.2);
+    sheen.style.opacity = t > at + cnt ? 0.85 : 0;
+    motion.shimmer(sheen, t, 2.4, at + cnt);
+  });
 });
 </script></body></html>

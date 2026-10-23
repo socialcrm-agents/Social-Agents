@@ -13,7 +13,10 @@
   #kw { display: flex; flex-direction: column; align-items: center; }
   .kl { font-weight: 900; line-height: .92; letter-spacing: -2px; color: transparent; -webkit-background-clip: text; background-clip: text;
         white-space: nowrap; filter: drop-shadow(0 10px 40px rgba(124,92,255,.45)); }
-  #card { position: absolute; left: 60px; right: 150px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  #card { position: absolute; left: 50%; width: 620px; margin-left: -355px; display: flex; flex-direction: column; align-items: center; gap: 10px;
+          padding: 36px 40px 34px; border-radius: 44px; }
+  .kl span { display: inline-block; color: transparent; -webkit-background-clip: text; background-clip: text; }
+  .orb { position: absolute; border-radius: 50%; filter: blur(60px); }
   #pic { width: 150px; height: 150px; border-radius: 26px; overflow: hidden; display: grid; place-items: center;
          font-weight: 900; font-size: 60px; color: #fff; border: 4px solid rgba(255,255,255,.3); box-shadow: 0 16px 40px rgba(0,0,0,.5); }
   #pic img { width: 100%; height: 100%; object-fit: cover; }
@@ -24,7 +27,8 @@
 </style></head>
 <body><div id="bg"></div><div id="glow"></div>
 <div id="wrap"><div id="rot"></div><div id="kw"></div></div>
-<div id="card"><div id="pic"></div><div id="nome"></div><div id="site"></div></div>
+<div class="orb" id="o1"></div><div class="orb" id="o2"></div>
+<div id="card" class="ds-card ds-dark"><div id="pic"></div><div id="nome"></div><div id="site"></div></div>
 <div id="chev"></div>
 <script type="module">
 import motion from '/lib/runtime.js';
@@ -47,7 +51,12 @@ motion.waitFor(document.fonts.ready.then(() => {
   size = 300; lines = tryLines([palavra], size);
   if (lines[0].offsetWidth > maxW && parts.length > 1) { size = 320; lines = tryLines(parts.slice(0, 3), size); }
   while (Math.max(...lines.map((l) => l.offsetWidth)) > maxW && size > 90) { size -= 10; lines.forEach((l) => { l.style.fontSize = size + 'px'; }); }
+  lines.forEach((l) => { l.letters = motion.split(l, 'chars');
+    l.letters.forEach((c) => { c.style.backgroundImage = `linear-gradient(180deg, ${c1} 10%, ${c2} 100%)`; }); l.style.backgroundImage = 'none'; });
 }));
+const o1 = document.getElementById('o1'), o2 = document.getElementById('o2');
+Object.assign(o1.style, { width: '700px', height: '700px', background: c1, opacity: .28 });
+Object.assign(o2.style, { width: '600px', height: '600px', background: c2, opacity: .22 });
 const card = document.getElementById('card'), pic = document.getElementById('pic');
 document.getElementById('nome').textContent = p.nome || '';
 document.getElementById('site').textContent = p.site || '';
@@ -67,20 +76,32 @@ const perfilAt = typeof p.perfil_at === 'number' ? p.perfil_at : D * 0.45;
 const wrapBottom = () => document.getElementById('wrap').getBoundingClientRect().bottom;
 motion.onFrame((t) => {
   const kin = motion.prog(t, 0, 0.4, 'outCubic');
-  rot.style.opacity = motion.prog(t, 0.05, 0.3); rot.style.transform = `translateY(${(1 - kin) * -30}px)`;
+  // fundo vivo: luz respira e duas manchas de cor passeiam devagar
+  const g = document.getElementById('glow');
+  g.style.transform = `scale(${0.85 + 0.15 * kin + 0.04 * Math.sin(t * 1.3)})`; g.style.opacity = kin;
+  o1.style.left = (120 + 160 * Math.sin(t * 0.5)) + 'px'; o1.style.top = (380 + 120 * Math.cos(t * 0.4)) + 'px';
+  o2.style.left = (420 + 140 * Math.cos(t * 0.45)) + 'px'; o2.style.top = (900 + 140 * Math.sin(t * 0.55)) + 'px';
+  motion.appear(rot, t, 0.05, { from: 'down', dist: 40, dur: 0.5, bounce: 0.3, out: 0, blur: 12 });
+  rot.style.letterSpacing = (6 + (1 - motion.clamp(motion.spring(t, 0.05, { dur: 0.6, bounce: 0 }))) * 30) + 'px';
+  const pk = motion.spring(t, perfilAt, { dur: 0.6, bounce: 0.3 });
   lines.forEach((l, i) => {
-    const q = motion.prog(t, 0.15 + i * 0.12, 0.45, 'outBack');
-    l.style.opacity = Math.min(1, q * 1.4);
-    l.style.transform = `scale(${0.7 + 0.3 * q + 0.012 * Math.sin(t * 2 + i)})`;
+    l.style.transform = `scale(${1 + 0.012 * Math.sin(t * 2 + i)})`;
+    l.style.filter = `drop-shadow(0 10px 40px rgba(124,92,255,.45)) brightness(${1 - 0.45 * motion.clamp(pk)})`;
+    (l.letters || []).forEach((c, j) => {
+      const at = 0.18 + i * 0.12 + j * 0.035;
+      const k = motion.spring(t, at, { dur: 0.55, bounce: 0.3 }), kp = motion.spring(t - 1 / motion.fps, at, { dur: 0.55, bounce: 0.3 });
+      const blur = Math.min(14, Math.abs(k - kp) * motion.fps * 2) + (k < 0.04 ? 12 : 0);
+      c.style.opacity = motion.clamp(k * 2.4);
+      c.style.transform = `translateY(${(1 - k) * 90}px) scale(${1.3 - 0.3 * k})`;
+      c.style.filter = blur > 0.3 ? `blur(${blur.toFixed(1)}px)` : 'none';
+    });
   });
   // perfil sobe por cima da palavra (que esmaece um pouco), como na referência
-  const pk = motion.prog(t, perfilAt, 0.45, 'outBack');
   const wb = wrapBottom();
   card.style.top = (Math.min(wb - 60, H - 760)) + 'px';
-  card.style.opacity = Math.min(1, pk * 1.3);
-  card.style.transform = `translateY(${(1 - pk) * 50}px)`;
-  lines.forEach((l) => { l.style.filter = `drop-shadow(0 10px 40px rgba(124,92,255,.45)) brightness(${1 - 0.45 * pk})`; });
+  motion.appear(card, t, perfilAt, { from: 'up', dist: 80, scale0: 0.88, dur: 0.6, bounce: 0.3, out: 0, float: 4 });
   chev.style.top = (Math.min(wb + 360, H - 470)) + 'px';
-  chevs.forEach((c, i) => { const ph = (t * 1.6 - i * 0.22) % 1; c.style.opacity = Math.max(0, Math.sin(ph * Math.PI)) * kin; });
+  chevs.forEach((c, i) => { const ph = (t * 1.6 - i * 0.22) % 1; c.style.opacity = Math.max(0, Math.sin(ph * Math.PI)) * kin;
+    c.style.transform = `translateY(${ph * 14}px)`; });
 });
 </script></body></html>

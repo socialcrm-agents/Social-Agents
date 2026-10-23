@@ -65,24 +65,41 @@ if (dm) {
 const ate = typeof p.digitar_ate === 'number' ? p.digitar_ate : D * 0.4;
 const dmAt = dm ? (typeof dm.at === 'number' ? dm.at : Math.min(ate + 0.5, D - 0.9)) : 1e9;
 const ph = p.placeholder || 'Adicione um comentário...';
+const bar = document.getElementById('bar');
+// chamada em cascata (cada palavra/trecho vira um bloco animado)
+const chamParts = [...cham.childNodes].flatMap((nd) => {
+  if (nd.nodeType === 3) return nd.textContent.split(/(\s+)/).filter(Boolean).map((x) => ({ t: x, b: false }));
+  return [{ t: nd.textContent, b: true }];
+});
+cham.innerHTML = '';
+const chamEls = [];
+for (const part of chamParts) {
+  if (/^\s+$/.test(part.t)) { cham.appendChild(document.createTextNode(' ')); continue; }
+  const sp = document.createElement(part.b ? 'b' : 'span'); sp.textContent = part.t; sp.style.display = 'inline-block';
+  if (part.b) { sp.style.backgroundImage = `linear-gradient(90deg, #E9DDFF, ${accent})`; sp.style.color = 'transparent';
+    sp.style.webkitBackgroundClip = 'text'; sp.style.backgroundClip = 'text'; sp.style.filter = 'drop-shadow(0 6px 20px rgba(0,0,0,.45))'; }
+  cham.appendChild(sp); chamEls.push(sp);
+}
+bar.style.background = 'linear-gradient(165deg, rgba(44,30,80,.94), rgba(18,12,36,.94))';
+bar.style.boxShadow = `var(--sh-float), inset 0 1px 0 rgba(255,255,255,.18), 0 0 0 1.5px color-mix(in srgb, ${accent} 45%, transparent)`;
 motion.onFrame((t) => {
-  const out = motion.prog(t, D - 0.3, 0.3);
-  const k = motion.prog(t, 0, 0.35, 'outBack');
-  wrap.style.opacity = Math.min(1, k) * (1 - out);
-  wrap.style.transform = `translateY(${(1 - k) * 40}px)`;
-  const n = Math.round(texto.length * motion.clamp((t - 0.25) / Math.max(ate - 0.25, 0.2)));
+  const out = motion.exitK(t, D, 0.3);
+  wrap.style.opacity = 1 - out;
+  wrap.style.filter = out > 0 ? `blur(${out * 10}px)` : 'none';
+  chamEls.forEach((e, i) => motion.appear(e, t, 0.05 + i * 0.07, { from: 'up', dist: 40, scale0: 0.8, dur: 0.5, bounce: 0.35, out: 0, blur: 12 }));
+  motion.appear(bar, t, 0.12, { from: 'up', dist: 60, scale0: 0.86, dur: 0.6, bounce: 0.28, out: 0, float: 3 });
+  const n = Math.round(texto.length * motion.clamp((t - 0.35) / Math.max(ate - 0.35, 0.2)));
   const blink = Math.floor(t * 2.4) % 2 === 0 || (n > 0 && n < texto.length);
   field.innerHTML = n === 0 ? `<span class="ph">${ph}</span>` :
-    `${texto.slice(0, n).replace(/</g, '&lt;')}<span id="caret" style="opacity:${blink ? 1 : 0}"></span>`;
+    `${texto.slice(0, Math.max(n - 1, 0)).replace(/</g, '&lt;')}<span style="display:inline-block;transform:scale(${n < texto.length ? 1.25 : 1});color:${n < texto.length ? '#E9DDFF' : '#fff'}">${texto.slice(Math.max(n - 1, 0), n).replace(/</g, '&lt;')}</span><span id="caret" style="opacity:${blink ? 1 : 0}"></span>`;
   const done = t > ate;
-  const pulse = done ? 1 + 0.08 * Math.sin((t - ate) * 9) : 1;
-  send.style.transform = `scale(${pulse * (done ? 1 : 0.9)})`;
-  send.style.boxShadow = done ? `0 0 ${20 + 14 * Math.sin((t - ate) * 9)}px ${accent}` : 'none';
+  const press = done ? motion.pop(t, ate + 0.05, 0.4, 0.55) : 0;
+  const pulse = done ? 1 + 0.06 * Math.sin((t - ate) * 8) : 1;
+  send.style.transform = `scale(${(done ? 0.85 + 0.15 * press : 0.9) * pulse}) rotate(${done ? (1 - press) * -25 : 0}deg)`;
+  send.style.boxShadow = done ? `0 0 ${22 + 14 * Math.sin((t - ate) * 8)}px ${accent}` : 'none';
   if (dm) {
-    const q = motion.prog(t, dmAt, 0.45, 'outBack');
-    dmEl.style.opacity = Math.min(1, q * 1.4) * (1 - out);
-    dmEl.style.transform = `translateY(${(1 - q) * 60}px) scale(${0.92 + 0.08 * q})`;
-    wrap.style.opacity = Math.min(1, k) * (1 - out) * (1 - 0.5 * motion.prog(t, dmAt, 0.3));
+    motion.appear(dmEl, t, dmAt, { from: 'right', dist: 140, scale0: 0.9, dur: 0.55, bounce: 0.25, t1: D, blur: 16, float: 3 });
+    wrap.style.opacity = (1 - out) * (1 - 0.5 * motion.prog(t, dmAt, 0.3));
   }
 });
 </script></body></html>

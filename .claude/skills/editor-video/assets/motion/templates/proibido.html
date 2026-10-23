@@ -45,24 +45,26 @@ const draw = () => {
   L = svg.querySelector('#a').getTotalLength();
 };
 motion.waitFor(document.fonts.ready.then(draw));
+row.style.background = 'linear-gradient(165deg, rgba(44,32,78,.92), rgba(16,12,32,.92))';
+row.style.boxShadow = 'var(--sh-float), inset 0 1px 0 rgba(255,255,255,.18)';
 motion.onFrame((t) => {
   if (!L) draw();
-  const out = motion.prog(t, D - 0.3, 0.3);
-  const k = motion.prog(t, 0, 0.35, 'outBack');
-  wrap.style.opacity = Math.min(1, k) * (1 - out);
-  rot.style.transform = `translateY(${(1 - k) * 20}px)`;
+  const out = motion.exitK(t, D, 0.3);
+  wrap.style.opacity = 1 - out;
+  wrap.style.filter = out > 0 ? `blur(${out * 10}px)` : 'none';
+  motion.appear(rot, t, 0.02, { from: 'down', dist: 30, dur: 0.5, bounce: 0.3, out: 0, blur: 10 });
+  const sh = motion.shake(t, xAt + 0.14, 16, 0.36);
+  motion.appear(row, t, 0, { from: 'up', dist: 60, scale0: 0.85, dur: 0.55, bounce: 0.3, out: 0, extra: `translateX(${sh}px)` });
   apps.forEach((a, i) => {
-    const q = motion.prog(t, 0.08 + i * 0.08, 0.35, 'outBack');
-    a.style.transform = `translateY(${(1 - q) * 50}px) scale(${0.7 + 0.3 * q})`;
-    a.style.opacity = Math.min(1, q * 1.3);
-    a.style.filter = t > xAt + 0.2 ? `grayscale(${motion.prog(t, xAt + 0.2, 0.3)}) brightness(.7)` : '';
+    const q = motion.spring(t, 0.1 + i * 0.07, { dur: 0.5, bounce: 0.45 });
+    a.style.transform = `translateY(${(1 - q) * 50}px) scale(${0.5 + 0.5 * q}) rotate(${(1 - q) * (i % 2 ? 14 : -14)}deg)`;
+    a.style.opacity = motion.clamp(q * 2);
+    a.style.filter = t > xAt + 0.2 ? `grayscale(${motion.prog(t, xAt + 0.2, 0.3)}) brightness(${1 - 0.35 * motion.prog(t, xAt + 0.2, 0.3)})` : 'none';
   });
-  const a1 = motion.prog(t, xAt, 0.18, 'outCubic'), a2 = motion.prog(t, xAt + 0.14, 0.18, 'outCubic');
+  const a1 = motion.prog(t, xAt, 0.16, 'outCubic'), a2 = motion.prog(t, xAt + 0.12, 0.16, 'outCubic');
   const [pa, pb] = svg.querySelectorAll('path');
   if (pa) { pa.style.strokeDasharray = L; pa.style.strokeDashoffset = L * (1 - a1);
-            pb.style.strokeDasharray = L; pb.style.strokeDashoffset = L * (1 - a2); }
-  // tremida no impacto do X
-  const sh = t > xAt + 0.14 && t < xAt + 0.5 ? Math.sin(t * 90) * 14 * (1 - (t - xAt - 0.14) / 0.36) : 0;
-  row.style.transform = `translateX(${sh}px)`;
+            pb.style.strokeDasharray = L; pb.style.strokeDashoffset = L * (1 - a2);
+            svg.style.filter = `drop-shadow(0 0 ${10 + 8 * motion.prog(t, xAt + 0.12, 0.3)}px ${p.cor_x || '#FF3B5C'})`; }
 });
 </script></body></html>

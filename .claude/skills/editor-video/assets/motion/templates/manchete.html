@@ -14,13 +14,15 @@
   #box { position: absolute; left: 60px; right: 150px; display: flex; flex-direction: column; align-items: center; }
   #rot, #sub { font-weight: 800; letter-spacing: 3px; text-transform: uppercase; white-space: nowrap;
                text-shadow: 0 4px 18px rgba(0,0,0,.55); }
-  #rot { font-size: 34px; color: #fff; margin-bottom: 8px; }
+  #rot { font-size: 30px; color: #fff; margin-bottom: 14px; padding: 8px 22px; border-radius: 999px; letter-spacing: .22em;
+         background: linear-gradient(135deg, rgba(255,255,255,.22), rgba(255,255,255,.08)); border: 1.5px solid rgba(255,255,255,.4);
+         box-shadow: 0 10px 30px rgba(0,0,0,.25); text-shadow: none; }
   #sub { font-size: 36px; color: #f3eaff; margin-top: 6px; }
   .ln { display: flex; justify-content: center; gap: .26em; white-space: nowrap; font-weight: 900; line-height: 1.02;
         text-transform: uppercase; letter-spacing: .5px; }
   .w { position: relative; display: inline-block; color: #fff; text-shadow: 0 6px 26px rgba(0,0,0,.55); }
-  .w.hi { color: transparent; -webkit-background-clip: text; background-clip: text; text-shadow: none;
-          filter: drop-shadow(0 6px 22px rgba(0,0,0,.5)); }
+  .w.hi { text-shadow: 0 6px 26px rgba(0,0,0,.45); }
+  .w > span { display: inline-block; }
   .strike { position: absolute; left: -4%; top: 52%; height: .11em; border-radius: .06em; width: 0; }
   .ghost { position: absolute; inset: 0; opacity: 0; mix-blend-mode: screen; }
   #ic { margin-top: 14px; width: 120px; height: 120px; border-radius: 50%; display: grid; place-items: center; }
@@ -32,6 +34,8 @@ import motion from '/lib/runtime.js';
 const p = motion.params, W = motion.w, D = motion.duration;
 const [c1, c2] = p.cores || ['#C9B2FF', '#FF5FB0'];
 const grad = `linear-gradient(90deg, ${c1}, ${c2})`;
+const hex = (c) => { const h = c.replace('#', ''); return [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16)); };
+const mix = (a, b, k) => { const A = hex(a), B = hex(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * k)).join(',')})`; };
 const rawL = p.linhas && p.linhas.length ? p.linhas : [p.text || ''];
 const linhas = rawL.map((l) => (typeof l === 'object' ? String(l.text || '') : String(l)));
 const linhaAt = rawL.map((l) => (typeof l === 'object' && typeof l.at === 'number' ? l.at : null));
@@ -54,9 +58,10 @@ const words = [];
 linhas.forEach((txt, li) => {
   const ln = document.createElement('div'); ln.className = 'ln';
   String(txt).split(/\s+/).filter(Boolean).forEach((tok) => {
-    const w = document.createElement('span'); w.className = 'w'; w.textContent = tok;
+    const w = document.createElement('span'); w.className = 'w';
     const hi = destaque.has(norm(tok)) || (autoLast && li === linhas.length - 1);
-    if (hi) { w.classList.add('hi'); w.style.backgroundImage = grad; }
+    const letters = motion.split(w, 'chars', tok);
+    if (hi) { w.classList.add('hi'); letters.forEach((c, j) => { c.style.color = mix(c1, c2, letters.length > 1 ? j / (letters.length - 1) : 0); }); }
     const rk = riscarAll || riscar.has(norm(tok));
     let strike = null, ghost = null;
     if (rk) {
@@ -68,7 +73,7 @@ linhas.forEach((txt, li) => {
       ghost.style.color = '#ff3b8a'; w.appendChild(ghost);
     }
     ln.appendChild(w);
-    words.push({ el: w, strike, ghost, rk, li });
+    words.push({ el: w, strike, ghost, rk, li, letters, hi });
   });
   holder.appendChild(ln);
 });
@@ -98,11 +103,28 @@ motion.onFrame((t) => {
   sub.style.transform = `translateY(${(1 - motion.prog(t, words.length ? words[n - 1].at : 0.2, 0.35)) * 16}px)`;
   if (p.icone) { const q = motion.prog(t, (words[n - 1]?.at ?? 0.3) + 0.15, 0.4, 'outBack');
     ic.style.transform = `scale(${q}) rotate(${(1 - q) * -40 + Math.sin(t * 3) * 4}deg)`; ic.style.opacity = Math.min(1, q) * (1 - out); }
+  rot.style.transform = `translateY(${(1 - motion.spring(t, 0, { dur: 0.5, bounce: 0.3 })) * -24}px) scale(${0.9 + 0.1 * head})`;
+  const sweep = ((t - 0.4) / 2.2) % 1;                       // brilho que atravessa as palavras em destaque
   words.forEach((w, i) => {
-    const k = motion.prog(t, w.at, 0.32, 'outCubic');
-    w.el.style.opacity = k * (1 - out);
-    w.el.style.filter = (w.el.classList.contains('hi') ? 'drop-shadow(0 6px 22px rgba(0,0,0,.5)) ' : '') + (k < 1 ? `blur(${(1 - k) * 10}px)` : '');
-    w.el.style.transform = `translateY(${(1 - k) * 34}px)`;
+    const k = motion.clamp(motion.spring(t, w.at, { dur: 0.5, bounce: 0.25 }), 0, 1.2);
+    w.el.style.opacity = (1 - out);
+    w.el.style.filter = out > 0 ? `blur(${out * 12}px)` : 'none';
+    w.el.style.transform = `translateY(${-out * 30}px)`;
+    const L = w.letters.length;
+    w.letters.forEach((c, j) => {
+      const kc = motion.spring(t, w.at + j * 0.022, { dur: 0.48, bounce: 0.32 });
+      const kp = motion.spring(t - 1 / motion.fps, w.at + j * 0.022, { dur: 0.48, bounce: 0.32 });
+      const blur = Math.min(12, Math.abs(kc - kp) * motion.fps * 1.6) + (kc < 0.05 ? 10 : 0);
+      c.style.opacity = motion.clamp(kc * 2.2);
+      c.style.transform = `translateY(${(1 - kc) * 46}px) scale(${0.6 + 0.4 * kc}) rotate(${(1 - kc) * 8}deg)`;
+      let f = blur > 0.3 ? `blur(${blur.toFixed(1)}px)` : '';
+      if (w.hi && t > w.at + 0.5) {
+        const d = Math.abs(sweep * (L + 6) - 3 - j);
+        const b = Math.max(0, 1 - d / 2.2);
+        if (b > 0) f += ` brightness(${1 + 0.7 * b})`;
+      }
+      c.style.filter = f || 'none';
+    });
     if (w.rk) {
       const s = motion.prog(t, riscarAt + i * 0.06, 0.28, 'outCubic');
       w.strike.style.width = (108 * s) + '%';
@@ -111,7 +133,7 @@ motion.onFrame((t) => {
       const jitter = g ? (rnd(Math.floor(t * 30) + i) - 0.5) * 18 : 0;
       w.ghost.style.opacity = g * 0.7;
       w.ghost.style.transform = `translate(${jitter}px, ${-jitter * 0.3}px)`;
-      w.el.style.opacity = k * (1 - out) * (1 - 0.45 * s);
+      w.el.style.opacity = Math.min(1, k) * (1 - out) * (1 - 0.45 * s);
     }
   });
 });

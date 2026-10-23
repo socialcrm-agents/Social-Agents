@@ -23,6 +23,18 @@ const ease = {
   outElastic: (k) => (k === 0 || k === 1 ? k : Math.pow(2, -10 * k) * Math.sin((k * 10 - 0.75) * (2 * Math.PI) / 3) + 1),
 };
 
+/**
+ * Mola amortecida em função do tempo decorrido tau (s): 0 -> 1, com overshoot controlado.
+ * dur = tempo até assentar (~), bounce 0 (sem passar do ponto) .. 0.6 (bem elástico).
+ */
+function springK(tau, dur = 0.6, bounce = 0.25) {
+  if (tau <= 0) return 0;
+  const zeta = Math.max(0.12, 1 - bounce), w = (2 * Math.PI) / Math.max(dur, 0.05) * 0.9;
+  if (zeta >= 1) return 1 - Math.exp(-w * tau) * (1 + w * tau);
+  const wd = w * Math.sqrt(1 - zeta * zeta);
+  return 1 - Math.exp(-zeta * w * tau) * (Math.cos(wd * tau) + (zeta * w / wd) * Math.sin(wd * tau));
+}
+
 const imgCache = new Map();
 function loadImage(src) {
   if (imgCache.has(src)) return imgCache.get(src);
@@ -39,7 +51,7 @@ function loadImage(src) {
 
 const motion = {
   w: cfg.w, h: cfg.h, fps: cfg.fps, duration: cfg.duration, params: cfg.params || {},
-  clamp, lerp, ease,
+  clamp, lerp, ease, springK,
   _frame: [], _ready: [],
 
   /** registra a função que desenha o quadro no tempo t (segundos desde o início do clipe) */
@@ -54,6 +66,103 @@ const motion = {
   /** entra em t0 e sai em t1: 0 -> 1 -> 0 (in/out em segundos) */
   inOut(t, t0, t1, din = 0.35, dout = 0.3, e = 'outCubic') {
     return Math.min(this.prog(t, t0, din, e), 1 - this.prog(t, t1 - dout, dout, 'inQuad'));
+  },
+
+  // ---------------------------------------------------------------------------------------------------------
+  // Vocabulário premium (mola, cascata, desfoque de movimento, saída limpa, respiração, wipe, contagem).
+  // Tudo determinístico em t. Use em vez de transições lineares: é o que dá cara de After Effects.
+  // ---------------------------------------------------------------------------------------------------------
+
+  /** mola: 0 -> 1 (com overshoot) a partir de t0. opts: {dur, bounce} */
+  spring(t, t0, opts = {}) { return springK(t - t0, opts.dur ?? 0.6, opts.bounce ?? 0.25); },
+
+  /** saída 0 -> 1 nos últimos `d` segundos antes de t1 (curva suave) */
+  exitK(t, t1, d = 0.32) { return ease.inOutCubic(clamp((t - (t1 - d)) / d)); },
+
+  /** respiração/flutuação depois de entrar (px); fase por índice para não sincronizar tudo */
+  float(t, amp = 6, period = 3.2, phase = 0) { return Math.sin((t / period + phase) * 2 * Math.PI) * amp; },
+
+  /**
+   * Entrada + respiração + saída aplicadas a um elemento (transform/filter/opacity).
+   * opts: from ('up'|'down'|'left'|'right'|'scale'|'none'), dist (px), scale0, rot0 (graus), dur, bounce,
+   *       blur (máx. px do desfoque de movimento), out (s da saída; 0 = sem saída), t1 (fim), float (px), phase,
+   *       origin (transform-origin), extra (string de transform somada no fim). Devolve {k, o, x}.
+   */
+  appear(el, t, t0, opts = {}) {
+    const dur = opts.dur ?? 0.6, bounce = opts.bounce ?? 0.22, dist = opts.dist ?? 60, from = opts.from ?? 'up';
+    const k = springK(t - t0, dur, bounce), kp = springK(t - t0 - 1 / this.fps, dur, bounce);
+    const vel = Math.abs(k - kp) * this.fps;                       // velocidade da entrada (1/s)
+    const t1 = opts.t1 ?? this.duration, out = opts.out ?? 0.32;
+    const x = out > 0 ? this.exitK(t, t1, out) : 0;
+    const vis = t >= t0 ? 1 : 0;
+    let tx = 0, ty = 0;
+    const r = 1 - k;
+    if (from === 'up') ty = r * dist; else if (from === 'down') ty = -r * dist;
+    else if (from === 'left') tx = -r * dist; else if (from === 'right') tx = r * dist;
+    const s0 = opts.scale0 ?? (from === 'scale' ? 0.6 : 0.92);
+    const sc = (s0 + (1 - s0) * k) * (1 - 0.06 * x);
+    const rot = (opts.rot0 ?? 0) * r;
+    const fl = opts.float ? this.float(t, opts.float, 3.4, opts.phase ?? 0) * clamp((t - t0 - dur) / 0.6) : 0;
+    const blur = Math.min(opts.blur ?? 14, vel * (opts.blurK ?? 2.2)) + 12 * x;
+    const o = vis * clamp(k * 2.2) * (1 - x);
+    el.style.opacity = o;
+    el.style.transform = `translate(${tx}px, ${ty + fl - 14 * x}px) rotate(${rot}deg) scale(${sc}) ${opts.extra || ''}`;
+    el.style.filter = blur > 0.3 ? `blur(${blur.toFixed(2)}px)` : (opts.keepFilter || 'none');
+    if (opts.origin) el.style.transformOrigin = opts.origin;
+    return { k, o, x };
+  },
+
+  /** quebra o texto de um elemento em <span> por letra ('chars') ou palavra ('words'); devolve os spans */
+  split(el, mode = 'words', text = null) {
+    const src = text ?? el.textContent;
+    el.textContent = '';
+    const out = [];
+    const parts = mode === 'chars' ? [...src] : src.split(/(\s+)/);
+    for (const part of parts) {
+      if (/^\s+$/.test(part)) { el.appendChild(document.createTextNode(part)); continue; }
+      if (mode === 'chars' && part === ' ') { el.appendChild(document.createTextNode(' ')); continue; }
+      const sp = document.createElement('span');
+      sp.textContent = part;
+      sp.style.display = 'inline-block';
+      sp.style.willChange = 'transform, filter, opacity';
+      el.appendChild(sp);
+      out.push(sp);
+    }
+    return out;
+  },
+
+  /** cascata: aplica appear() em cada elemento com atraso `step` (s) entre eles */
+  stagger(els, t, t0, step = 0.045, opts = {}) {
+    els.forEach((e, i) => this.appear(e, t, t0 + i * step, { phase: i * 0.13, ...opts }));
+  },
+
+  /** pop com overshoot (escala) — selos, ícones, checks */
+  pop(t, t0, dur = 0.45, bounce = 0.45) { return springK(t - t0, dur, bounce); },
+
+  /** revelação com máscara (clip-path) na direção dada: 'right' (da esquerda p/ direita), 'left', 'down', 'up' */
+  wipe(el, t, t0, d = 0.5, dir = 'right') {
+    const k = ease.outExpo(clamp((t - t0) / d)), r = (1 - k) * 100;
+    const ins = { right: `0 ${r}% 0 0`, left: `0 0 0 ${r}%`, down: `0 0 ${r}% 0`, up: `${r}% 0 0 0` }[dir];
+    el.style.clipPath = `inset(${ins})`;
+    return k;
+  },
+
+  /** contagem com desaceleração até o valor (para números que "rolam") */
+  countUp(t, t0, d, value, decimals = 0) {
+    const k = ease.outExpo(clamp((t - t0) / d));
+    return (value * k).toFixed(decimals);
+  },
+
+  /** brilho que atravessa o texto/card (posição 0..1 a cada `period` s); use com a classe .shine */
+  shimmer(el, t, period = 2.6, t0 = 0) {
+    const ph = ((t - t0) / period) % 1;
+    el.style.backgroundPosition = `${(1.3 - ph * 1.6) * 100}% 0`;
+  },
+
+  /** tremida curta de impacto (px) entre at e at+d */
+  shake(t, at, amp = 10, d = 0.25) {
+    if (t < at || t > at + d) return 0;
+    return Math.sin((t - at) * 95) * amp * (1 - (t - at) / d);
   },
 
   /** tempo (s, relativo ao clipe) em que uma palavra-gatilho é dita; params.cues vem do plano */

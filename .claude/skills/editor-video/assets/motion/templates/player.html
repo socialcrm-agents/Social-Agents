@@ -8,7 +8,7 @@
 <html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
 <style>
   #win { position: absolute; left: 40px; right: 150px; border-radius: 26px; overflow: hidden;
-         background: rgba(12,10,22,.92); border: 3px solid rgba(190,170,255,.55); box-shadow: 0 30px 80px rgba(0,0,0,.5); }
+         background: rgba(12,10,22,.92); border: 2px solid rgba(190,170,255,.55); box-shadow: var(--sh-float), inset 0 1px 0 rgba(255,255,255,.2); }
   #head { position: absolute; left: 0; right: 0; top: 0; height: 74px; display: flex; align-items: center; gap: 14px;
           padding: 0 22px; background: linear-gradient(180deg, rgba(10,8,20,.95), rgba(10,8,20,.6)); z-index: 2; }
   #play { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
@@ -48,9 +48,9 @@ const total = p.total ? toSec(p.total) : Math.max(count / fps, D);
 const start = Number(it.start || 0);
 if (it.image) motion.waitFor(new Promise((r) => { img.onload = r; img.onerror = r; img.src = it.image; }));
 motion.onFrame(async (t) => {
-  const k = motion.inOut(t, 0, D, 0.4, 0.32, 'outCubic');
-  win.style.opacity = k;
-  win.style.transform = `translateY(${(1 - k) * -120}px) scale(${0.94 + 0.06 * k})`;
+  motion.appear(win, t, 0, { from: 'down', dist: 140, scale0: 0.86, rot0: -2, dur: 0.65, bounce: 0.24, t1: D, blur: 18, float: 3 });
+  const pl = document.getElementById('play');
+  pl.style.transform = `scale(${motion.pop(t, 0.35, 0.45, 0.55)})`;
   if (it.frames) {
     const i = motion.clamp(Math.round(t * fps), 0, count - 1) + 1;
     const src = it.frames.replace('%05d', String(i).padStart(5, '0'));

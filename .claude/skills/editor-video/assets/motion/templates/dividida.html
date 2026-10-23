@@ -229,7 +229,7 @@ const pw = CW, ph = personH;
 motion.onFrame(async (t) => {
   await motion.setFrame(img, 'plate', t);
   // pessoa: tela cheia -> painel -> tela cheia
-  const kin = motion.prog(t, 0.0, 0.6, 'inOutCubic'), kout = motion.prog(t, D - 0.55, 0.5, 'inOutCubic');
+  const kin = motion.springK(t, 0.75, 0.12), kout = motion.prog(t, D - 0.55, 0.5, 'inOutCubic');
   const k = kin * (1 - kout);
   const x = motion.lerp(0, X0, k), y = motion.lerp(0, py, k), w = motion.lerp(W, pw, k), h = motion.lerp(H, ph, k);
   Object.assign(person.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px', borderRadius: 36 * k + 'px',
@@ -243,9 +243,12 @@ motion.onFrame(async (t) => {
   }
   const out = 1 - motion.prog(t, D - 0.6, 0.4, 'inQuad');
   for (const a of anim) {
-    const q = motion.prog(t, a.t0, 0.45, a.kind === 'note' || a.kind === 'pop' ? 'outBack' : 'outCubic');
-    const o = Math.min(1, q * 1.6) * out;
+    const bz = a.kind === 'note' || a.kind === 'pop' ? 0.45 : 0.22;
+    const q = motion.springK(t - a.t0, 0.55, bz), qp = motion.springK(t - a.t0 - 1 / motion.fps, 0.55, bz);
+    const o = Math.min(1, q * 1.8) * out;
     a.e.style.opacity = o;
+    const mb = Math.min(12, Math.abs(q - qp) * motion.fps * 2) + (1 - out) * 8;   // desfoque de movimento
+    a.e.style.filter = mb > 0.3 ? `blur(${mb.toFixed(1)}px)` : 'none';
     if (a.kind === 'up') a.e.style.transform = `translateY(${(1 - q) * 30}px)`;
     else if (a.kind === 'left') a.e.style.transform = `translateX(${(1 - q) * -40}px)`;
     else if (a.kind === 'pop') a.e.style.transform = `scale(${0.85 + 0.15 * q})` + (a.pulse && q >= 1 ? ` scale(${1 + 0.025 * Math.sin(t * 6)})` : '');
