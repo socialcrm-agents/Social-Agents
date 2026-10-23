@@ -11,7 +11,10 @@ from __future__ import annotations
 import json
 import unittest
 
-import util
+import sys as _sys
+from pathlib import Path as _P
+_sys.path.insert(0, str(_P(__file__).resolve().parent))
+import util  # noqa: E402
 
 
 class BaselinePlanejamento(unittest.TestCase):

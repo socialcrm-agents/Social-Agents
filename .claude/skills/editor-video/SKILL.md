@@ -174,8 +174,21 @@ PY SK/scripts/edit.py <projeto> --note "tira o oi do começo e deixa a legenda m
 ```
 Cada `edit.py` grava a mudança em `project.json` (vale para todas as versões seguintes, inclusive se trocar de
 estilo) e renderiza a próxima versão. Pedido ambíguo: faça a leitura mais provável e diga qual foi.
-Pedido que nenhuma operação cobre: edite `timeline.json` e rode `render.py`; se for recorrente, proponha
-uma nova operação.
+
+**Revisão inteligente (só refaz o que mudou).** Todo elemento da `timeline.json` tem `id` estável (planos
+`sc1_8920`, animações `m1..` na ordem pedida, automáticas `a_<template>_<n>`, ícones `i<n>`, palavras atrás `b<n>`,
+gráficos `g_cta`, B-roll `r<n>`, legendas `p<n>`).
+- Ajuste fino que os comandos não cobrem: `--patch "ID.campo=valor"` (ex.: `m5.params.text=VICIANTE.`,
+  `m5.t1=15.2`, `sc1_8920.zoom0=1.2`, `g_cta.text="COMPRE"`), `--patch-remove ID`, `--patch-clear ID`. O patch
+  sobrevive a cortes, troca de estilo e replanejamento. Editar `timeline.json` à mão também funciona: no próximo
+  `plan.py` a diferença vira patch sozinha.
+- Antes de uma mudança grande, mostre o custo: `edit.py <projeto> <operações> --dry-run` (ou `run.py revisar`)
+  lista HIT/MISS por componente sem gravar nada. Ex.: mudar uma animação em 12–16 s refaz só ela e o trecho 12–16.
+- `motion.json` reaplicado não duplica: pedido idêntico é ignorado; pedido com `"id"` substitui o anterior.
+- O render imprime `HIT`/`MISS` de planos, máscaras, animações, trechos (4 s) e áudio, e grava
+  `versions/vN/revisao.json`. `run.py versoes <projeto>` mostra o histórico; `run.py rollback <projeto> --para N
+  [--render]` volta a uma versão (100 % cache); `run.py limpar-cache <projeto> --manter 5` libera disco.
+- Se o render falhar, o projeto volta sozinho ao estado anterior (nada fica pela metade).
 
 ## 6. Entrega
 

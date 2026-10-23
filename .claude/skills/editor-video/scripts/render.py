@@ -19,14 +19,17 @@ import sys
 import time
 from pathlib import Path
 
+import revisao
 from assets import behind_ass, caption_y, captions_ass, graphic_png, make_sfx
 from common import FONTS_DIR, EditorError, ffmpeg, load_json, log, main_guard, probe, project_paths, run, save_json
 
 W, H, FPS = 1080, 1920, 30
 
 
-def face_for_shots(tl: dict, work: Path) -> bool:
-    """Centraliza o zoom de cada plano no rosto. Devolve True se achou rosto."""
+def face_for_shots(tl: dict, work: Path, so_cache: bool = False) -> bool:
+    """Centraliza o zoom de cada plano no rosto. Devolve True se achou rosto.
+
+    so_cache: só usa rastreios já feitos (dry-run). Plano com `enquadramento_fixo` (patch manual) mantém cx/cy."""
     try:
         from vision import face_track
     except EditorError:
@@ -37,7 +40,9 @@ def face_for_shots(tl: dict, work: Path) -> bool:
         if sh["clip"] not in tracks:
             cache = work / f"face_{sh['clip']}.json"
             tracks[sh["clip"]] = load_json(cache) if cache.exists() else None
-            if tracks[sh["clip"]] is None:
+            if tracks[sh["clip"]] is None and so_cache:
+                tracks[sh["clip"]] = []
+            elif tracks[sh["clip"]] is None:
                 try:
                     tracks[sh["clip"]] = face_track(sh["src"], aspect=W / H)
                 except EditorError as exc:
@@ -57,8 +62,9 @@ def face_for_shots(tl: dict, work: Path) -> bool:
                            for m in tl.get("motion", []))
             # card/player no alto ou palavra atrás: o rosto desce no quadro para sobrar espaço em cima
             target_y = 0.56 if top_busy else 0.48 if has_word else 0.40
-            sh["cx"] = round(min(max((fx * z - 0.5) / (z - 1), 0), 1), 3)
-            sh["cy"] = round(min(max((fy * z - target_y) / (z - 1), 0), 1), 3)
+            if not sh.get("enquadramento_fixo"):
+                sh["cx"] = round(min(max((fx * z - 0.5) / (z - 1), 0), 1), 3)
+                sh["cy"] = round(min(max((fy * z - target_y) / (z - 1), 0), 1), 3)
             # queixo no quadro final (px): a legenda desse plano fica sempre abaixo dele
             fh = statistics.median(p["h"] for p in pts)
             zf = max(sh["zoom0"], sh["zoom1"])
@@ -67,18 +73,46 @@ def face_for_shots(tl: dict, work: Path) -> bool:
     return found
 
 
-def render_shots(tl: dict, work: Path, preset: str) -> Path:
-    """Monta o A-roll contínuo (cortes + zoom). Reaproveita se os planos não mudaram desde o último render."""
-    import hashlib
-    key = hashlib.sha1(json.dumps([tl["shots"], W, H, FPS], sort_keys=True).encode()).hexdigest()[:12]
+class Cache:
+    """Arquivos por componente em work/cache/<tipo>/<chave><ext>. Guarda várias versões: desfazer é HIT."""
+
+    def __init__(self, work: Path):
+        self.root = work / "cache"
+
+    def caminho(self, tipo: str, chave: str, ext: str) -> Path:
+        d = self.root / tipo
+        d.mkdir(parents=True, exist_ok=True)
+        return d / f"{chave}{ext}"
+
+    def tem(self, tipo: str, chave: str, ext: str) -> bool:
+        return (self.root / tipo / f"{chave}{ext}").exists()
+
+
+def _concat(files: list[Path], out: Path, extra: list[str] | None = None, inputs: list[str] | None = None) -> None:
+    """Concatena sem recodificar (lista com caminhos absolutos em barra normal: funciona no Windows)."""
+    lst = out.with_name(f".{out.stem}.lista.txt")
+    lst.write_text("".join("file '" + f.resolve().as_posix().replace("'", "'\\''") + "'\n" for f in files),
+                   encoding="utf-8")
+    tmp = out.with_name(out.stem + ".tmp" + out.suffix)
+    ffmpeg(["-f", "concat", "-safe", "0", "-i", str(lst), *(inputs or []), *(extra or ["-c", "copy"]), str(tmp)])
+    os.replace(tmp, out)
+    lst.unlink(missing_ok=True)
+
+
+def render_shots(tl: dict, work: Path, preset: str, reg: "revisao.Registro | None" = None,
+                 chaves: list[str] | None = None) -> Path:
+    """Monta o A-roll contínuo (cortes + zoom). Cada plano tem cache próprio (work/cache/planos): um corte num
+    trecho só re-codifica os planos que mudaram; o A-roll é a concatenação (sem recodificar)."""
+    chaves = chaves or [revisao.chave_plano(sh, W, H, FPS) for sh in tl["shots"]]
+    key = revisao.hk("aroll", chaves)
     aroll = work / "aroll.mkv"
     stamp = work / "aroll.key"
-    if aroll.exists() and stamp.exists() and stamp.read_text() == key:
+    cache = Cache(work)
+    if aroll.exists() and stamp.exists() and stamp.read_text() == key and all(cache.tem("planos", k, ".mkv") for k in chaves):
+        for sh, k in zip(tl["shots"], chaves):
+            reg and reg.anota("plano", sh.get("id", "?"), True, k, janela=(sh["t0"], sh["t1"]))
         log("   A-roll reaproveitado (planos iguais)")
         return aroll
-    d = work / "shots"
-    shutil.rmtree(d, ignore_errors=True)
-    d.mkdir(parents=True)
 
     def one(n: int, sh: dict) -> Path:
         speed = sh.get("speed", 1.0)
@@ -91,26 +125,66 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
               f"scale=w='2*trunc({W}*{z}/2)':h='2*trunc({H}*{z}/2)':eval=frame:flags=bicubic,"
               f"crop={W}:{H}:x='(in_w-{W})*{sh['cx']}':y='(in_h-{H})*{sh['cy']}'{tempo},fps={FPS},setsar=1,format=yuv420p")
         atempo = f"atempo={speed:.4f}," if abs(speed - 1) > 1e-3 else ""
-        out = d / f"{n:03d}.mp4"
+        k = chaves[n]
+        final = cache.caminho("planos", k, ".mkv")
+        if final.exists():
+            reg and reg.anota("plano", sh.get("id", str(n)), True, k, janela=(sh["t0"], sh["t1"]))
+            return final
+        t_ini = time.time()
+        out = final.with_name(f"{k}.tmp.mp4")
         ffmpeg(["-ss", f"{sh['in']:.3f}", "-i", sh["src"], "-t", f"{dur:.3f}", "-vf", vf,
                 "-af", f"{atempo}aresample=48000,afade=t=in:d=0.012,afade=t=out:st={max(tl_dur - 0.02, 0):.3f}:d=0.02,"
                 f"apad,atrim=0:{tl_dur:.4f}",  # áudio com a duração exata do plano: sem deriva entre som e imagem
                 "-frames:v", str(round(tl_dur * FPS)),
                 "-c:v", "libx264", "-preset", preset, "-crf", "13", "-threads", "2",
                 "-c:a", "pcm_s16le", str(out.with_suffix(".mkv"))])
-        return out.with_suffix(".mkv")
+        os.replace(out.with_suffix(".mkv"), final)
+        reg and reg.anota("plano", sh.get("id", str(n)), False, k, "plano novo ou alterado",
+                          round(time.time() - t_ini, 1), janela=(sh["t0"], sh["t1"]))
+        return final
 
     # um processo ffmpeg por plano, vários ao mesmo tempo (cada um usa pouco a CPU sozinho)
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(max_workers=max(2, (os.cpu_count() or 4))) as pool:
         files = list(pool.map(lambda a: one(*a), enumerate(tl["shots"])))
-    lst = d / "list.txt"
-    lst.write_text("".join(f"file '{f.name}'\n" for f in files), encoding="utf-8")
-    ffmpeg(["-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(aroll)])
+    _concat(files, aroll)
     stamp.write_text(key)
-    (work / "mask.mp4").unlink(missing_ok=True)
-    (work / "mask_stats.json").unlink(missing_ok=True)
     return aroll
+
+
+def precisa_mascara(tl: dict, has_face: bool = True) -> bool:
+    motions = tl.get("motion", [])
+    needs = any(m.get("needs_video") or m.get("layer") == "behind" or m.get("zona") == "topo" for m in motions)
+    return bool((tl["behind"] and has_face) or needs)
+
+
+def mascara_por_plano(tl: dict, work: Path, chaves: list[str], reg: "revisao.Registro | None" = None):
+    """Máscara da pessoa com cache por plano (work/cache/mascaras): só os planos novos passam pelo MediaPipe."""
+    from vision import person_mask
+    cache = Cache(work)
+    mask = work / "mask.mp4"
+    key = revisao.hk("mascara", chaves)
+    stamp = work / "mask.key"
+    arquivos, stats = [], []
+    for sh, k in zip(tl["shots"], chaves):
+        mp4, js = cache.caminho("mascaras", k, ".mp4"), cache.caminho("mascaras", k, ".json")
+        if mp4.exists() and js.exists():
+            reg and reg.anota("mascara", sh.get("id", "?"), True, k, janela=(sh["t0"], sh["t1"]))
+        else:
+            t_ini = time.time()
+            tmp = mp4.with_name(f"{k}.tmp.mp4")
+            st = person_mask(cache.caminho("planos", k, ".mkv"), tmp, W, H, FPS)
+            save_json(js, st)
+            os.replace(tmp, mp4)
+            reg and reg.anota("mascara", sh.get("id", "?"), False, k, "plano novo ou alterado",
+                              round(time.time() - t_ini, 1), janela=(sh["t0"], sh["t1"]))
+        arquivos.append(mp4)
+        stats += load_json(js)
+    if not (mask.exists() and stamp.exists() and stamp.read_text() == key):
+        _concat(arquivos, mask)
+        stamp.write_text(key)
+    save_json(work / "mask_stats.json", stats)
+    return mask, stats
 
 
 # quanto do alto do quadro (px, em 1920) cada elemento de topo precisa livre
@@ -225,7 +299,10 @@ def prepare_fonts(tl: dict, work: Path) -> Path:
     for src in files:
         dst = fdir / src.name
         if not dst.exists():
-            dst.symlink_to(src.resolve())
+            try:
+                dst.symlink_to(src.resolve())
+            except OSError:  # Windows sem modo desenvolvedor: copia (as fontes são pequenas)
+                shutil.copy2(src, dst)
     return fdir
 
 
@@ -255,10 +332,54 @@ def fx_chain(f: list[str], cur: str, fx: list[dict]) -> str:
 DUR_FX = {"tremida": 0.3, "clarao": 0.08, "glitch": 0.22, "whip": 0.1}
 
 
-def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: list, front: list,
-            out: Path, preset: str, motion_clips: list | None = None) -> None:
-    motion_clips = motion_clips or []
-    m_behind = [(m, p) for m, p in motion_clips if m.get("layer") == "behind" and mask]
+VOZ = "highpass=f=80,afftdn=nf=-28,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=2,loudnorm=I={lufs}:TP=-1.5:LRA=9,aresample=48000"
+LIMITE = "alimiter=limit=0.95"
+_LAT: dict = {}
+
+
+def latencia(filtro: str) -> float:
+    """Atraso (s) que um filtro de áudio introduz, medido no ffmpeg desta máquina (afftdn atrasa ~25 ms e o
+    alimiter ~5 ms, sem compensar). Medido uma vez por versão do ffmpeg e guardado em ~/.cache/editor-video."""
+    from common import MODELS_DIR
+    if filtro in _LAT:
+        return _LAT[filtro]
+    versao = run(["ffmpeg", "-hide_banner", "-version"]).splitlines()[0] if shutil.which("ffmpeg") else "?"
+    arq = MODELS_DIR.parent / "latencias.json"
+    dados = load_json(arq) or {}
+    chave = f"{versao}|{filtro}"
+    if chave not in dados:
+        def onset(af: str) -> float:
+            raw = subprocess.run(["ffmpeg", "-v", "error", "-nostdin", "-f", "lavfi", "-i",
+                                  "aevalsrc='0.5*sin(2*PI*1000*t)*between(t,0.5,0.6)':s=48000:d=1.5", "-af",
+                                  f"{af},aresample=48000", "-ac", "1", "-f", "s16le", "-"], capture_output=True).stdout
+            import array
+            amostras = array.array("h", raw)
+            pico = max((abs(x) for x in amostras), default=0) or 1
+            return next((i for i, x in enumerate(amostras) if abs(x) > 0.3 * pico), 0) / 48000
+        try:
+            dados[chave] = round(max(onset(filtro) - onset("anull"), 0.0), 4)
+            arq.parent.mkdir(parents=True, exist_ok=True)
+            save_json(arq, dados)
+        except Exception:  # sem medição: não compensa (comportamento antigo)
+            dados[chave] = 0.0
+    _LAT[filtro] = dados[chave]
+    return _LAT[filtro]
+
+
+def cadeia_voz(lufs) -> str:
+    """Tratamento da voz + compensação do atraso dos filtros (som e boca no mesmo quadro)."""
+    voz = VOZ.format(lufs=lufs)
+    lat = latencia(VOZ.format(lufs=-14))
+    return voz + (f",atrim=start={lat:.4f},asetpts=PTS-STARTPTS" if lat > 0.001 else "")
+
+
+def cadeia_limite() -> str:
+    lat = latencia(LIMITE)
+    return LIMITE + (f",atrim=start={lat:.4f},asetpts=PTS-STARTPTS,apad" if lat > 0.001 else "")
+
+
+def preparar_composicao(tl: dict, project: Path, behind: list, front: list) -> dict:
+    """Arquivos usados por toda a composição (uma vez por render): legendas, palavras atrás, gráficos e sons."""
     work = project / "work"
     gdir = work / "gfx"
     shutil.rmtree(gdir, ignore_errors=True)
@@ -266,14 +387,49 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
     captions_ass(tl, work / "captions.ass", extra_front=front)
     if behind:
         behind_ass(tl, behind, work / "behind.ass")
-    sfx_files = make_sfx(work / "sfx")
+    gfx = []
+    import assets
+    for k, g in enumerate(tl["graphics"]):
+        if g["type"] == "progress":
+            continue
+        png = gdir / f"{k:02d}_{g['type']}.png"
+        top_busy = any(m.get("zona") in ("topo", "barra") and m["t0"] < g["t1"] and m["t1"] > g["t0"]
+                       for m in tl.get("motion", []))
+        cta_top = g["type"] == "cta" and not top_busy and \
+            max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > assets.SAFE_BOTTOM - 220
+        gcfg = {**tl["graphics_cfg"], "logo_position": g.get("position"), "logo_opacity": g.get("opacity", 0.85)}
+        graphic_png(g["type"], g["text"], tl["style"], gcfg, png, top=cta_top)
+        gfx.append((png, g))
+    return {"gfx": gfx, "sfx_files": make_sfx(work / "sfx")}
+
+
+def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: list, front: list,
+            out: Path, preset: str, motion_clips: list | None = None, prep: dict | None = None,
+            janela: tuple | None = None, audio: bool = True) -> None:
+    """Grafo ffmpeg da composição. Sem `janela`: vídeo inteiro com áudio (modo clássico).
+    Com `janela` = (a, b, quadros): só aquele trecho, sem áudio, com o tempo absoluto preservado dentro do grafo
+    (legendas, efeitos e animações usam o mesmo relógio do vídeo inteiro) e saída começando em 0."""
+    motion_clips = motion_clips or []
+    prep = prep or preparar_composicao(tl, project, behind, front)
+    j0, j1 = (janela[0], janela[1]) if janela else (0.0, 0.0)
+    if janela:
+        motion_clips = [(m, p) for m, p in motion_clips if m["t0"] < j1 and m["t1"] > j0]
+    brolls = [r for r in tl["broll"] if not janela or (r["t0"] < j1 and r["t1"] > j0)]
+    gfx_sel = [(png, g) for png, g in prep["gfx"] if not janela or (g["t0"] < j1 and g["t1"] > j0)]
+    # trecho: lê o A-roll (e a máscara) a partir de meio segundo antes, mantendo os tempos originais (-copyts),
+    # e corta no grafo com meia-imagem de tolerância (o MKV guarda tempos em ms: 12,000 s pode virar 11,999 s)
+    shift = ""
+    seek = ["-ss", f"{max(j0 - 0.5, 0):.6f}", "-t", f"{j1 - j0 + 0.75:.6f}"] if janela else []
+    m_behind = [(m, p) for m, p in motion_clips if m.get("layer") == "behind" and mask]
+    work = project / "work"
+    sfx_files = prep["sfx_files"]
     total = tl["duration"]
 
-    inputs: list[str] = ["-i", str(aroll)]
+    inputs: list[str] = [*seek, "-i", str(aroll)]
     n_in = 1
     mask_idx = None
     if (behind or m_behind) and mask:
-        inputs += ["-i", str(mask)]
+        inputs += [*seek, "-i", str(mask)]
         mask_idx, n_in = n_in, n_in + 1
     motion_idx = []
     for m, p in motion_clips:
@@ -281,43 +437,33 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         motion_idx.append((n_in, m))
         n_in += 1
     broll_idx = []
-    for b in tl["broll"]:
-        dur = b["t1"] - b["t0"]
-        if b["kind"] == "image":
-            inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-i", b["src"]]
+    for b_ in brolls:
+        dur = b_["t1"] - b_["t0"]
+        if b_["kind"] == "image":
+            inputs += ["-loop", "1", "-t", f"{dur:.3f}", "-i", b_["src"]]
         else:
-            inputs += ["-ss", f"{b['src_in']:.3f}", "-t", f"{dur:.3f}", "-i", b["src"]]
+            inputs += ["-ss", f"{b_['src_in']:.3f}", "-t", f"{dur:.3f}", "-i", b_["src"]]
         broll_idx.append(n_in)
         n_in += 1
     gfx = []
-    for k, g in enumerate(tl["graphics"]):
-        if g["type"] == "progress":
-            continue
-        png = gdir / f"{k:02d}_{g['type']}.png"
-        import assets
-        top_busy = any(m.get("zona") in ("topo", "barra") and m["t0"] < g["t1"] and m["t1"] > g["t0"]
-                       for m in tl.get("motion", []))
-        cta_top = g["type"] == "cta" and not top_busy and \
-            max(caption_y(tl, t) for t in (g["t0"], (g["t0"] + g["t1"]) / 2)) > assets.SAFE_BOTTOM - 220
-        gcfg = {**tl["graphics_cfg"], "logo_position": g.get("position"), "logo_opacity": g.get("opacity", 0.85)}
-        graphic_png(g["type"], g["text"], tl["style"], gcfg, png, top=cta_top)
+    for png, g in gfx_sel:
         inputs += ["-loop", "1", "-t", f"{g['t1'] - g['t0']:.3f}", "-i", str(png)]
         gfx.append((n_in, g))
         n_in += 1
     sfx_idx = []
-    for s in tl["sfx"]:
+    for s in (tl["sfx"] if audio else []):
         inputs += ["-i", str(sfx_files[s["type"]])]
         sfx_idx.append((n_in, s))
         n_in += 1
     music_idx = None
-    if tl.get("music"):
+    if tl.get("music") and audio:
         inputs += ["-stream_loop", "-1", "-i", tl["music"]["path"]]
         music_idx, n_in = n_in, n_in + 1
 
-    splits = [b for b in tl["broll"] if b["mode"] == "split"]
+    splits = [b_ for b_ in brolls if b_["mode"] == "split"]
     f: list[str] = []
     n_copies = 1 + (1 if mask_idx is not None else 0) + len(splits)
-    f.append(f"[0:v]{tl['grade']},format=yuv420p,split={n_copies}" + "".join(f"[a{i}]" for i in range(n_copies)))
+    f.append(f"[0:v]{shift}{tl['grade']},format=yuv420p,split={n_copies}" + "".join(f"[a{i}]" for i in range(n_copies)))
     cur, copy = "a0", 1
     def motion_in(idx: int, m: dict, lbl: str) -> None:
         f.append(f"[{idx}:v]fps={FPS},format=rgba,setpts=PTS-STARTPTS+{m['t0']:.3f}/TB[{lbl}]")
@@ -329,14 +475,14 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
             motion_in(idx, m, f"mb{k}")
             f.append(f"[{bcur}][mb{k}]overlay=0:0:eof_action=pass:enable='between(t,{m['t0']:.3f},{m['t1']:.3f})'[bt{k + 1}]")
             bcur = f"bt{k + 1}"
-        f.append(f"[{mask_idx}:v]format=gray,scale={W}:{H}[mk]")
+        f.append(f"[{mask_idx}:v]{shift}format=gray,scale={W}:{H}[mk]")
         f.append(f"[a{copy}][mk]alphamerge[fg]")
         wins = [(b["t0"], b["t1"]) for b in behind] + [(m["t0"], m["t1"]) for m, _ in m_behind]
         en = "+".join(f"between(t,{a:.3f},{b:.3f})" for a, b in wins)
         f.append(f"[{bcur}][fg]overlay=0:0:enable='{en}'[vb]")
         cur, copy = "vb", copy + 1
 
-    for k, (b, idx) in enumerate(zip(tl["broll"], broll_idx)):
+    for k, (b, idx) in enumerate(zip(brolls, broll_idx)):
         t0, t1 = b["t0"], b["t1"]
         dur = t1 - t0
         lbl = f"br{k}"
@@ -399,11 +545,21 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         f.append(f"[{cur}][g{k}]overlay=x=0:y={y}:eof_action=pass:enable='between(t,{t0:.3f},{t1:.3f})'[vg{k}]")
         cur = f"vg{k}"
     cur = fx_chain(f, cur, tl.get("fx", []))
-    f.append(f"[{cur}]ass=captions.ass:fontsdir=fonts,format=yuv420p[vout]")
+    fim = (f",trim=start={max(j0 - 0.5 / FPS, 0):.6f},setpts=PTS-STARTPTS,tpad=stop_mode=clone:stop_duration=1"
+           if janela else "")
+    f.append(f"[{cur}]ass=captions.ass:fontsdir=fonts,format=yuv420p{fim}[vout]")
+    if not audio:
+        tag = f"{j0:07.2f}".replace(".", "_")
+        graph = work / f"graph_{tag}.txt"
+        graph.write_text(";\n".join(f), encoding="utf-8")
+        ffmpeg([*(["-copyts"] if janela else []), *inputs, "-filter_complex_script", graph.name, "-map", "[vout]", "-an",
+                *(["-frames:v", str(janela[2])] if janela else ["-t", f"{total:.3f}"]), "-r", str(FPS),
+                "-c:v", "libx264", "-preset", preset, "-crf", "19" if preset == "medium" else "18",
+                "-profile:v", "high", "-pix_fmt", "yuv420p", str(out.resolve())], cwd=work)
+        return
 
     lufs = tl["audio"]["lufs"]
-    f.append(f"[0:a]highpass=f=80,afftdn=nf=-28,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=2,"
-             f"loudnorm=I={lufs}:TP=-1.5:LRA=9,aresample=48000[voice]")
+    f.append(f"[0:a]{cadeia_voz(lufs)}[voice]")
     mix = ["[voice]"]
     if music_idx is not None:
         mv = tl["music"].get("volume", 0.12)
@@ -416,9 +572,9 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         f.append(f"[{idx}:a]volume={s['gain'] * 0.5:.3f},adelay={ms}|{ms}[s{k}]")
         mix.append(f"[s{k}]")
     if len(mix) > 1:
-        f.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=first,alimiter=limit=0.95[aout]")
+        f.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=first,{cadeia_limite()}[aout]")
     else:
-        f.append("[voice]alimiter=limit=0.95[aout]")
+        f.append(f"[voice]{cadeia_limite()}[aout]")
 
     graph = work / "graph.txt"
     graph.write_text(";\n".join(f), encoding="utf-8")
@@ -428,6 +584,46 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
             "-movflags", "+faststart", str(out.resolve())]
     # caminhos relativos (behind.ass, captions.ass, fonts) são resolvidos dentro de work/
     ffmpeg(args, cwd=work)
+
+
+def mix_audio(tl: dict, aroll: Path, prep: dict, out: Path) -> None:
+    """Áudio final sozinho (voz tratada + SFX + trilha + loudness), igual ao da composição clássica."""
+    total = tl["duration"]
+    inputs: list[str] = ["-i", str(aroll)]
+    n_in = 1
+    sfx_idx = []
+    for s in tl["sfx"]:
+        inputs += ["-i", str(prep["sfx_files"][s["type"]])]
+        sfx_idx.append((n_in, s))
+        n_in += 1
+    music_idx = None
+    if tl.get("music"):
+        inputs += ["-stream_loop", "-1", "-i", tl["music"]["path"]]
+        music_idx, n_in = n_in, n_in + 1
+    f: list[str] = []
+    lufs = tl["audio"]["lufs"]
+    f.append(f"[0:a]{cadeia_voz(lufs)}[voice]")
+    mix = ["[voice]"]
+    if music_idx is not None:
+        mv = tl["music"].get("volume", 0.12)
+        f.append("[voice]asplit=2[voice_m][voice_sc]")
+        f.append(f"[{music_idx}:a]atrim=0:{total:.3f},volume={mv},aresample=48000[mus]")
+        f.append("[mus][voice_sc]sidechaincompress=threshold=0.03:ratio=8:attack=20:release=300[duck]")
+        mix = ["[voice_m]", "[duck]"]
+    for k, (idx, s) in enumerate(sfx_idx):
+        ms = int(s["t"] * 1000)
+        f.append(f"[{idx}:a]volume={s['gain'] * 0.5:.3f},adelay={ms}|{ms}[s{k}]")
+        mix.append(f"[s{k}]")
+    if len(mix) > 1:
+        f.append(f"{''.join(mix)}amix=inputs={len(mix)}:normalize=0:duration=first,{cadeia_limite()}[aout]")
+    else:
+        f.append(f"[voice]{cadeia_limite()}[aout]")
+    graph = out.with_suffix(".graph.txt")
+    graph.write_text(";\n".join(f), encoding="utf-8")
+    tmp = out.with_name(out.stem + ".tmp.m4a")
+    ffmpeg([*inputs, "-filter_complex_script", str(graph), "-map", "[aout]", "-t", f"{total:.3f}",
+            "-c:a", "aac", "-b:a", "192k", "-ar", "48000", str(tmp)])
+    os.replace(tmp, out)
 
 
 def qa(out: Path, tl: dict, qa_dir: Path, name: str) -> dict:
@@ -465,34 +661,40 @@ def main() -> None:
         _t[0] = agora
 
     work = paths["work"]
+    reg = revisao.Registro()
     prepare_fonts(tl, work)
     has_face = face_for_shots(tl, work)
     log(f"   rosto detectado: {'sim' if has_face else 'não'}")
     etapa("rosto")
-    aroll = render_shots(tl, work, "ultrafast")  # intermediário: rápido e quase sem perda (crf 13)
+    chaves_planos = [revisao.chave_plano(sh, W, H, FPS) for sh in tl["shots"]]
+    aroll = render_shots(tl, work, "ultrafast", reg, chaves_planos)  # intermediário: rápido e quase sem perda (crf 13)
     etapa("planos")
     mask, stats = None, None
     motions = tl.get("motion", [])
-    needs_mask = any(m.get("needs_video") or m.get("layer") == "behind" or m.get("zona") == "topo" for m in motions)
-    if (tl["behind"] and has_face) or needs_mask:
-        from vision import person_mask
-        mask = work / "mask.mp4"
-        cache = work / "mask_stats.json"
-        if mask.exists() and cache.exists():
-            stats = load_json(cache)
-            log("   máscara reaproveitada")
-        else:
-            stats = person_mask(aroll, mask, W, H, FPS)
-            save_json(cache, stats)
+    if precisa_mascara(tl, has_face):
+        mask, stats = mascara_por_plano(tl, work, chaves_planos, reg)
     etapa("máscara")
+    chaves_motion = {m.get("id"): revisao.chave_motion(m, tl, chaves_planos, bool(mask), work) for m in motions}
     clips = []
     if motions:
-        from motion import hand_track, render_clip
-        hands = hand_track(aroll, FPS, W, H) if any(m.get("hand") for m in motions) else None
-        # duas animações por vez: enquanto uma abre o Chromium ou extrai quadros, a outra usa a CPU
         from concurrent.futures import ThreadPoolExecutor
+
+        from motion import hand_track, render_clip
+        novos = [m for m in motions if not (work / "motion" / f"clip_{chaves_motion[m.get('id')]}.mov").exists()]
+        hands = hand_track(aroll, FPS, W, H) if any(m.get("hand") for m in novos) else None
+
+        def um(m: dict) -> Path:
+            k = chaves_motion[m.get("id")]
+            hit = (work / "motion" / f"clip_{k}.mov").exists()
+            t_ini = time.time()
+            path = render_clip(m, project, aroll, mask, tl, hands, chave=k, chaves_planos=chaves_planos)
+            reg.anota("motion", f"{m.get('id')}:{m.get('template') or m.get('page')}", hit, k,
+                      "" if hit else "animação nova ou alterada", None if hit else round(time.time() - t_ini, 1),
+                      janela=(m["t0"], m["t1"]))
+            return path
+        # duas animações por vez: enquanto uma abre o Chromium ou extrai quadros, a outra usa a CPU
         with ThreadPoolExecutor(max_workers=2) as pool:
-            clips = list(zip(motions, pool.map(lambda m: render_clip(m, project, aroll, mask, tl, hands), motions)))
+            clips = list(zip(motions, pool.map(um, motions)))
     etapa("motion")
     tl["recuo"] = recuo_windows(motions, stats)
     if tl["recuo"]:
@@ -515,12 +717,47 @@ def main() -> None:
     out = paths["renders"] / f"{name}.mp4"
     paths["renders"].mkdir(parents=True, exist_ok=True)
     etapa("palavras atrás")
-    compose(tl, project, aroll, mask, behind, front, out, preset, clips)
+    prep = preparar_composicao(tl, project, behind, front)
+    if os.environ.get("EDITOR_COMPOSICAO", "trechos") == "inteira":
+        compose(tl, project, aroll, mask, behind, front, out, preset, clips, prep=prep)  # modo clássico (um grafo)
+    else:
+        from concurrent.futures import ThreadPoolExecutor
+        cache = Cache(work)
+        fsig = revisao.fontes_sig(work)
+
+        def trecho(j: tuple) -> Path:
+            a_, b_, _nq = j
+            k = revisao.chave_trecho(tl, a_, b_, chaves_planos, chaves_motion, bool(mask), preset, fsig)
+            dst = cache.caminho("trechos", k, ".mp4")
+            ident = f"{a_:05.1f}-{b_:05.1f}"
+            if dst.exists():
+                reg.anota("trecho", ident, True, k, janela=(a_, b_))
+                return dst
+            t_ini = time.time()
+            tmp = dst.with_name(f"{k}.tmp.mp4")
+            compose(tl, project, aroll, mask, behind, front, tmp, preset, clips, prep=prep, janela=j, audio=False)
+            os.replace(tmp, dst)
+            reg.anota("trecho", ident, False, k, "algo mudou neste trecho", round(time.time() - t_ini, 1), janela=(a_, b_))
+            return dst
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            partes = list(pool.map(trecho, revisao.janelas(tl["duration"], FPS)))
+        ka = revisao.chave_audio(tl, chaves_planos)
+        am = cache.caminho("audio", ka, ".m4a")
+        if am.exists():
+            reg.anota("audio", "mix", True, ka)
+        else:
+            t_ini = time.time()
+            mix_audio(tl, aroll, prep, am)
+            reg.anota("audio", "mix", False, ka, "voz, sons ou trilha mudaram", round(time.time() - t_ini, 1))
+        _concat(partes, out, inputs=["-i", str(am)],
+                extra=["-map", "0:v", "-map", "1:a", "-c", "copy", "-movflags", "+faststart"])
     etapa("composição final")
     vdir = paths["versions"] / f"v{v}"
     vdir.mkdir(parents=True, exist_ok=True)
     save_json(vdir / "timeline.json", tl)
     save_json(vdir / "project.json", proj)
+    if (work / "timeline_gerada.json").exists():  # a timeline exatamente como o plan.py gerou (para o rollback)
+        shutil.copy2(work / "timeline_gerada.json", vdir / "timeline_gerada.json")
     save_json(paths["project"], proj)
     report = qa(out, tl, paths["qa"], name)
     etapa("QA")
@@ -528,10 +765,12 @@ def main() -> None:
                   behind_used=[b["text"] for b in behind], behind_front=[b["text"] for b in front],
                   tempos={n: round(s, 1) for n, s in tempos})
     save_json(vdir / "qa.json", report)
+    save_json(vdir / "revisao.json", {"versao": v, "resumo": reg.resumo(), "itens": reg.itens,
+                                      "segundos": report["seconds"], "tempos": report["tempos"]})
     log(f"OK: {out} ({report['duration']}s, {report['lufs']} LUFS, render {report['seconds']}s)")
+    log(f"   revisão: {reg.linha()}")
     log(f"   contato dos cortes: {report['sheet']}")
     log("   tempos: " + " | ".join(f"{n} {s:.1f}s" for n, s in tempos if s >= 0.05))
-
 
 if __name__ == "__main__":
     main_guard(main)

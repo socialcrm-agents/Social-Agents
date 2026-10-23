@@ -13,6 +13,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import revisao
 from common import (FORMATS, EditorError, load_brand, load_json, load_style, log, main_guard, norm, perfil, project_paths,
                     save_json)
 
@@ -229,8 +230,10 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
 
 def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: list[tuple]) -> list[dict]:
     out = []
+    removidos = {str(x) for x in ov.get("motion_remove", [])}
     for n, req in enumerate(ov.get("motion", []), 1):
-        if n in set(ov.get("motion_remove", [])):
+        rid = str(req.get("id") or f"m{n}")
+        if str(n) in removidos or rid in removidos:
             continue
         hit = find_word(words, req["at"]) if isinstance(req.get("at"), str) else None
         if isinstance(req.get("at"), str) and not hit:
@@ -246,7 +249,7 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
             continue
         item = {**MOTION_DEFAULTS.get(req.get("template", ""), {}), **{k: v for k, v in req.items() if k not in ("at", "until", "dur")}}
         item["params"] = {**MOTION_DEFAULTS.get(req.get("template", ""), {}).get("params", {}), **req.get("params", {})}
-        item.update(t0=t0, t1=t1, params=resolve_cues(item["params"], words, t0, t1))
+        item.update(id=rid, t0=t0, t1=t1, params=resolve_cues(item["params"], words, t0, t1))
         if item["params"].get("follow") == "hand":
             item["hand"] = True
         out.append(item)
@@ -259,7 +262,8 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
             if not name or t0 - last < 4.5 or any(a - 1.0 < t0 < b + 0.2 for a, b in busy) \
                     or any(m["t0"] - 0.5 < t0 < m["t1"] + 0.5 for m in out):
                 continue
-            out.append({"template": "icone", "layer": "front", "t0": round(t0, 3), "t1": round(min(t0 + 1.6, total), 3),
+            out.append({"id": f"i{w.get('i', 0)}", "template": "icone", "layer": "front", "t0": round(t0, 3),
+                        "t1": round(min(t0 + 1.6, total), 3),
                         "params": {"icon": name, "label": w["w"].strip(".,!?:;"), "at": 0.0,
                                    "color": style["graphics"]["accent"], "y": 470}, "auto": True})
             last = t0
@@ -275,7 +279,19 @@ def main() -> None:
     if not edl:
         raise EditorError("edl.json não encontrado. Rode analyze.py.")
     style = load_style(proj["style"], proj.get("brand"))
+    # timeline persistente: o que mudou à mão em timeline.json desde a última geração vira patch (não se perde)
+    paths["work"].mkdir(parents=True, exist_ok=True)
+    gerada_path = paths["work"] / "timeline_gerada.json"
+    gerada = load_json(gerada_path)
+    capturados = revisao.capturar_edicoes(gerada, load_json(paths["timeline"]))
+    if capturados:
+        o = proj.setdefault("overrides", {})
+        o["patches"] = revisao.juntar_patches(o.get("patches", []), capturados)
+        save_json(paths["project"], proj)
+        log(f"   {len(capturados)} edição(ões) manual(is) da timeline.json guardada(s) como patch (sobrevivem ao replanejamento)")
     ov = dict(proj.get("overrides", {}))
+    patches = ov.get("patches", [])
+    usados: set = set()
     brand = load_brand(proj.get("brand"))
     # padrões da marca: correções de palavras, CTA por estilo, ícones próprios (o pedido do usuário vence)
     ov["word_fixes"] = {**brand.get("word_fixes", {}), **ov.get("word_fixes", {})}
@@ -297,6 +313,10 @@ def main() -> None:
             cap.update(words_per_page=cap["words_per_page"] + 2, max_chars=int(cap["max_chars"] * 1.8))
     cap.update(ov.get("caption", {}))
     zcfg = {**style["zoom"], **ov.get("zoom", {})}
+    zoom_sig = revisao.hk(zcfg)
+    # zoom já decidido para um plano (mesmo id) é mantido: um corte não muda o enquadramento do resto do vídeo
+    zoom_ant = {s_["id"]: (s_["zoom0"], s_["zoom1"]) for s_ in (gerada or {}).get("shots", [])
+                if s_.get("id") and (gerada or {}).get("revisao", {}).get("zoom_sig") == zoom_sig and not s_.get("_patch")}
 
     # 1) planos com tempo na timeline final + zoom
     # velocidade da fala (ex.: 1.15 = 15% mais rápido, sem mudar o tom); duração quantizada em quadros (sem deriva)
@@ -316,23 +336,28 @@ def main() -> None:
             punch = n % zcfg["punch_every"] == 1
             z0 = zcfg["punch"] if punch else zcfg["base"]
             z1 = z0 + zcfg["push"] + (0.03 if punch else 0.0)
-        plan_shots.append({"clip": s["clip"], "src": clips[s["clip"]]["path"], "in": s["in"], "out": s["out"],
+        sid = f"s{s['clip']}_{int(round(s['in'] * 1000))}"
+        if sid in zoom_ant:
+            z0, z1 = zoom_ant[sid]
+        plan_shots.append({"id": sid, "clip": s["clip"], "src": clips[s["clip"]]["path"], "in": s["in"], "out": s["out"],
                            "t0": round(t, 3), "t1": round(t + dur, 3), "zoom0": round(z0, 3), "zoom1": round(z1, 3),
                            "cx": 0.5, "cy": 0.42, "speed": speed})
         t += dur
     total = round(t, 3)
+    plan_shots = revisao.aplicar_patches("shots", plan_shots, patches, usados)
 
     # 2) palavras na timeline final (com correções do usuário)
     fixes = ov.get("word_fixes", {})
     words = []
+    dropped = set(edl["dropped"])
     for sh in plan_shots:
-        for w in words_src:
+        for idx, w in enumerate(words_src):
             if w["clip"] == sh["clip"] and sh["in"] <= (w["t0"] + w["t1"]) / 2 < sh["out"]:
-                idx = words_src.index(w)
-                if idx in set(edl["dropped"]):
+                if idx in dropped:
                     continue
                 words.append({"w": fix_word(w["w"], fixes), "t0": round(sh["t0"] + max(w["t0"] - sh["in"], 0) / speed, 3),
-                              "t1": round(min(sh["t0"] + (w["t1"] - sh["in"]) / speed, sh["t1"]), 3), "emph": False})
+                              "t1": round(min(sh["t0"] + (w["t1"] - sh["in"]) / speed, sh["t1"]), 3), "emph": False,
+                              "i": idx})
 
     # 3) ênfase: melhor palavra de cada frase + pedidos do usuário
     sentence, last_emph = [], -9.0
@@ -366,7 +391,8 @@ def main() -> None:
     for n, p in enumerate(pages):
         t0 = words[p[0]]["t0"]
         nxt = words[pages[n + 1][0]]["t0"] if n + 1 < len(pages) else total
-        cap_pages.append({"t0": t0, "t1": round(min(nxt, words[p[-1]]["t1"] + 0.6), 3), "words": p})
+        cap_pages.append({"id": f"p{words[p[0]]['i']}", "t0": t0, "t1": round(min(nxt, words[p[-1]]["t1"] + 0.6), 3),
+                          "words": p})
 
     # 5) palavras atrás da pessoa (fora da janela do gancho e do CTA)
     gfx_hook_end = 2.9 if style["graphics"]["hook_banner"] else (4.3 if style["graphics"]["lower_third"] else 0.3)
@@ -386,12 +412,13 @@ def main() -> None:
             too_close = any(abs(w["t0"] - b["t0"]) < 4.0 or b["text"] == text for b in behind)
             if w["t0"] < gfx_hook_end or w["t0"] + 1.0 > cta_start or too_close or len(behind) >= bcfg["max"]:
                 continue
-            behind.append({"text": text, "t0": round(max(w["t0"] - 0.08, 0), 3),
+            behind.append({"id": f"b{w['i']}", "text": text, "t0": round(max(w["t0"] - 0.08, 0), 3),
                            "t1": round(min(w["t0"] + 1.9, total), 3)})
         for req in ov.get("behind_add", []):
             hit = next((w for w in words if norm(w["w"]) == norm(req.get("at", req["text"]))), None)
             if hit:
-                behind.append({"text": apply_case(req["text"], bcfg["case"]), "t0": round(max(hit["t0"] - 0.08, 0), 3),
+                behind.append({"id": f"b{hit['i']}", "text": apply_case(req["text"], bcfg["case"]),
+                               "t0": round(max(hit["t0"] - 0.08, 0), 3),
                                "t1": round(min(hit["t0"] + req.get("dur", 1.9), total), 3)})
         # a palavra não atravessa troca de plano (a cabeça muda de lugar no corte)
         for b in behind:
@@ -417,16 +444,17 @@ def main() -> None:
                     if src_in + dur > b["duration"]:
                         src_in = 0.0
                     cursor[b["id"]] = src_in + dur + 3.0
-                broll.append({"src": b["path"], "kind": b["kind"], "t0": w["t0"], "t1": round(w["t0"] + dur, 3),
+                broll.append({"id": f"r{w['i']}", "src": b["path"], "kind": b["kind"], "t0": w["t0"],
+                              "t1": round(w["t0"] + dur, 3),
                               "src_in": round(src_in, 2), "mode": rcfg["mode"], "cue": w["w"]})
                 k += 1
         drop = set(ov.get("broll_remove", []))
         broll = [b for n, b in enumerate(broll, 1) if n not in drop]
-    for req in ov.get("broll_at", []):
+    for k_req, req in enumerate(ov.get("broll_at", []), 1):
         hit = next((w for w in words if norm(w["w"]) == norm(req["at"].split()[0])), None)
         src = next((b for b in pool if b["id"] == req.get("src")), None) or (pool[0] if pool else None)
         if hit and src:
-            broll.append({"src": src["path"], "kind": src["kind"], "t0": hit["t0"],
+            broll.append({"id": f"ra{k_req}", "src": src["path"], "kind": src["kind"], "t0": hit["t0"],
                           "t1": round(hit["t0"] + req.get("dur", rcfg["max_dur"]), 3), "src_in": req.get("src_in", 0.0),
                           "mode": req.get("mode", rcfg["mode"]), "cue": req["at"]})
     broll.sort(key=lambda b: b["t0"])
@@ -480,8 +508,11 @@ def main() -> None:
                                            for x in motion if not x.get("auto"))]
         for m in auto:
             m.update({k: v for k, v in MOTION_DEFAULTS.get(m["template"], {}).items() if k not in m})
+            wi = min(words, key=lambda w_: abs(w_["t0"] - m["t0"]))["i"] if words else 0
+            m["id"] = f"a_{m['template']}_{wi}"
         motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
         fx += trig_fx
+    motion = revisao.aplicar_patches("motion", motion, patches, usados)
     if motion and not perfil()["motion"]:
         log(f"   {len(motion)} animação(ões) puladas: elas fazem parte do Pacote Motion 3D (não instalado)")
         motion, trig_sfx = [], []
@@ -521,6 +552,11 @@ def main() -> None:
                 if m.get("layer") == "full" and m["t0"] < gr["t1"] and m["t1"] > gr["t0"]:
                     m["params"].setdefault("cta", gr["text"])
     graphics = kept
+    nch = 0
+    for gr in graphics:
+        if gr["type"] == "chapter":
+            nch += 1
+        gr["id"] = f"g_{gr['type']}" + (str(nch) if gr["type"] == "chapter" else "")
 
     # 9) efeitos sonoros (sutis, abaixo da voz)
     s = style["sfx"]
@@ -549,7 +585,14 @@ def main() -> None:
     sfx += trig_sfx
     sfx.sort(key=lambda x: x["t"])
 
-    save_json(paths["timeline"], {
+    behind = revisao.aplicar_patches("behind", behind, patches, usados)
+    broll = revisao.aplicar_patches("broll", broll, patches, usados)
+    graphics = revisao.aplicar_patches("graphics", graphics, patches, usados)
+    for k_fx, f_ in enumerate(fx):
+        f_.setdefault("id", f"fx_{f_['type']}_{k_fx}")
+    fx = revisao.aplicar_patches("fx", fx, patches, usados)
+    revisao.avisar_orfaos(patches, usados)
+    timeline = {
         "style": style["name"], "w": fw, "h": fh, "fps": 30, "duration": total, "format": proj.get("format", "9:16"),
         "shots": plan_shots, "words": words, "captions": {"cfg": cap, "pages": [
             pg for pg in cap_pages if not any(  # o card de pergunta já mostra o que está sendo dito
@@ -558,7 +601,10 @@ def main() -> None:
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
         "sfx": sfx, "grade": style["grade"], "audio": style["audio"],
         "music": ov.get("music") or brand.get("music"), "motion": motion, "brand": proj.get("brand"), "fx": fx,
-    })
+        "revisao": {"zoom_sig": zoom_sig, "patches_aplicados": len(usados)},
+    }
+    save_json(paths["timeline"], timeline)
+    save_json(gerada_path, timeline)
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "
         f"{len(behind)} atrás da pessoa | {len(broll)} B-roll | {len(graphics)} gráficos | {len(motion)} motion | {len(sfx)} SFX")
 

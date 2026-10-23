@@ -69,18 +69,32 @@ def extract_frames(aroll: Path, mask: Path | None, grade: str, t0: float, t1: fl
     return info
 
 
-def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: dict, hands=None) -> Path:
+def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: dict, hands=None,
+                chave: str | None = None, chaves_planos: list | None = None) -> Path:
+    """Renderiza (ou reaproveita) o clipe. `chave` = chave do componente (revisao.chave_motion): com ela o cache
+    responde antes de extrair quadros ou rastrear mão/rosto, e mudar outro trecho do vídeo não refaz este clipe."""
     work = project / "work"
     mdir = work / "motion"
     mdir.mkdir(parents=True, exist_ok=True)
+    if chave and (mdir / f"clip_{chave}.mov").exists():
+        # decisões tomadas no render do clipe (ex.: palavra sem espaço acima da cabeça vai para a frente/topo)
+        lado = mdir / f"clip_{chave}.item.json"
+        if lado.exists():
+            item.update(json.loads(lado.read_text(encoding="utf-8")))
+        return mdir / f"clip_{chave}.mov"
     w, h, fps = tl["w"], tl["h"], tl["fps"]
     t0, t1 = item["t0"], item["t1"]
     params = json.loads(json.dumps(item.get("params", {})))  # cópia profunda (itens são reescritos abaixo)
     params.setdefault("cues", {})
     params["format"] = {"w": w, "h": h}
     if item.get("needs_video"):
-        shots = json.dumps(tl["shots"], sort_keys=True)
-        key = hashlib.sha1(f"{shots}{t0}{t1}{tl['grade']}{bool(mask)}{w}x{h}".encode()).hexdigest()[:10]
+        if chaves_planos is not None:  # só os planos sob a janela importam (um corte em outro trecho não refaz)
+            import revisao
+            shots = json.dumps(revisao.planos_na_janela(tl, chaves_planos, t0, t1))
+        else:
+            shots = json.dumps(tl["shots"], sort_keys=True)
+        key = hashlib.sha1(f"{shots}{t0 if chaves_planos is None else 0}{t1 - t0 if chaves_planos is not None else t1}"
+                           f"{tl['grade']}{bool(mask)}{w}x{h}".encode()).hexdigest()[:10]
         fdir = mdir / f"frames_{key}"
         info = extract_frames(aroll, mask, tl["grade"], t0, t1, fdir, fps)
         rel = fdir.relative_to(work).as_posix()
@@ -151,7 +165,10 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
     page = page_for(item)
     sig = hashlib.sha1(json.dumps([page, params, t1 - t0, w, h, fps], sort_keys=True).encode()
                        + _page_bytes(page, work)).hexdigest()[:12]
-    out = mdir / f"clip_{sig}.mov"
+    out = mdir / f"clip_{chave or sig}.mov"
+    decidido = {k: item[k] for k in ("layer", "zona", "libera") if k in item}
+    if chave:
+        (mdir / f"clip_{chave}.item.json").write_text(json.dumps(decidido), encoding="utf-8")
     if out.exists():
         return out
     job = {"page": page, "out": str(out), "w": w, "h": h, "fps": fps, "duration": round(t1 - t0, 3), "params": params,

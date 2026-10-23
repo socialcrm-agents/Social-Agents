@@ -30,21 +30,33 @@ Operações:
   --brand SLUG|nenhuma           aplica o kit de marca (cores, fontes, logo, CTAs, correções de palavras)
   --motion JSON|@arquivo.json    animação: {"template": "moldura", "at": "trecho falado", "dur": 5, "params": {...}}
                                  (lista em references/motion.md; "at" dentro de params aceita palavra falada)
-  --motion-remove N              remove a N-ésima animação pedida
+  --motion-remove N|ID           remove a animação pelo número (1 = primeira pedida) ou pelo id (m3, a_carimbo_12)
+  --patch "ID.campo=valor"       muda um elemento da timeline pelo id e o ajuste SOBREVIVE a replanejamentos
+                                 (ex.: m5.params.text=VICIANTE, m5.t1=15.2, sc1_8920.zoom0=1.2, g_cta.text="COMPRE")
+  --patch-remove ID              tira um elemento da timeline (vale também para os automáticos)
+  --patch-clear ID               desfaz os patches de um elemento
   --icons on|off                 ícones automáticos nas palavras-chave
   --gatilhos on|off              mapa de gatilhos (frase/dinheiro/enumeração -> efeito + som)
   --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
   --sem-cortes on|off            vídeo já cortado: mantém tudo e o ritmo original (só embeleza)
   --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
+  --dry-run                      mostra o que seria refeito (HIT/MISS por componente) sem gravar nem renderizar
+
+Pedidos de --motion com "id" substituem o pedido anterior com o mesmo id; um pedido idêntico a outro já existente é
+ignorado (reaplicar o mesmo motion.json não duplica animações). Se o render falhar, o project.json volta ao estado
+anterior (rollback automático).
 """
 
 from __future__ import annotations
 
 import argparse
+import copy
 import datetime
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 from common import EditorError, load_json, load_style, log, main_guard, perfil, probe, project_paths, save_json
@@ -77,7 +89,11 @@ def main() -> None:
     ap.add_argument("--format", choices=["9:16", "16:9", "1:1", "4:5"])
     ap.add_argument("--brand", help="aplica o kit de marca brands/<slug> (ou 'nenhuma')")
     ap.add_argument("--motion", action="append", default=[])
-    ap.add_argument("--motion-remove", action="append", type=int, default=[])
+    ap.add_argument("--motion-remove", action="append", default=[])
+    ap.add_argument("--patch", action="append", default=[])
+    ap.add_argument("--patch-remove", action="append", default=[])
+    ap.add_argument("--patch-clear", action="append", default=[])
+    ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--icons", choices=["on", "off"])
     ap.add_argument("--gatilhos", choices=["on", "off"])
     ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
@@ -94,8 +110,10 @@ def main() -> None:
     proj = load_json(paths["project"])
     if not proj:
         raise EditorError("project.json não encontrado.")
+    original = copy.deepcopy(proj)
     ov = proj.setdefault("overrides", {})
     done: list[str] = []
+    ignorados: list[str] = []
 
     def add(key, values, label):
         if values:
@@ -191,9 +209,36 @@ def main() -> None:
         for req in reqs if isinstance(reqs, list) else [reqs]:
             if "template" not in req and "page" not in req:
                 raise EditorError("--motion precisa de 'template' (ou 'page' para composição própria)")
-            ov.setdefault("motion", []).append(req)
-            done.append(f"motion {req.get('template') or req.get('page')} em '{req.get('at')}'")
-    add("motion_remove", a.motion_remove, "remover motion nº")
+            lista = ov.setdefault("motion", [])
+            if req.get("id") and any(r.get("id") == req["id"] for r in lista):
+                lista[:] = [req if r.get("id") == req["id"] else r for r in lista]
+                done.append(f"motion {req['id']} substituído")
+                continue
+            if req in lista:
+                ignorados.append(f"{req.get('template')} em '{req.get('at')}'")
+                continue
+            lista.append(req)
+            done.append(f"motion {req.get('template') or req.get('page')} em '{req.get('at')}' (id m{len(lista)})")
+    add("motion_remove", [int(x) if str(x).isdigit() else x for x in a.motion_remove], "remover motion")
+    import revisao
+    novos = []
+    for spec in a.patch:
+        alvo, _, val = spec.partition("=")
+        ident, _, campo = alvo.partition(".")
+        if not campo or not _:
+            raise EditorError(f"--patch precisa de ID.campo=valor (recebi '{spec}')")
+        novos.append({"id": ident.strip(), "set": {campo.strip(): revisao.valor(val.strip())},
+                      "origem": "edit.py --patch"})
+        done.append(f"patch {ident}.{campo} = {val}")
+    for ident in a.patch_remove:
+        novos.append({"id": ident.strip(), "remover": True, "origem": "edit.py --patch-remove"})
+        done.append(f"remover elemento {ident}")
+    if novos:
+        ov["patches"] = revisao.juntar_patches(ov.get("patches", []), novos)
+    for ident in a.patch_clear:
+        antes = len(ov.get("patches", []))
+        ov["patches"] = [p for p in ov.get("patches", []) if p.get("id") != ident.strip()]
+        done.append(f"desfeitos {antes - len(ov['patches'])} patch(es) de {ident}")
     if a.icons:
         ov["icons"] = a.icons == "on"
         done.append(f"ícones automáticos: {a.icons}")
@@ -210,8 +255,16 @@ def main() -> None:
         kind, _, at = spec.partition("@")
         ov.setdefault("fx_requests", []).append({"type": kind, "at": at})
         done.append(f"efeito {kind} em '{at}'")
+    if ignorados:
+        log(f"   pedido(s) de motion idêntico(s) a um já existente ignorado(s): {'; '.join(ignorados)}")
     if not done and not a.note:
+        if ignorados:
+            log("Nada mudou: o projeto já tinha esse(s) pedido(s).")
+            return
         raise EditorError("Nenhuma operação informada. Veja edit.py --help.")
+    if a.dry_run:
+        prever_edicao(project, proj, done, "ultrafast" if a.draft else ("medium" if a.max else "veryfast"))
+        return
     ov.setdefault("notes", []).append({"when": datetime.datetime.now().isoformat(timespec="seconds"),
                                        "note": a.note, "ops": done, "for_version": proj.get("version", 0) + 1})
     save_json(paths["project"], proj)
@@ -225,9 +278,41 @@ def main() -> None:
     log("Alterações: " + ("; ".join(done) or "(só anotação)"))
     if a.no_render:
         return
+    tl_antes = paths["timeline"].read_bytes() if paths["timeline"].exists() else None
     for script, extra in (("analyze.py", []), ("plan.py", []), ("render.py", ["--draft"] if a.draft else (["--max"] if a.max else []))):
         if subprocess.run([sys.executable, str(HERE / script), str(project), *extra]).returncode:
-            raise EditorError(f"{script} falhou")
+            # rollback automático: o pedido não fica aplicado pela metade
+            atual = load_json(paths["project"]) or {}
+            original["version"] = max(original.get("version", 0), atual.get("version", 0))
+            save_json(paths["project"], original)
+            if tl_antes is not None:
+                paths["timeline"].write_bytes(tl_antes)
+            subprocess.run([sys.executable, str(HERE / "analyze.py"), str(project)], capture_output=True)
+            raise EditorError(f"{script} falhou; o projeto voltou ao estado anterior (rollback). Nada foi perdido.")
+
+
+def prever_edicao(project: Path, proj: dict, done: list[str], preset: str = "veryfast") -> None:
+    """Dry-run: aplica o pedido numa cópia temporária (só os .json), replaneja lá e compara com os caches reais."""
+    import revisao
+    paths = project_paths(project)
+    tmp = Path(tempfile.mkdtemp(prefix="editor_dry_"))
+    try:
+        for name in ("transcript.json", "timeline.json"):
+            if (project / name).exists():
+                shutil.copy2(project / name, tmp / name)
+        (tmp / "work").mkdir()
+        if (paths["work"] / "timeline_gerada.json").exists():
+            shutil.copy2(paths["work"] / "timeline_gerada.json", tmp / "work" / "timeline_gerada.json")
+        save_json(tmp / "project.json", proj)
+        for script in ("analyze.py", "plan.py"):
+            r = subprocess.run([sys.executable, str(HERE / script), str(tmp)], capture_output=True, text=True)
+            if r.returncode:
+                raise EditorError(f"dry-run: {script} falhou:\n{r.stdout[-800:]}{r.stderr[-800:]}")
+        tl = load_json(tmp / "timeline.json")
+        log("Pedido: " + "; ".join(done))
+        revisao.imprimir(revisao.prever(project, tl, preset))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
 
 
 if __name__ == "__main__":

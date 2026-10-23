@@ -10,6 +10,10 @@
   run.py styles                 lista os estilos
   run.py variacoes <projeto> [--ganchos 3]      uma versão por gancho (grave 3 ganchos seguidos + o corpo)
   run.py curta <projeto> [--segundos 30 15]     versões curtas terminando em fim de frase
+  run.py revisar <projeto> [--draft]             dry-run: o que o próximo render refaria (HIT/MISS), sem gravar nada
+  run.py versoes <projeto>                       lista as versões (o que mudou e o que foi reaproveitado em cada uma)
+  run.py rollback <projeto> --para N [--render]  volta o projeto ao estado da versão N (patches e pedidos inclusos)
+  run.py limpar-cache <projeto> [--manter 5]     apaga do cache o que nenhuma das últimas N versões usa
 
 Correções por texto: use edit.py (aplica a mudança e renderiza a próxima versão).
 """
@@ -114,10 +118,13 @@ def cmd_render(a) -> None:
 
 
 def _temp_render(project: Path, tweak, label: str) -> Path | None:
-    """Renderiza uma variação sem mexer de vez no projeto (o project.json volta ao original no fim)."""
+    """Renderiza uma variação sem mexer de vez no projeto (project.json, edl.json e timeline.json voltam ao original)."""
     import shutil
     paths = project_paths(project)
     backup = paths["project"].read_text(encoding="utf-8")
+    salvos = {k: paths[k].read_bytes() for k in ("edl", "timeline") if paths[k].exists()}
+    gerada = paths["work"] / "timeline_gerada.json"
+    salvos_g = gerada.read_bytes() if gerada.exists() else None
     try:
         proj = load_json(paths["project"])
         tweak(proj)
@@ -135,6 +142,10 @@ def _temp_render(project: Path, tweak, label: str) -> Path | None:
         orig = json.loads(backup)
         orig["version"] = version
         save_json(paths["project"], orig)
+        for k, data in salvos.items():
+            paths[k].write_bytes(data)
+        if salvos_g is not None:
+            gerada.write_bytes(salvos_g)
 
 
 def cmd_variacoes(a) -> None:
@@ -164,6 +175,81 @@ def cmd_curta(a) -> None:
     project = Path(a.project).resolve()
     for s in a.segundos:
         _temp_render(project, lambda p, s=s: p.__setitem__("target_duration", s), f"curta_{s}s")
+
+
+def cmd_revisar(a) -> None:
+    import revisao
+    revisao.imprimir(revisao.prever(Path(a.project).resolve(), preset="ultrafast" if a.draft else
+                                    ("medium" if a.max else "veryfast")))
+
+
+def cmd_versoes(a) -> None:
+    paths = project_paths(Path(a.project).resolve())
+    vs = sorted((int(p.name[1:]) for p in paths["versions"].glob("v*") if p.name[1:].isdigit()))
+    if not vs:
+        log("Nenhuma versão renderizada ainda.")
+    for v in vs:
+        d = paths["versions"] / f"v{v}"
+        rev = load_json(d / "revisao.json") or {}
+        qa = load_json(d / "qa.json") or {}
+        notas = [n for n in (load_json(d / "project.json") or {}).get("overrides", {}).get("notes", [])
+                 if n.get("for_version") == v]
+        pedido = "; ".join(n.get("note") or ", ".join(n.get("ops", [])) for n in notas) or "-"
+        resumo = " | ".join(f"{t} {x['MISS']}/{x['HIT'] + x['MISS']} refeito(s)" for t, x in rev.get("resumo", {}).items())
+        log(f"v{v}: {qa.get('duration', '?')}s, render {rev.get('segundos', qa.get('seconds', '?'))}s | {resumo or 'sem relatório'}"
+            f"\n     pedido: {pedido}")
+
+
+def cmd_rollback(a) -> None:
+    """Volta project.json ao estado da versão N (pedidos, patches, estilo). O contador de versões continua subindo:
+    o próximo render vira v(atual+1) igual a vN, e como tudo está em cache, quase nada é refeito."""
+    project = Path(a.project).resolve()
+    paths = project_paths(project)
+    alvo = load_json(paths["versions"] / f"v{a.para}" / "project.json")
+    if not alvo:
+        raise EditorError(f"Versão v{a.para} não encontrada em {paths['versions']}")
+    atual = load_json(paths["project"])
+    alvo["version"] = atual.get("version", 0)
+    alvo.setdefault("overrides", {}).setdefault("notes", []).append(
+        {"when": time.strftime("%Y-%m-%dT%H:%M:%S"), "note": f"rollback para v{a.para}", "ops": [f"rollback v{a.para}"],
+         "for_version": alvo["version"] + 1})
+    save_json(paths["project"], alvo)
+    import shutil
+    gerada = paths["versions"] / f"v{a.para}" / "timeline_gerada.json"
+    if gerada.exists():  # timeline e decisões (zoom de cada plano) exatamente como na vN: nada a capturar
+        shutil.copy2(gerada, paths["work"] / "timeline_gerada.json")
+        shutil.copy2(gerada, paths["timeline"])
+    else:
+        (paths["work"] / "timeline_gerada.json").unlink(missing_ok=True)
+        paths["timeline"].unlink(missing_ok=True)
+    log(f"Projeto voltou ao estado da v{a.para}. Próximo render: v{alvo['version'] + 1}.")
+    if a.render:
+        cmd_render(a)
+
+
+def cmd_limpar(a) -> None:
+    """Apaga do cache (work/cache, work/motion) o que nenhuma das últimas N versões usou."""
+    import shutil
+    project = Path(a.project).resolve()
+    paths = project_paths(project)
+    vs = sorted((int(p.name[1:]) for p in paths["versions"].glob("v*") if p.name[1:].isdigit()), reverse=True)[:a.manter]
+    usadas = set()
+    for v in vs:
+        for it in (load_json(paths["versions"] / f"v{v}" / "revisao.json") or {}).get("itens", []):
+            usadas.add(it["chave"])
+    if not usadas:
+        log("Sem relatório de revisão nas versões: nada apagado (renderize uma vez com esta versão do editor).")
+        return
+    livre = 0
+    for f in list((paths["work"] / "cache").rglob("*")) + list((paths["work"] / "motion").glob("clip_*")):
+        if f.is_file():
+            chave = f.name.split(".")[0].removeprefix("clip_")
+            if chave not in usadas:
+                livre += f.stat().st_size
+                f.unlink()
+    for d in (paths["work"] / "motion").glob("frames_*"):
+        shutil.rmtree(d, ignore_errors=True)
+    log(f"Cache limpo: {livre / 1e6:.0f} MB liberados (mantidas as peças das últimas {len(vs)} versão(ões)).")
 
 
 def cmd_styles(_a) -> None:
@@ -202,9 +288,25 @@ def main() -> None:
     c = sub.add_parser("curta", help="versões curtas terminando em fim de frase")
     c.add_argument("project")
     c.add_argument("--segundos", type=int, nargs="+", default=[30, 15])
+    r = sub.add_parser("revisar", help="dry-run: o que o próximo render refaria")
+    r.add_argument("project")
+    r.add_argument("--draft", action="store_true")
+    r.add_argument("--max", action="store_true")
+    vv = sub.add_parser("versoes", help="lista as versões e o que cada uma refez")
+    vv.add_argument("project")
+    rb = sub.add_parser("rollback", help="volta ao estado de uma versão anterior")
+    rb.add_argument("project")
+    rb.add_argument("--para", type=int, required=True)
+    rb.add_argument("--render", action="store_true")
+    rb.add_argument("--draft", action="store_true")
+    rb.add_argument("--max", action="store_true")
+    lc = sub.add_parser("limpar-cache", help="apaga peças de cache que as últimas versões não usam")
+    lc.add_argument("project")
+    lc.add_argument("--manter", type=int, default=5)
     a = ap.parse_args()
     {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "styles": cmd_styles,
-     "variacoes": cmd_variacoes, "curta": cmd_curta}[a.cmd](a)
+     "variacoes": cmd_variacoes, "curta": cmd_curta, "revisar": cmd_revisar, "versoes": cmd_versoes,
+     "rollback": cmd_rollback, "limpar-cache": cmd_limpar}[a.cmd](a)
 
 
 if __name__ == "__main__":

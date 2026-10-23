@@ -115,3 +115,62 @@ Teste reproduzível (`tests/editor_video` + script da seção 3): edita `timelin
 - Goldens gerados com `eb5f2e9`: `golden_edl.json` e `golden_timeline.json`.
 - `tests/editor_video/test_baseline.py`: o planejamento tem que bater com o baseline e ser determinístico.
   Rodar: `python -m unittest discover -s tests/editor_video -v` (só biblioteca padrão).
+
+## 9. Depois: Smart Revision Engine (implementado)
+
+O que mudou (sem reescrever o editor e sem remover recursos; modo clássico disponível com
+`EDITOR_COMPOSICAO=inteira`):
+
+| Risco | Solução | Onde |
+|---|---|---|
+| R-1 edições manuais perdidas | IDs estáveis em todos os elementos; `timeline.json` editada à mão vira patch automaticamente (comparada com `work/timeline_gerada.json`); `edit.py --patch ID.campo=valor`, `--patch-remove`, `--patch-clear`; patch órfão avisa e fica guardado | `revisao.py`, `plan.py`, `edit.py` |
+| R-2 motion duplicado | pedido idêntico é ignorado; pedido com `id` substitui; `--motion-remove` aceita id | `edit.py`, `plan.py` |
+| R-3 composição inteira | composição por trechos de 4 s com cache por conteúdo; áudio separado; final por concatenação sem recodificar | `render.py`, `revisao.py` |
+| R-4 invalidação global | cache por plano e por máscara; chave do motion depende só dos planos sob a janela | `render.py`, `motion.py` |
+| R-5 Windows/symlink | fontes copiadas quando o link simbólico falha; listas de concat com caminho absoluto em barra normal; `os.replace` atômico | `render.py` |
+| R-6 sem rollback | `edit.py` restaura `project.json`/`timeline.json` se algo falha; `run.py rollback --para N` | `edit.py`, `run.py` |
+| R-8 `_temp_render` | restaura também `edl.json`, `timeline.json` e a timeline gerada | `run.py` |
+| R-9 cache de 1 slot | cache guarda várias versões; `run.py limpar-cache --manter N` | `run.py` |
+| R-10 zoom por índice | zoom de um plano persiste pelo id (um corte não muda o resto) | `plan.py` |
+| (novo) atraso de áudio | **achado no teste de sincronismo**: `afftdn` (+25 ms) e `alimiter` (+5 ms) atrasavam o som em todas as versões, também no modo clássico. Agora a latência é medida no ffmpeg da máquina (cache em `~/.cache/editor-video/latencias.json`) e compensada | `render.py` |
+
+Ferramentas: `edit.py ... --dry-run` / `run.py revisar` (HIT/MISS sem gravar), `run.py versoes`,
+`run.py rollback`, `run.py limpar-cache`; cada versão grava `versions/vN/revisao.json` (HIT/MISS, chave, motivo,
+segundos de cada componente).
+
+### Prova: mesmo experimento da seção 3 (projeto `ref_pro2`, `--draft`, mesma máquina)
+
+Script `auditoria/exp2.py`, resultados `auditoria/exp2_resultados.jsonl`.
+
+| Revisão | Antes | Depois | O que ainda é refeito |
+|---|---|---|---|
+| Renderizar de novo sem mudança | ~30 s | **3,5 s** | nada (só a concatenação final) |
+| Só legenda maior | 30,8 s | 21,4 s | os 4 trechos (a legenda está em todos) |
+| Só CTA | 29,8 s | **11,7 s** | 2 trechos (onde o CTA aparece) |
+| Corta 1 frase no meio | 59,7 s | **20,0 s** | 2 planos, 2 máscaras, 2 trechos, áudio |
+| Desfaz o corte | 44,3 s | **3,7 s** | nada (tudo em cache) |
+| Muda 1 animação (12,2–14,9 s) | ~45 s* | **16,7 s** | 1 animação + 1 trecho |
+| Rollback para a 1ª versão | — | **3,2 s** | nada |
+| Velocidade 1,1 | 60,5 s | 66,6 s | tudo (muda todos os planos: inerente) |
+
+\* antes: refazia o clipe + a composição inteira (~27 s) + rosto/QA.
+
+Operações que deixaram de ser repetidas: re-codificar planos não alterados, recalcular a máscara do vídeo
+inteiro, extrair quadros/re-renderizar animações fora da janela alterada, recompor trechos sem mudança e
+remixar o áudio quando só a imagem mudou.
+
+### Testes
+
+`python -m unittest discover -s tests/editor_video -v` (21 testes; 6 de render rodam com `EDITOR_TESTES_RENDER=1`):
+baseline do planejamento (igual a `eb5f2e9`), IDs estáveis, patches que sobrevivem, captura de edição manual,
+idempotência, grafo (mudar a animação de 12–16 s invalida só ela e o trecho), dry-run sem escrita, Windows
+(fontes sem symlink, lista de concat), e com render: quadros/duração exatos, **sincronismo imagem×som em 5
+eventos incluindo as emendas de 8 s e 12 s (≤ ½ quadro)**, render sem mudança = 0 MISS, revisão 12–16 s com
+quadros fora da janela idênticos bit a bit, rollback 100 % cache e equivalência com o modo clássico (PSNR > 35 dB).
+
+### Pendências conhecidas (P2)
+
+- Máscara por plano reinicia o modelo do MediaPipe a cada plano: render a frio ~10 % mais lento.
+- A montagem dos planos ainda deixa até ~10 ms de diferença entre som e imagem (início do plano no quadro do
+  bruto vs. amostra de áudio); abaixo de meio quadro.
+- Mudar a legenda refaz todos os trechos (a legenda aparece no vídeo todo), mas cada trecho é recomposto em paralelo.
