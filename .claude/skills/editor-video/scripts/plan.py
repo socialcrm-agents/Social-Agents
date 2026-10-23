@@ -54,17 +54,19 @@ MOTION_DEFAULTS = {
     "recorte": {"layer": "full", "needs_video": True}, "maos": {"layer": "front", "zona": "barra"},
     "transcricao": {"layer": "full", "needs_video": True}, "tomadas": {"layer": "front", "zona": "topo"},
     "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
-    "mapa": {"layer": "front"}, "infografico": {"layer": "front"}, "documentario": {"layer": "full"},
+    "mapa": {"layer": "front"}, "infografico": {"layer": "front", "zona": "topo"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},
     "tela_ia": {"layer": "full"}, "carrossel3d": {"layer": "full", "needs_video": True},
     "notificacao": {"layer": "front"}, "botao_cta": {"layer": "front"}, "anotacao": {"layer": "front"},
-    "carimbo": {"layer": "front"}, "checklist": {"layer": "front"}, "onda_audio": {"layer": "front"},
+    "carimbo": {"layer": "front", "zona": "topo", "params": {"y": 0.2}},
+    "checklist": {"layer": "front", "zona": "topo"}, "onda_audio": {"layer": "front"},
     "pedacos": {"layer": "behind"}, "card_fogo": {"layer": "front"},
     "clones": {"layer": "full", "needs_video": True}, "cenario": {"layer": "full", "needs_video": True},
     "giro": {"layer": "front"}, "luz": {"layer": "front"},
     "vendas": {"layer": "front"}, "tabela": {"layer": "front"}, "cronometro": {"layer": "front"},
 }
-DEFAULT_CTA = {"reels_viral": "SEGUE PRA VER MAIS", "anuncio_conversao": "CLIQUE EM SAIBA MAIS", "editorial_premium": "Link na bio"}
+DEFAULT_CTA = {"reels_viral": "SEGUE PRA VER MAIS", "anuncio_conversao": "CLIQUE EM SAIBA MAIS", "editorial_premium": "Link na bio",
+               "pro_clean": "SEGUE PRA VER MAIS"}
 
 
 def fix_word(text: str, fixes: dict) -> str:
@@ -161,6 +163,16 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
                     m["t1"] = f["t0"]
         if m["t1"] - m["t0"] >= 1.0:
             out.append(m)
+    # dois textos grandes no alto ao mesmo tempo disputam o mesmo espaço: o anterior termina quando o próximo entra
+    topo = sorted((m for m in out if m.get("layer") != "full" and (m.get("zona") == "topo" or m.get("template") == "palavra")),
+                  key=lambda m: m["t0"])
+    for a, b in zip(topo, topo[1:]):
+        if a["t1"] > b["t0"]:
+            if b["t0"] - a["t0"] >= 1.0:
+                a["t1"] = b["t0"]          # o anterior sai quando o próximo entra
+            else:
+                b["t0"] = a["t1"]          # o anterior ficaria curto demais: o próximo espera ele sair
+    out = [m for m in out if m["t1"] - m["t0"] >= 1.0 or m.get("layer") == "full"]
     return sorted(out, key=lambda m: m["t0"])
 
 
@@ -176,10 +188,14 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
         t0 = round(max((hit["t0"] - 0.1) if hit else float(req.get("at", 0)), 0), 3)
         end = find_word(words, req["until"], t0) if req.get("until") else None
         t1 = round(min((end["t1"] + 0.2) if end else t0 + float(req.get("dur", 3.0)), total), 3)
+        if t1 - t0 < min(float(req.get("dur", 1.5)), 1.2) and t1 >= total - 0.05:
+            t0 = round(max(t1 - min(float(req.get("dur", 1.5)), 1.5), 0), 3)  # fala no fim do vídeo: recua
         if t1 - t0 < 0.5:
+            log(f"   aviso: motion {n} ({req.get('template')}): janela curta demais ({t1 - t0:.2f}s); ignorado")
             continue
         item = {**MOTION_DEFAULTS.get(req.get("template", ""), {}), **{k: v for k, v in req.items() if k not in ("at", "until", "dur")}}
-        item.update(t0=t0, t1=t1, params=resolve_cues(req.get("params", {}), words, t0, t1))
+        item["params"] = {**MOTION_DEFAULTS.get(req.get("template", ""), {}).get("params", {}), **req.get("params", {})}
+        item.update(t0=t0, t1=t1, params=resolve_cues(item["params"], words, t0, t1))
         if item["params"].get("follow") == "hand":
             item["hand"] = True
         out.append(item)
@@ -234,6 +250,8 @@ def main() -> None:
     # 1) planos com tempo na timeline final + zoom
     # velocidade da fala (ex.: 1.15 = 15% mais rápido, sem mudar o tom); duração quantizada em quadros (sem deriva)
     speed = float(ov.get("speed") or brand.get("speed") or style.get("speed", 1.0))
+    if ov.get("sem_cortes"):
+        speed = 1.0  # vídeo já editado pelo cliente: ritmo original
     plan_shots, t = [], 0.0
     for n, s in enumerate(shots(edl["segments"], words_src, style)):
         dur = round(round((s["out"] - s["in"]) / speed * 30) / 30, 4)
@@ -389,7 +407,7 @@ def main() -> None:
         graphics.append({"type": "logo", "text": str(Path(brand["_dir"]) / logo["file"]), "t0": 0.0, "t1": total,
                          "position": logo.get("position", "top-right"), "opacity": logo.get("opacity", 0.85)})
     if g["cta"]:
-        graphics.append({"type": "cta", "text": ov.get("cta") or DEFAULT_CTA[style["name"]], "t0": round(cta_start, 3), "t1": total})
+        graphics.append({"type": "cta", "text": ov.get("cta") or DEFAULT_CTA.get(style["name"], "SEGUE PRA VER MAIS"), "t0": round(cta_start, 3), "t1": total})
 
     # 8) motion graphics: pedidos do usuário/Claude + ícones automáticos
     busy = [(0.0, gfx_hook_end), (cta_start, total)] + [(b["t0"] - 0.3, b["t1"] + 0.3) for b in behind] \
@@ -406,6 +424,9 @@ def main() -> None:
         manual = [(m["t0"], m["t1"]) for m in motion if not m.get("auto")]
         auto, trig_sfx, trig_fx = triggers.apply(words, triggers.load_rules(brand), style["name"], total,
                                                  brand.get("cta_keywords", ["PRODUTO"]), busy + manual)
+        # gatilho automático não repete um bloco que você já pediu a menos de 6 s (ex.: o mesmo preço dito 2 vezes)
+        auto = [m for m in auto if not any(x["template"] == m["template"] and abs(x["t0"] - m["t0"]) < 6
+                                           for x in motion if not x.get("auto"))]
         for m in auto:
             m.update({k: v for k, v in MOTION_DEFAULTS.get(m["template"], {}).items() if k not in m})
         motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
@@ -419,19 +440,21 @@ def main() -> None:
     fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]
     # palavra automática atrás da pessoa cede lugar a texto grande pedido no mesmo instante (não sobrepõe)
-    textos = [(m["t0"] - 0.3, m["t1"] + 0.3) for m in motion
-              if m.get("template") in ("palavra", "manchete", "etiqueta", "pergunta", "empilha", "final")]
+    textos = [(m["t0"] - 0.3, m["t1"] + 0.3) for m in motion if m.get("template") != "icone"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in textos)]
     # faixas de texto (gancho, CTA, título) somem durante animação de tela cheia: a animação redesenha o quadro
     # inteiro e o texto por cima atrapalha. Fica o maior pedaço livre (mín. 0,6 s); o CTA que ficaria todo
     # coberto vai para dentro da animação (params.cta), quando ela aceita.
     kept = []
+    # o CTA do estilo também sai enquanto um bloco de CTA animado (botão, comentário) está na tela: nada de CTA duplo
+    cta_blocos = [(m["t0"], m["t1"]) for m in motion if m.get("template") in ("botao_cta", "comentario")]
     for gr in graphics:
-        if gr["type"] not in ("hook", "cta", "lower_third", "chapter") or not fulls:
+        wins = fulls + (cta_blocos if gr["type"] == "cta" else [])
+        if gr["type"] not in ("hook", "cta", "lower_third", "chapter") or not wins:
             kept.append(gr)
             continue
         free, start = [], gr["t0"]
-        for a, b in sorted(fulls):
+        for a, b in sorted(wins):
             if b <= start or a >= gr["t1"]:
                 continue
             if a > start:
@@ -477,7 +500,7 @@ def main() -> None:
         "style": style["name"], "w": fw, "h": fh, "fps": 30, "duration": total, "format": proj.get("format", "9:16"),
         "shots": plan_shots, "words": words, "captions": {"cfg": cap, "pages": [
             pg for pg in cap_pages if not any(  # o card de pergunta já mostra o que está sendo dito
-                m["template"] in ("pergunta", "final", "transcricao") and m["params"].get("esconde_legenda", True)
+                m["template"] in ("pergunta", "final", "transcricao", "botao_cta") and m["params"].get("esconde_legenda", True)
                 and m["t0"] - 0.05 <= (pg["t0"] + pg["t1"]) / 2 <= m["t1"] for m in motion if m.get("template"))]},
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
         "sfx": sfx, "grade": style["grade"], "audio": style["audio"],

@@ -114,7 +114,8 @@ def render_shots(tl: dict, work: Path, preset: str) -> Path:
 
 
 # quanto do alto do quadro (px, em 1920) cada elemento de topo precisa livre
-LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560, "proibido": 560, "tomadas": 700}
+LIBERA = {"pergunta": 560, "etiqueta": 540, "manchete": 640, "palavra": 560, "proibido": 560, "tomadas": 700,
+          "infografico": 560, "carimbo": 600, "checklist": 700}
 
 
 def recuo_windows(motions: list[dict], stats: list | None) -> list[dict]:
@@ -138,7 +139,7 @@ def recuo_windows(motions: list[dict], stats: list | None) -> list[dict]:
         if top >= need:
             continue
         s = max(0.62, min(1.0, (H - need) / max(H - top, 1)))
-        out.append({"t0": m["t0"], "t1": m["t1"], "s": round(s, 3)})
+        out.append({"t0": m["t0"], "t1": m["t1"] + 0.3, "s": round(s, 3)})  # volta só depois do card sair
     return out
 
 
@@ -202,6 +203,8 @@ def place_behind(tl: dict, stats: list[dict] | None) -> tuple[list[dict], list[d
             if max(tops) - min(tops) < 220:  # cabeça estável: legível
                 behind.append({**b, "head_top": int(statistics.median(tops))})
                 continue
+        if faces:
+            continue  # rosto no quadro mas sem como ir atrás: a palavra sai (na frente ela cobriria o rosto)
         front.append(b)
     return behind, front
 
@@ -495,8 +498,9 @@ def main() -> None:
     if tl["recuo"]:
         log(f"   recuo (pessoa desce para abrir o topo): {len(tl['recuo'])} trecho(s)")
     behind, front = place_behind(tl, stats)
-    behind, moved = fit_behind(tl, behind)
-    front += moved
+    behind, moved = fit_behind(tl, behind)  # sem espaço acima da cabeça: a palavra sai (não vai para o rosto)
+    if moved:
+        log(f"   palavras atrás puladas (cabeça encostada no topo): {', '.join(b['text'] for b in moved)}")
     for b in behind:
         size = b["size"]
         y1 = b["head_top"] + int(size * 0.2)

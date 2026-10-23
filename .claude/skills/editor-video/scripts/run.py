@@ -88,7 +88,8 @@ def cmd_new(a) -> None:
         "style": a.style, "format": a.format, "brand": a.brand, "clips": clips, "broll": broll, "version": 0,
         "overrides": {"word_fixes": {}, "cuts": [], "restores": [], "behind_add": [], "behind_remove": [],
                       "emphasis_add": [], "broll_at": [], "broll_remove": [], "caption": {}, "zoom": {},
-                      "hook": a.hook, "cta": a.cta, "behind_enabled": None, "notes": []},
+                      "hook": a.hook, "cta": a.cta, "behind_enabled": None, "notes": [],
+                      "sem_cortes": a.sem_cortes},
     })
     log(f"Projeto criado: {project} ({len(clips)} clipe(s), {len(broll)} B-roll, estilo {a.style}, formato {a.format})")
 
@@ -185,6 +186,8 @@ def main() -> None:
     n.add_argument("--cta", default=None)
     n.add_argument("--format", default="9:16", choices=["9:16", "16:9", "1:1", "4:5"],
                    help="9:16 Reels/TikTok/Shorts, 16:9 YouTube/aula/podcast, 1:1 ou 4:5 feed")
+    n.add_argument("--sem-cortes", action="store_true",
+                   help="vídeo já cortado (CapCut etc.): não remove pausas/erros nem acelera; só embeleza")
     n.add_argument("--force", action="store_true")
     for name in ("all", "plan", "render"):
         sp = sub.add_parser(name)

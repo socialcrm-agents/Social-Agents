@@ -213,6 +213,19 @@ def main() -> None:
         raise EditorError("transcript.json não encontrado. Rode transcribe.py.")
     style = load_style(proj["style"], proj.get("brand"))
     words = tr["words"]
+    if proj.get("overrides", {}).get("sem_cortes"):
+        # vídeo já cortado pelo cliente (CapCut etc.): nada sai, nada acelera; 1 segmento por clipe, do início ao fim
+        segs = [{"clip": c["id"], "in": 0.0, "out": round(c["duration"], 3),
+                 "words": [i for i, w in enumerate(words) if w["clip"] == c["id"]],
+                 "text": " ".join(w["w"] for w in words if w["clip"] == c["id"])} for c in proj["clips"]]
+        raw = sum(c["duration"] for c in proj["clips"])
+        save_json(paths["edl"], {"style": proj["style"], "segments": segs, "dropped": [],
+                                 "raw_duration": round(raw, 2), "edit_duration": round(raw, 2)})
+        paths["qa"].mkdir(parents=True, exist_ok=True)
+        (paths["qa"] / "takes.md").write_text("# Tomadas e cortes\n\nModo sem cortes: vídeo mantido inteiro.\n",
+                                              encoding="utf-8")
+        log(f"OK: modo sem cortes, {raw:.1f}s mantidos inteiros")
+        return
     drop, report = analyze(words, style, proj.get("overrides", {}))
     keep = [i for i in range(len(words)) if i not in drop]
     segs = build_segments(words, keep, style, tr.get("silences"))

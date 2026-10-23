@@ -34,6 +34,7 @@ Operações:
   --icons on|off                 ícones automáticos nas palavras-chave
   --gatilhos on|off              mapa de gatilhos (frase/dinheiro/enumeração -> efeito + som)
   --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
+  --sem-cortes on|off            vídeo já cortado: mantém tudo e o ritmo original (só embeleza)
   --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
 """
 
@@ -80,6 +81,7 @@ def main() -> None:
     ap.add_argument("--icons", choices=["on", "off"])
     ap.add_argument("--gatilhos", choices=["on", "off"])
     ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
+    ap.add_argument("--sem-cortes", choices=["on", "off"])
     ap.add_argument("--fx", action="append", default=[], help="efeito de impacto: tipo@palavra (tremida, clarao, glitch, whip)")
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
@@ -198,6 +200,9 @@ def main() -> None:
     if a.gatilhos:
         ov["triggers"] = a.gatilhos == "on"
         done.append(f"gatilhos automáticos: {a.gatilhos}")
+    if a.sem_cortes:
+        ov["sem_cortes"] = a.sem_cortes == "on"
+        done.append(f"sem cortes: {a.sem_cortes}")
     if a.velocidade:
         ov["speed"] = a.velocidade
         done.append(f"velocidade da fala ×{a.velocidade}")

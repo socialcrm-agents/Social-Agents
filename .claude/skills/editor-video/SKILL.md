@@ -55,7 +55,10 @@ Referência (CPU de 4 núcleos, vídeo de 30 s com 4 animações): primeiro rend
 - B-roll: vídeos/imagens do próprio usuário (gravação de tela, produto, prints). Nunca baixe mídia de terceiros
   sem licença. Sem B-roll, o estilo usa só gráficos e zooms.
 - Estilo: pergunte só se o usuário não disse. Sem resposta: `reels_viral` para orgânico, `anuncio_conversao` se
-  ele falar em anúncio/tráfego/venda, `editorial_premium` para marca pessoal/autoridade.
+  ele falar em anúncio/tráfego/venda, `editorial_premium` para marca pessoal/autoridade, `pro_clean` para
+  "máxima qualidade" / anúncio premium.
+- **Já editado?** Se ele disser que já cortou (CapCut etc.) ou pedir para não cortar/acelerar, crie com
+  `--sem-cortes`: o vídeo fica inteiro, no ritmo original, e você só embeleza.
 - Formato: `9:16` (padrão: Reels/TikTok/Shorts), `16:9` (YouTube, aula, podcast, vídeo longo), `1:1`/`4:5` (feed).
 - Projeto: uma pasta nova por vídeo (ex.: `~/video-edits/<slug>`).
 
@@ -74,7 +77,12 @@ celular) e `--draft` na primeira prévia.
 
 ## 2. Leia a transcrição e decida como editor (este é o seu trabalho, não do script)
 
-Leia `transcript.txt` inteiro. Depois:
+**Antes de decidir qualquer coisa, leia `SK/references/direcao.md` (direção de edição profissional): o método,
+a tabela de gatilhos fala → elemento, a densidade por tipo de vídeo, as receitas e os cuidados.** Monte o MAPA DE
+EDIÇÃO (tempo | fala | função | elemento) e aplique tudo de uma vez com `--motion @motion.json`. Editar só com
+legenda e zoom é o erro mais comum: siga a densidade do manual.
+
+Leia `transcript.txt` inteiro. Depois (pule no modo sem cortes):
 ```bash
 PY SK/scripts/analyze.py <projeto>        # escolhe tomadas e corta pausas -> qa/takes.md, edl.json
 ```
