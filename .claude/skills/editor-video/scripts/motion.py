@@ -25,7 +25,7 @@ from common import FONTS_DIR, SKILL_DIR, EditorError, ffmpeg, log
 
 MOTION_DIR = SKILL_DIR / "assets" / "motion"
 RENDERER = Path(__file__).resolve().parent / "motion_render.mjs"
-WEBGL = {"estudio3d", "objeto3d"}  # templates Three.js (render com WebGL/SwiftShader, mais lento)
+WEBGL = {"estudio3d", "objeto3d", "profundidade"}  # templates Three.js (render com WebGL/SwiftShader, mais lento)
 
 
 def page_for(item: dict) -> str:

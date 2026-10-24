@@ -29,6 +29,7 @@ Pedido via `edit.py <projeto> --motion '<json>'` (ou `--motion @arquivo.json` co
 | `mapa` | front (card) ou full | Mapa ilustrado com pino, ponto de interesse, rota desenhada e tempo de deslocamento | `place`, `poi`, `poi_icon`, `time_label`, `pin_at`, `route_at`, `mode` |
 | `infografico` | front | Cartões de vidro com números que contam até o valor quando são ditos | `stats[{value, decimals, prefix, suffix, label, icon, at}]`, `y` |
 | `documentario` | full | Foto/print com câmera Ken Burns até o ponto que importa + círculos/setas/rótulos no tempo da fala | `image`, `focus`, `zoom`, `title`, `marks[{x, y, label, at, kind}]` |
+| `profundidade` | full (usa vídeo, WebGL) | 2.5D: câmera anda e o cenário se mexe em paralaxe pela profundidade (Depth Anything local ou heurístico), desfoque de lente ao longe, pessoa real nítida na frente; palavra gigante entre cenário e pessoa | `movimento` dolly/orbita/lateral, `intensidade` 0–1, `texto`, `cor`, `y`, `texto_at`, `desfoque`, `fundo` real/limpo |
 | `icone` | front | Ícone que pula com rótulo (o plano já põe automático em palavras-chave no Viral/Anúncio) | `icon`, `label`, `color`, `y` |
 
 ### Blocos da referência e efeitos (rodada 3)

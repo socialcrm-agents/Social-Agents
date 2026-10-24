@@ -94,7 +94,8 @@ decisões, QA, HIT/MISS de `versions/vN/revisao.json`, gaps). Resposta curta ao 
 - SFX avulso num instante sem animação, trocar o som de uma animação específica, equalização por trecho, biblioteca
   de trilhas (só `--music` com arquivo do usuário).
 - Estilo de legenda diferente por cena (a legenda é global: tamanho/posição/estilo para o vídeo inteiro).
-- Gerar imagem/vídeo de B-roll dentro do editor (use skills de imagem/vídeo à parte e `--add-broll`).
+- Gerar **vídeo** de B-roll (imagem existe: `PY SK/scripts/imagens.py gerar "<prompt>" <proj>/midia/x.jpg`, grátis,
+  e entra por `cenario`/`documentario`; vídeo só do usuário).
 - Cortar/acelerar vídeo marcado `ja_editado` (D02).
 - Mudar a velocidade ou fazer um corte sem refazer os planos afetados (são refeitos por definição; o resto é cache).
 

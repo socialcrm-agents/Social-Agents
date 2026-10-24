@@ -110,6 +110,14 @@ def check_models(fetch: bool) -> bool:
             download(url, p)
         print(f"STATUS model:{name} {'OK' if p.exists() else 'MISSING -> setup.py --models'}")
         ok = ok and p.exists()
+    # profundidade (efeito 2.5D): opcional — sem ele o template profundidade usa o modo heurístico
+    import profundidade
+    if fetch and not profundidade.caminho_modelo().exists():
+        try:
+            profundidade.baixar()
+        except Exception as exc:  # rede bloqueada etc.: segue sem, não reprova a instalação
+            print(f"aviso: modelo de profundidade não baixou ({exc}); o 2.5D usa o modo heurístico")
+    print(f"STATUS model:depth_anything_v2_small {'OK' if profundidade.caminho_modelo().exists() else 'OPCIONAL -> setup.py --models'}")
     return ok
 
 

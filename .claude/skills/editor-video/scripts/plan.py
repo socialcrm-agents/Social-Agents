@@ -54,7 +54,7 @@ MOTION_DEFAULTS = {
     "final": {"layer": "full"}, "hud": {"layer": "front", "zona": "barra"}, "pontos": {"layer": "full", "needs_video": True},
     "recorte": {"layer": "full", "needs_video": True}, "maos": {"layer": "front", "zona": "barra"},
     "transcricao": {"layer": "full", "needs_video": True}, "tomadas": {"layer": "front", "zona": "topo"},
-    "estudio3d": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
+    "estudio3d": {"layer": "full", "needs_video": True}, "profundidade": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
     "mapa": {"layer": "front"}, "infografico": {"layer": "front", "zona": "topo"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},
     "tela_ia": {"layer": "full"}, "carrossel3d": {"layer": "full", "needs_video": True},

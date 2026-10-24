@@ -52,8 +52,8 @@ GAPS = [
      "alternativa": "trocar o template"},
     {"acao": "equalização por trecho ou biblioteca de trilhas", "motivo": "só --music com arquivo do usuário"},
     {"acao": "estilo de legenda diferente por cena", "motivo": "legenda é global (--caption-size/--caption-y)"},
-    {"acao": "gerar imagem/vídeo de B-roll", "motivo": "o editor só insere arquivos",
-     "alternativa": "gerar com skill de imagem/vídeo e usar --add-broll"},
+    {"acao": "gerar vídeo de B-roll", "motivo": "o editor gera imagens (imagens.py), não vídeos",
+     "alternativa": "imagem gerada com imagens.py + cenario/documentario (movimento de câmera) ou vídeo do usuário"},
     {"acao": "cortar/acelerar vídeo já editado", "motivo": "D02"},
 ]
 

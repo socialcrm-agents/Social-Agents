@@ -171,7 +171,8 @@ tráfego; `--draft` na primeira prévia (vídeo longo).
   `etiqueta`, `empilha`, `carimbo`, `anotacao` (à mão), destaque de palavra na legenda (`--emph`).
 - **Dados e listas**: `infografico`, `cronometro`, `tabela`, `checklist`, `vendas`, `notificacao`.
 - **3D e tela cheia**: `moldura`, `camadas`, `estudio3d`, `objeto3d` (segue a mão), `carrossel3d`, `clones`,
-  `cenario`, `giro`, `quadrinho`, `dividida`, `documentario`, `mapa`.
+  `cenario`, `giro`, `quadrinho`, `dividida`, `documentario`, `mapa`, **`profundidade`** (2.5D: a câmera anda, o
+  fundo se mexe em paralaxe pela profundidade real e desfoca ao longe; palavra gigante ENTRE o cenário e a pessoa).
 - **Visão computacional (com dados reais do vídeo)**: `hud` (segue o rosto), `pontos` (pessoa em nuvem de
   pontos), `recorte` (pessoa separada do fundo em camadas), `maos` (esqueleto da mão).
 - **Edição "ao vivo" (metalinguagem)**: `editor_ia`, `transcricao`, `tomadas`, `onda_audio`, `tela_ia`, `visor`.
@@ -180,7 +181,9 @@ tráfego; `--draft` na primeira prévia (vídeo longo).
   em tela cheia, sons sintetizados (whoosh, pop, ding, riser) já sincronizados.
 - **Composição própria**: qualquer animação nova em HTML/Three.js (contrato em `motion.md`) — use quando a fala
   pede algo que nenhum template mostra (órgão do corpo, gráfico específico, objeto do nicho).
-- **Mídia**: B-roll do usuário, imagens geradas pelas skills de imagem, `qa/pedidos-de-midia.md`.
+- **Mídia**: B-roll do usuário; **imagens geradas de graça** com `scripts/imagens.py gerar "<prompt>" midia/x.jpg`
+  (Gemini/Nano Banana com `GEMINI_API_KEY`, senão Pollinations/Flux sem conta) e `imagens.py atender <proj>`, que
+  gera os cenários de `qa/pedidos-de-midia.md` e devolve o `--motion cenario` pronto.
 
 Parâmetros completos de cada bloco: `motion.md`. O que cada um precisa: `hud`/`palavra` atrás → rosto detectado;
 `maos`/`objeto3d follow` → mão visível; `pontos`/`recorte`/`estudio3d` → máscara boa (pessoa nítida, fundo
@@ -189,6 +192,12 @@ separado); `documentario`/`giro`/`cenario` → imagens.
 ---
 
 ## 7. Fundo: quando trocar
+
+**Sem trocar o fundo, dê profundidade a ele:** `profundidade` (3–6 s) no gancho, numa virada ou com a palavra-chave
+(`texto`) entre o cenário e a pessoa — é o efeito "câmera de cinema" dos criativos de tráfego. `movimento: dolly`
+(empurra), `orbita` (gira leve) ou `lateral`. Fundo real (padrão) aceita câmera na mão e produto na mão; `fundo:
+"limpo"` só com câmera parada. Profundidade de verdade com o Depth Anything (baixado no `setup.py --models`);
+sem ele, modo heurístico (pessoa e o que ela segura perto, cenário longe).
 
 Troque (com `estudio3d`, `cenario`, `dividida`, `quadrinho`, `recorte`) quando:
 - o fundo original é feio, bagunçado ou não tem nada a ver com o assunto;
