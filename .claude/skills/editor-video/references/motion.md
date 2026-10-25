@@ -26,6 +26,7 @@ Pedido via `edit.py <projeto> --motion '<json>'` (ou `--motion @arquivo.json` co
 | `camadas` | full (usa vídeo) | Cena gira e se separa em camadas de vidro (fundo, elementos, pessoa) com rótulos; depois junta | `graphic`, `icon`, `labels{fundo, elementos, voce}`, `accent` |
 | `estudio3d` | full (usa vídeo, WebGL) | Troca o fundo por estúdio 3D iluminado (Three.js), câmera em parallax, letreiro na parede atrás da pessoa | `wall_text`, `accent`, `accent2`, `mood` noite/dia |
 | `objeto3d` | front ou behind (WebGL) | Texto extrudado ou logo em placa 3D com reflexo; entra girando, flutua; **segue a mão** | `text` ou `image`, `color`, `follow: "hand"`, `offset`, `x`, `y`, `size` |
+| `produto3d` | front (`atras`: `"layer": "behind"`; WebGL) | **Produto/ícone 3D de verdade**: a foto recortada (`scripts/recorte.py`) vira objeto extrudado pelo contorno do alfa, com chanfro arredondado, frente com a foto, laterais na cor da borda, luz key/rim/ambiente com verniz, sombra suave e brilho que passa. Entradas: `voa` (sobe em arco girando e pousa), `gira` (dá a volta e para de frente), `mao` (sai da palma e segue a mão; use `follow: "hand"`), `atras` (gira devagar atrás da pessoa). Sozinho, foge do rosto e da legenda | `image` (PNG recortado) ou `icone` (emoji, texto curto ou nome Lucide), `entrada`, `x`, `y`, `lado`, `size`, `espessura`, `cor`, `voltas`, `offset`, `brilho`, `sombra` |
 | `mapa` | front (card) ou full | Mapa ilustrado com pino, ponto de interesse, rota desenhada e tempo de deslocamento | `place`, `poi`, `poi_icon`, `time_label`, `pin_at`, `route_at`, `mode` |
 | `infografico` | front | Cartões de vidro com números que contam até o valor quando são ditos | `stats[{value, decimals, prefix, suffix, label, icon, at}]`, `y` |
 | `documentario` | full | Foto/print com câmera Ken Burns até o ponto que importa + círculos/setas/rótulos no tempo da fala | `image`, `focus`, `zoom`, `title`, `marks[{x, y, label, at, kind}]` |
@@ -78,6 +79,11 @@ Exemplos (os mesmos dos anúncios de referência):
 - "Coloca a logo em 3D na minha mão e faz acompanhar o movimento": `objeto3d` com `image` = logo do usuário,
   `follow: "hand"`. "Joga pra trás de mim": `layer: "behind"`.
 - "Remove meu fundo e coloca um cenário 3D": `estudio3d`.
+- "Tira o fundo da foto do produto e faz ele voar e girar até a tela": `python scripts/recorte.py foto.jpg produto.png`
+  (100% local: rembg se instalado, senão o IS-Net do anuncio-produto, senão OpenCV para foto de estúdio; de um
+  quadro do vídeo: `recorte.py video.mov produto.png --tempo 4.2 --caixa x0,y0,x1,y1`) e depois `produto3d` com
+  `image` = produto.png e `entrada: "voa"` (ou `"gira"`; `follow: "hand"` para sair da mão; `"atras"` + `"layer":
+  "behind"` para girar atrás da pessoa). Ícone 3D com o mesmo motor: `{"icone": "🔥"}`, `{"icone": "star", "preencher": true}`.
 - Corretor ("a 4 minutos a pé do metrô"): `mapa`; ("18 andares, 72 m², a partir de 1,1 milhão"): `infografico`.
 - Documentário / aula sobre uma foto: `documentario`.
 
