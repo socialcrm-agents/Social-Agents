@@ -128,6 +128,16 @@ Ritmo: no máximo uma animação de tela cheia a cada ~6-8 s num Reels; num víd
 Ícones em palavras-chave entram sozinhos no Viral/Anúncio (`--icons off` desliga).
 Não invente números, endereços ou dados: só o que a pessoa disse ou o usuário forneceu.
 
+## 2c. Direção premium (máxima qualidade / nível concorrente)
+
+Leia `references/direcao.md` seção **4c**. Em resumo: `edit.py --direcao premium` (seletor por intenção, palavra-chave
+com emoji e cor da emoção, transições no ritmo da fala, controle de densidade), composições de referência
+(`--composicao revelacao@trecho | produto_heroi@trecho | impacto@trecho`), produto recortado
+(`scripts/recorte.py foto.jpg produto.png` → `--produto produto.png`), trilha sem direitos (`--music auto:energia`),
+prévia rápida (`run.py previa <proj> --de A --ate B`), ganchos para teste A/B (`run.py ganchos <proj>`) e estilo
+copiado de um vídeo de referência (`scripts/referencia.py analisar video.mp4` → `aplicar perfil.json <proj>`).
+O render protege o rosto sozinho e o QA reprova rosto tampado.
+
 ## 3. Renderize
 
 ```bash
@@ -149,6 +159,15 @@ PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v
 - Variações de gancho (ele grava 3 ganchos seguidos e depois o corpo): `PY SK/scripts/run.py variacoes <projeto> --ganchos 3`
   → `renders/gancho1.mp4`, `gancho2.mp4`, `gancho3.mp4`.
 - Versões curtas terminando em fim de frase: `PY SK/scripts/run.py curta <projeto> --segundos 30 15`.
+- Gancho testado (3 aberturas do MESMO vídeo para teste no anúncio): `PY SK/scripts/run.py ganchos <projeto> [--n 3]`
+  → `renders/gancho_A.mp4` (pergunta na tela), `_B` (manchete + zoom de impacto), `_C` (corte de gancho com a frase
+  mais forte; em vídeo sem cortes, 2.5D com a palavra forte) + `qa/ganchos.md` com o que muda e o custo HIT/MISS.
+  Só o começo é refeito; textos = palavras ditas; o projeto principal não muda. `--so-plano` só compara sem render.
+- Referência do concorrente (copiar ritmo/densidade/estilo, nunca o conteúdo):
+  `PY SK/scripts/referencia.py analisar <video_deles> --saida perfil.json` (cortes/min, plano médio, zoom, texto na
+  tela, faixa e tamanho da legenda, paleta, flashes, loudness, trilha, ritmo da fala) e depois
+  `PY SK/scripts/referencia.py aplicar perfil.json <projeto>` (estilo, zoom, legenda, cor de destaque, densidade,
+  efeitos nas NOSSAS palavras fortes, via edit.py sem renderizar). Mostre ao usuário o que mudou e renderize.
 
 ## 4. Confira antes de entregar (obrigatório)
 

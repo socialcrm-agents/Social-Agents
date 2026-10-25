@@ -10,6 +10,7 @@
   run.py styles                 lista os estilos
   run.py variacoes <projeto> [--ganchos 3]      uma versão por gancho (grave 3 ganchos seguidos + o corpo)
   run.py curta <projeto> [--segundos 30 15]     versões curtas terminando em fim de frase
+  run.py ganchos <projeto> [--n 3] [--draft]     3 aberturas diferentes do mesmo vídeo (teste A/B/C no anúncio)
   run.py revisar <projeto> [--draft]             dry-run: o que o próximo render refaria (HIT/MISS), sem gravar nada
   run.py versoes <projeto>                       lista as versões (o que mudou e o que foi reaproveitado em cada uma)
   run.py rollback <projeto> --para N [--render]  volta o projeto ao estado da versão N (patches e pedidos inclusos)
@@ -184,6 +185,12 @@ def cmd_curta(a) -> None:
         _temp_render(project, lambda p, s=s: p.__setitem__("target_duration", s), f"curta_{s}s")
 
 
+def cmd_ganchos(a) -> None:
+    """Gancho testado: N versões que só diferem nos primeiros ~3 s; o resto vem do cache (veja ganchos.py)."""
+    import ganchos
+    ganchos.gerar(Path(a.project).resolve(), a.n, a.draft, a.so_plano)
+
+
 def cmd_revisar(a) -> None:
     import revisao
     revisao.imprimir(revisao.prever(Path(a.project).resolve(), preset="ultrafast" if a.draft else
@@ -299,6 +306,11 @@ def main() -> None:
     c = sub.add_parser("curta", help="versões curtas terminando em fim de frase")
     c.add_argument("project")
     c.add_argument("--segundos", type=int, nargs="+", default=[30, 15])
+    g = sub.add_parser("ganchos", help="N aberturas diferentes do mesmo vídeo (teste de gancho)")
+    g.add_argument("project")
+    g.add_argument("--n", type=int, default=3)
+    g.add_argument("--draft", action="store_true")
+    g.add_argument("--so-plano", action="store_true", help="só planeja e compara (não renderiza)")
     r = sub.add_parser("revisar", help="dry-run: o que o próximo render refaria")
     r.add_argument("project")
     r.add_argument("--draft", action="store_true")
@@ -317,7 +329,7 @@ def main() -> None:
     a = ap.parse_args()
     {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "previa": cmd_previa, "styles": cmd_styles,
      "variacoes": cmd_variacoes, "curta": cmd_curta, "revisar": cmd_revisar, "versoes": cmd_versoes,
-     "rollback": cmd_rollback, "limpar-cache": cmd_limpar}[a.cmd](a)
+     "rollback": cmd_rollback, "limpar-cache": cmd_limpar, "ganchos": cmd_ganchos}[a.cmd](a)
 
 
 if __name__ == "__main__":

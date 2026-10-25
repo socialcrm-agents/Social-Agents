@@ -50,6 +50,9 @@ Operações:
   --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
   --sem-cortes on|off            vídeo já cortado: mantém tudo e o ritmo original (só embeleza)
   --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
+  --cor-destaque #RRGGBB         cor da palavra em destaque na legenda (e do realce, se o estilo usa)
+  --corte-gancho "trecho"|off    abre o vídeo com esse trecho falado (1,5-3 s) e depois segue do começo
+                                 (corte de gancho; não vale para vídeo sem cortes/já editado)
   --dry-run                      mostra o que seria refeito (HIT/MISS por componente) sem gravar nem renderizar
 
 Pedidos de --motion com "id" substituem o pedido anterior com o mesmo id; um pedido idêntico a outro já existente é
@@ -116,6 +119,8 @@ def main() -> None:
     ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
     ap.add_argument("--sem-cortes", choices=["on", "off"])
     ap.add_argument("--fx", action="append", default=[], help="efeito de impacto: tipo@palavra (tremida, clarao, glitch, whip)")
+    ap.add_argument("--cor-destaque", help="cor de destaque da legenda, ex.: #FFE600")
+    ap.add_argument("--corte-gancho", help="trecho falado que abre o vídeo (ou 'off')")
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
@@ -330,6 +335,24 @@ def main() -> None:
         kind, _, at = spec.partition("@")
         ov.setdefault("fx_requests", []).append({"type": kind, "at": at})
         done.append(f"efeito {kind} em '{at}'")
+    if a.cor_destaque:
+        cor = a.cor_destaque.strip()
+        if not (len(cor) == 7 and cor.startswith("#") and all(c in "0123456789abcdefABCDEF" for c in cor[1:])):
+            raise EditorError(f"--cor-destaque precisa ser #RRGGBB (recebi '{cor}')")
+        cap = ov.setdefault("caption", {})
+        cap["emph_color"] = cor.upper()
+        if load_style(proj["style"], proj.get("brand"))["captions"].get("highlight", "none") != "none":
+            cap["highlight"] = cor.upper()
+        done.append(f"cor de destaque {cor.upper()}")
+    if a.corte_gancho:
+        if a.corte_gancho.strip().lower() == "off":
+            ov.pop("corte_gancho", None)
+            done.append("corte de gancho: off")
+        else:
+            if ov.get("sem_cortes") or proj.get("ja_editado"):
+                raise EditorError("Corte de gancho muda a ordem da fala: não vale para vídeo sem cortes/já editado.")
+            ov["corte_gancho"] = {"texto": a.corte_gancho.strip()}
+            done.append(f"corte de gancho: '{a.corte_gancho.strip()}'")
     if ignorados:
         log(f"   pedido(s) de motion idêntico(s) a um já existente ignorado(s): {'; '.join(ignorados)}")
     if not done and not a.note:

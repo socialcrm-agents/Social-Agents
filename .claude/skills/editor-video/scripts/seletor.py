@@ -202,6 +202,8 @@ def direcionar(words: list[dict], motion: list[dict], style_name: str, total: fl
                 ult_tipo = m["template"]
                 d["escolha"].append(f"herói {m['template']}" + (f" '{texto}' {emoji or ''} ({emo})" if texto else ""))
         rel.append(d)
+    for f_ in fx:  # id estável (não renumera quando outra coisa entra antes)
+        f_.setdefault("id", f"fx_{f_['type']}_s{round(f_['t'] * 1000)}")
     return {"motion": novos, "fx": fx, "sfx": sfx, "relatorio": rel, "paleta": paleta}
 
 

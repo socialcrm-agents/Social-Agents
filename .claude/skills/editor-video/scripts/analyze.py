@@ -204,6 +204,18 @@ def shorten(words, keep: list[int], segs: list[dict], target: float) -> set[int]
     return drop
 
 
+def segmento_gancho(words, gancho: dict, style: dict) -> dict | None:
+    """Corte de gancho: o trecho pedido (a frase mais forte) vira um segmento extra no começo do vídeo.
+    As palavras continuam também no lugar original; o plano marca as do começo como 'gancho'."""
+    idx = matches(words, gancho.get("texto", ""))
+    if not idx or len({words[i]["clip"] for i in idx}) != 1:
+        return None
+    c = style["cuts"]
+    a, b = words[idx[0]], words[idx[-1]]
+    return {"clip": a["clip"], "in": round(max(0.0, a["t0"] - c["pad_in"]), 3), "out": round(b["t1"] + c["pad_out"], 3),
+            "words": idx, "text": " ".join(words[i]["w"] for i in idx), "gancho": True}
+
+
 def main() -> None:
     project = Path(sys.argv[1])
     paths = project_paths(project)
@@ -225,6 +237,8 @@ def main() -> None:
         (paths["qa"] / "takes.md").write_text("# Tomadas e cortes\n\nModo sem cortes: vídeo mantido inteiro.\n",
                                               encoding="utf-8")
         log(f"OK: modo sem cortes, {raw:.1f}s mantidos inteiros")
+        if proj["overrides"].get("corte_gancho"):
+            log("   aviso: corte de gancho ignorado (vídeo sem cortes: a ordem da fala não muda)")
         return
     drop, report = analyze(words, style, proj.get("overrides", {}))
     keep = [i for i in range(len(words)) if i not in drop]
@@ -241,7 +255,15 @@ def main() -> None:
                            " / ".join(" ".join(words[i]["w"] for i in sorted(extra)[:12]).split(". ")[:3])))
             keep = [i for i in range(len(words)) if i not in drop]
             segs = build_segments(words, keep, style, tr.get("silences"))
-    raw = sum(c["duration"] for c in proj["clips"])
+    gancho = proj.get("overrides", {}).get("corte_gancho")
+    if gancho:
+        seg = segmento_gancho(words, gancho, style)
+        if seg:
+            segs.insert(0, seg)
+            report.append(("Corte de gancho (abre o vídeo, repete depois no lugar)", seg["text"]))
+        else:
+            report.append(("Corte de gancho", f"{gancho.get('texto')} (NÃO ENCONTRADO)"))
+    raw =sum(c["duration"] for c in proj["clips"])
     final = sum(s["out"] - s["in"] for s in segs)
     save_json(paths["edl"], {"style": proj["style"], "segments": segs, "dropped": sorted(drop),
                              "raw_duration": round(raw, 2), "edit_duration": round(final, 2)})

@@ -108,4 +108,6 @@ def expandir(pedidos: list[dict], words: list[dict], total: float, ov: dict) -> 
                    {"type": "tremida", "t": round(w0 + 0.05, 3), "force": 0.5}]
             sfx += [{"type": "hit", "t": round(w0 - 0.03, 3), "gain": 0.55},
                     {"type": cores["sfx"], "t": round(w0 + 0.12, 3), "gain": 0.45}]
+    for k, f_ in enumerate(fx):  # id estável (não renumera quando outra coisa entra antes)
+        f_.setdefault("id", f"fx_{f_['type']}_c{round(f_['t'] * 1000)}")
     return motion, fx, sfx, avisos

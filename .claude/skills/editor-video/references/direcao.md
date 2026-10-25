@@ -129,6 +129,34 @@ Ritmo:
 9. **Final forte.** Os últimos 3 s sempre têm o CTA visual mais bonito do vídeo (`final` ou `botao_cta`) e um som
    de fechamento.
 
+## 4c. Direção premium (padrão quando pedirem "máxima qualidade" / "nível concorrente")
+
+Três efeitos extraordinários valem mais que trinta genéricos. Ligue o seletor e use as composições:
+
+```
+python scripts/edit.py <proj> --direcao premium [--produto produto.png] \
+    --composicao "revelacao@<trecho do gancho>" --composicao "impacto@<número ou palavra forte>" \
+    [--composicao "produto_heroi@<quando mostra o produto>"] [--music auto:energia] --no-render
+python scripts/run.py previa <proj> --de 0 --ate 5      # prévia rápida só do trecho (não vira versão)
+python scripts/seletor.py <proj>                         # o que entrou em cada cena, o que ficou de fora e por quê
+```
+
+| Composição | Quando | O que faz |
+|---|---|---|
+| `revelacao@trecho` | gancho, virada, nome do produto | 2.5D: câmera empurra, fundo em paralaxe pela profundidade, a palavra mais forte do trecho aparece ENTRE o cenário e a pessoa, no lugar livre da parede; riser → hit; chicote de entrada |
+| `produto_heroi@trecho` | "olha esse…", "esse produto" (precisa `--produto`, recorte com `scripts/recorte.py`) | produto 3D de verdade (extrudado, luz, sombra) voa e pousa na mão; swoosh + plim + soco de câmera |
+| `impacto@trecho` | preço, número, palavra-chave de emoção | soco de câmera + palavra gigante com emoji e cor da emoção + clarão + tremida curta; som da emoção |
+
+O seletor (`--direcao premium`) decide o resto cena a cena: palavra-chave com emoji/cor por emoção (paleta de no
+máximo 2 cores), transições no ritmo da fala (zoom de impacto, chicote, glitch, passa a mão) só na troca de frase e
+na família da linguagem do estilo, e respeita o orçamento: herói ≥ 2 s, transição ≥ 2,5 s, tela cheia ≤ 1 a cada
+8 s, nunca o mesmo efeito em sequência. Pedido seu (motion/composição) sempre vence o automático.
+
+Garantias automáticas no render: **rosto livre** (animações que cobririam olhos/boca descem/sobem/vão para o lado
+ou diminuem, desviando também de legenda e gráficos; o QA reprova o que sobrar e avisa quando diminuiu < 70%) e
+**QA de densidade/leitura** (`seletor.py <proj>`: buracos > 4,5 s, dois heróis juntos, tela cheia colada, legenda
+< 44 px). Antes de entregar, olhe a folha de quadros dos momentos de cada composição.
+
 ## 5. Receitas por tipo de vídeo
 
 ### Comparação / "VS" (ex.: "30 aulas vs 1 método")
