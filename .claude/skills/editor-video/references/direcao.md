@@ -173,6 +173,8 @@ tráfego; `--draft` na primeira prévia (vídeo longo).
 - **3D e tela cheia**: `moldura`, `camadas`, `estudio3d`, `objeto3d` (segue a mão), `carrossel3d`, `clones`,
   `cenario`, `giro`, `quadrinho`, `dividida`, `documentario`, `mapa`, **`profundidade`** (2.5D: a câmera anda, o
   fundo se mexe em paralaxe pela profundidade real e desfoca ao longe; palavra gigante ENTRE o cenário e a pessoa).
+- **Produto e ícones 3D de verdade**: `produto3d` — foto do produto sem fundo (`scripts/recorte.py`, local e grátis)
+  vira objeto 3D com espessura, luz e sombra que voa, gira, sai da mão (`follow:"hand"`) ou gira atrás da pessoa; emoji/ícone vira 3D igual.
 - **Visão computacional (com dados reais do vídeo)**: `hud` (segue o rosto), `pontos` (pessoa em nuvem de
   pontos), `recorte` (pessoa separada do fundo em camadas), `maos` (esqueleto da mão).
 - **Edição "ao vivo" (metalinguagem)**: `editor_ia`, `transcricao`, `tomadas`, `onda_audio`, `tela_ia`, `visor`.
