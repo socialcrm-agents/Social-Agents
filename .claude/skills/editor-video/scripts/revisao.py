@@ -210,8 +210,10 @@ def juntar_patches(existentes: list[dict], novos: list[dict]) -> list[dict]:
 # chaves de cache por componente
 
 def chave_plano(sh: dict, w: int, h: int, fps: int) -> str:
-    return hk("plano", arquivo_sig(sh["src"]), sh["in"], sh["out"], round(sh["t1"] - sh["t0"], 4), sh["zoom0"], sh["zoom1"],
-             sh.get("cx"), sh.get("cy"), sh.get("speed", 1.0), w, h, fps)
+    base = ("plano", arquivo_sig(sh["src"]), sh["in"], sh["out"], round(sh["t1"] - sh["t0"], 4), sh["zoom0"],
+            sh["zoom1"], sh.get("cx"), sh.get("cy"), sh.get("speed", 1.0), w, h, fps)
+    # correção de imagem/estabilização só entra na chave quando ligada: sem ela a chave é idêntica à de antes
+    return hk(*base, sh["imagem"]) if sh.get("imagem") else hk(*base)
 
 
 def planos_na_janela(tl: dict, chaves: list[str], a: float, b: float) -> list:

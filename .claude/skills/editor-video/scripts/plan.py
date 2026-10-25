@@ -635,6 +635,8 @@ def main() -> None:
         "music": ov.get("music") or brand.get("music"), "motion": motion, "brand": proj.get("brand"), "fx": fx,
         "revisao": {"zoom_sig": zoom_sig, "patches_aplicados": len(usados)},
     }
+    if ov.get("imagem"):  # correção de imagem/estabilização (só aparece quando pedida: timelines antigas não mudam)
+        timeline["imagem"] = ov["imagem"]
     save_json(paths["timeline"], timeline)
     save_json(gerada_path, timeline)
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "

@@ -19,7 +19,8 @@ prova, organiza ou chama a ação daquilo que está sendo dito naquele instante.
 No modo sem cortes: não use `--cut`, `--velocidade` nem `run.py curta`. Projeto existente: `edit.py --sem-cortes on`.
 
 Pedido de "máxima qualidade": estilo `pro_clean` (anúncio premium) ou `anuncio_conversao` (mais agressivo), render
-final sem `--draft`, e **densidade alta** (seção 4). Pedido de troca de fundo liberada: veja a seção 7.
+final sem `--draft`, **densidade alta** (seção 4) e imagem automática (`edit.py --correcao auto --estabilizar auto`,
+seção 8c). Pedido de troca de fundo liberada: veja a seção 7.
 
 ---
 
@@ -245,6 +246,25 @@ crespo com fundo da mesma cor, pouca luz — teste 2 s e olhe), ou o vídeo é d
 - Fala no fim do vídeo (CTA na última frase): a animação recua para caber, em vez de sumir.
 - Gatilho automático não repete um bloco igual ao que você pediu a menos de 6 s.
 - `maos`: o render imprime `maos: mão em N/M quadros`; abaixo de metade, troque por outro bloco (fica vazio).
+
+## 8c. Imagem: luz, cor, pele e tremida (vídeo de celular)
+
+Desligado por padrão (projetos antigos renderizam igual). Ligue com
+`edit.py <projeto> --correcao auto --estabilizar auto [--pele 0.35]` (fica em `project.json → overrides.imagem`):
+
+- **Quando ligar**: `pro_clean` / "máxima qualidade" (sempre `auto`); vídeo de celular escuro, granulado ou com cor
+  puxada (lâmpada amarela); câmera na mão ou selfie tremida; rosto fugindo do centro; pedido de "pele bonita".
+  Vídeo de estúdio bem iluminado e no tripé: o `auto` decide sozinho que não precisa (não mexe).
+- **O que faz** (100% local, uma análise por clipe em `work/imagem_<clipe>.json`): curva de luz (preto, branco e
+  gamma; clareia o rosto até perto do ideal, nunca estoura), balanço de branco (cinza-mundo parcial nos tons
+  neutros), denoise proporcional ao ruído e ao quanto a sombra clareou, nitidez só quando falta, pele suavizada só
+  nos tons de pele (máx. ~55%: sem plástico) e recorte dinâmico por quadro que compensa o tremor e segue o rosto
+  devagar (zoom mínimo 1,06, até 1,10 se tremer muito). O grade do estilo continua por cima, na composição.
+- **Limites**: balanço/whip-pan intencional não é "tirado" (só suavizado dentro da margem do zoom); rotação da câmera
+  não é compensada; bruto muito pequeno (360p) continua macio (a nitidez só ajuda um pouco).
+- **Custo** (medido em 4 núcleos, tudo ligado): planos +0,9 a +2,2 s de CPU por segundo de vídeo (bruto 360p a
+  1440p; ~0,25–0,6 s de relógio, os planos rodam em paralelo) + análise 0,3–2,3 s de CPU por segundo, uma vez por
+  clipe (quase tudo é decodificar o bruto). Mudar a opção refaz só os planos (e o que depende deles).
 
 ## 9. QA antes de entregar
 

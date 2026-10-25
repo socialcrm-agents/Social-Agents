@@ -22,6 +22,9 @@ Várias operações podem ir no mesmo comando (uma versão nova por rodada).
 | "legenda maior / menor" | `--caption-size +15%` / `--caption-size -10%` |
 | "sobe a legenda" | `--caption-y 1100` (base da legenda em px; máx 1470) |
 | "menos zoom", "sem zoom", "zoom mais agressivo" | `--zoom suave` / `--zoom off` / `--zoom forte` |
+| "tá escuro", "melhora a imagem / a cor", "tá granulado" | `--correcao auto` (`--correcao off` desfaz) |
+| "tira a tremida", "deixa meu rosto no centro" | `--estabilizar on` (`auto` = só se precisar; `off` desfaz) |
+| "deixa a pele mais bonita / mais lisa", "menos filtro na pele" | `--pele 0.5` / `--pele 0.2` (0 desliga) |
 | "coloca essa música baixinha" | `--music trilha.mp3:0.10` (ducking automático sob a voz) |
 | "me coloca numa moldura e explica X do lado" | `--motion '{"template":"moldura","at":"trecho","until":"trecho","params":{"title":"...","items":[...]}}'` |
 | "separa em camadas de vidro" | `--motion '{"template":"camadas","at":"trecho","dur":4,"params":{"graphic":"..."}}'` |

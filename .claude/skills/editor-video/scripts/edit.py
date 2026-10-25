@@ -40,6 +40,9 @@ Operações:
   --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
   --sem-cortes on|off            vídeo já cortado: mantém tudo e o ritmo original (só embeleza)
   --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
+  --correcao auto|off            luz/cor/ruído/nitidez automáticos por clipe (vídeo de celular escuro, cor puxada)
+  --estabilizar auto|on|off      tira a tremida da câmera na mão e mantém o rosto centralizado (zoom mín. 1,06)
+  --pele 0..1                    suavização só nos tons de pele (padrão 0.35 com --correcao auto; 0 desliga)
   --dry-run                      mostra o que seria refeito (HIT/MISS por componente) sem gravar nem renderizar
 
 Pedidos de --motion com "id" substituem o pedido anterior com o mesmo id; um pedido idêntico a outro já existente é
@@ -99,6 +102,9 @@ def main() -> None:
     ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
     ap.add_argument("--sem-cortes", choices=["on", "off"])
     ap.add_argument("--fx", action="append", default=[], help="efeito de impacto: tipo@palavra (tremida, clarao, glitch, whip)")
+    ap.add_argument("--correcao", choices=["auto", "off"], help="luz, cor, ruído e nitidez automáticos")
+    ap.add_argument("--estabilizar", choices=["auto", "on", "off"], help="tira a tremida e mantém o rosto centralizado")
+    ap.add_argument("--pele", type=float, help="suavização de pele 0..1 (0 = desliga; padrão com --correcao auto: 0.35)")
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
@@ -255,6 +261,13 @@ def main() -> None:
     if a.velocidade:
         ov["speed"] = a.velocidade
         done.append(f"velocidade da fala ×{a.velocidade}")
+    for chave in ("correcao", "estabilizar", "pele"):
+        val = getattr(a, chave)
+        if val is not None:
+            if chave == "pele":
+                val = round(min(max(val, 0.0), 1.0), 2)
+            ov.setdefault("imagem", {})[chave] = val
+            done.append(f"imagem {chave}: {val}")
     for spec in a.fx:
         kind, _, at = spec.partition("@")
         ov.setdefault("fx_requests", []).append({"type": kind, "at": at})

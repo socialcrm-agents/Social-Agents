@@ -33,9 +33,11 @@ def face_for_shots(tl: dict, work: Path, so_cache: bool = False) -> bool:
     try:
         from vision import face_track
     except EditorError:
+        _preparar_imagem(tl, work, {}, {}, so_cache)
         return False
     found = False
     tracks: dict[str, list] = {}
+    alvos_y: dict[str, float] = {}
     for sh in tl["shots"]:
         if sh["clip"] not in tracks:
             cache = work / f"face_{sh['clip']}.json"
@@ -62,6 +64,7 @@ def face_for_shots(tl: dict, work: Path, so_cache: bool = False) -> bool:
                            for m in tl.get("motion", []))
             # card/player no alto ou palavra atrás: o rosto desce no quadro para sobrar espaço em cima
             target_y = 0.56 if top_busy else 0.48 if has_word else 0.40
+            alvos_y[sh.get("id", "")] = target_y
             if not sh.get("enquadramento_fixo"):
                 sh["cx"] = round(min(max((fx * z - 0.5) / (z - 1), 0), 1), 3)
                 sh["cy"] = round(min(max((fy * z - target_y) / (z - 1), 0), 1), 3)
@@ -70,7 +73,15 @@ def face_for_shots(tl: dict, work: Path, so_cache: bool = False) -> bool:
             zf = max(sh["zoom0"], sh["zoom1"])
             face_y = fy * zf * H - (zf * H - H) * sh["cy"]
             sh["chin"] = int(face_y + 0.62 * fh * zf * H)
+    _preparar_imagem(tl, work, tracks, alvos_y, so_cache)
     return found
+
+
+def _preparar_imagem(tl: dict, work: Path, tracks: dict, alvos_y: dict, so_cache: bool) -> None:
+    """Correção de imagem / estabilização (opção "imagem" do projeto). Desligada: nada muda nos planos."""
+    if tl.get("imagem"):
+        import imagem
+        imagem.preparar_planos(tl, work, tracks, alvos_y, W, H, so_cache=so_cache)
 
 
 class Cache:
@@ -132,7 +143,16 @@ def render_shots(tl: dict, work: Path, preset: str, reg: "revisao.Registro | Non
             return final
         t_ini = time.time()
         out = final.with_name(f"{k}.tmp.mp4")
-        ffmpeg(["-ss", f"{sh['in']:.3f}", "-i", sh["src"], "-t", f"{dur:.3f}", "-vf", vf,
+        filtro = ["-vf", vf]
+        if sh.get("imagem"):
+            # correção de imagem e/ou recorte dinâmico (estabilização): o grafo vai num arquivo (as expressões
+            # por quadro passariam do limite de linha de comando do Windows)
+            import imagem
+            script = final.with_name(f"{k}.vf.txt")
+            script.write_text(f"{imagem.cadeia(sh, work, W, H, z)}{tempo},fps={FPS},setsar=1,format=yuv420p",
+                              encoding="utf-8")
+            filtro = ["-filter_script:v", str(script)]
+        ffmpeg(["-ss", f"{sh['in']:.3f}", "-i", sh["src"], "-t", f"{dur:.3f}", *filtro,
                 "-af", f"{atempo}aresample=48000,afade=t=in:d=0.012,afade=t=out:st={max(tl_dur - 0.02, 0):.3f}:d=0.02,"
                 f"apad,atrim=0:{tl_dur:.4f}",  # áudio com a duração exata do plano: sem deriva entre som e imagem
                 "-frames:v", str(round(tl_dur * FPS)),
