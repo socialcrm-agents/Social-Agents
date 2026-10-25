@@ -9,9 +9,9 @@ from common import norm
 
 # emoção -> cor do destaque (paleta legível sobre vídeo: contraste alto com sombra) e sfx de impacto
 EMOCOES = {
-    "alegria":    {"cor": "#FACC15", "cor2": "#FB923C", "sfx": "pop"},
-    "dinheiro":   {"cor": "#22C55E", "cor2": "#A3E635", "sfx": "venda"},
-    "urgencia":   {"cor": "#F43F5E", "cor2": "#FB7185", "sfx": "boom"},
+    "alegria":    {"cor": "#FACC15", "cor2": "#FB923C", "sfx": "pop_bolha"},
+    "dinheiro":   {"cor": "#22C55E", "cor2": "#A3E635", "sfx": "cash"},
+    "urgencia":   {"cor": "#F43F5E", "cor2": "#FB7185", "sfx": "hit"},
     "alerta":     {"cor": "#F97316", "cor2": "#FACC15", "sfx": "glitch"},
     "confianca":  {"cor": "#60A5FA", "cor2": "#A5B4FC", "sfx": "ding"},
     "curiosidade": {"cor": "#B794FF", "cor2": "#F0ABFC", "sfx": "whoosh"},

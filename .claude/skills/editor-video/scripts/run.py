@@ -111,6 +111,13 @@ def cmd_plan(a) -> None:
     step("conectores.py", project)
 
 
+def cmd_previa(a) -> None:
+    """Prévia rápida de um trecho: só o que aparece entre --de e --ate (cache para o resto); não cria versão."""
+    project = Path(a.project).resolve()
+    cmd_plan(a)
+    step("render.py", project, "--de", str(a.de), "--ate", str(a.ate))
+
+
 def cmd_render(a) -> None:
     project = Path(a.project).resolve()
     cmd_plan(a)
@@ -281,6 +288,10 @@ def main() -> None:
         if name != "plan":
             sp.add_argument("--draft", action="store_true", help="prévia rápida (qualidade menor)")
             sp.add_argument("--max", action="store_true", help="compressão mais lenta, arquivo menor")
+    pv = sub.add_parser("previa", help="prévia rápida de um trecho (ex.: --de 12 --ate 16)")
+    pv.add_argument("project")
+    pv.add_argument("--de", type=float, required=True)
+    pv.add_argument("--ate", type=float, required=True)
     sub.add_parser("styles")
     v = sub.add_parser("variacoes", help="uma versão por gancho gravado")
     v.add_argument("project")
@@ -304,7 +315,7 @@ def main() -> None:
     lc.add_argument("project")
     lc.add_argument("--manter", type=int, default=5)
     a = ap.parse_args()
-    {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "styles": cmd_styles,
+    {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "previa": cmd_previa, "styles": cmd_styles,
      "variacoes": cmd_variacoes, "curta": cmd_curta, "revisar": cmd_revisar, "versoes": cmd_versoes,
      "rollback": cmd_rollback, "limpar-cache": cmd_limpar}[a.cmd](a)
 

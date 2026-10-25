@@ -43,7 +43,7 @@ TRANSICAO = {"virada": "whip", "dor": "glitch", "prova": "zoom_impacto", "numero
 FAMILIA = {"pro_clean": {"zoom_impacto", "whip", "swipe"}, "editorial_premium": {"whip"},
            "anuncio_conversao": {"zoom_impacto", "swipe", "glitch", "whip"},
            "reels_viral": {"zoom_impacto", "whip", "glitch", "swipe"}}
-SOM = {"zoom_impacto": ("boom", 0.55), "whip": ("whoosh", 0.6), "glitch": ("glitch", 0.5), "swipe": ("whoosh", 0.5)}
+SOM = {"zoom_impacto": ("hit", 0.6), "whip": ("swoosh", 0.65), "glitch": ("glitch", 0.5), "swipe": ("swipe", 0.6)}
 HEROI_GAP, TRANS_GAP, FULL_GAP = 2.0, 2.5, 8.0
 
 

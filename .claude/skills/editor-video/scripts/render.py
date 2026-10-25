@@ -691,6 +691,11 @@ def main() -> None:
     # final: veryfast/crf 18 tem a mesma qualidade visível do medium/crf 19 e codifica ~40% mais rápido
     # (Instagram e TikTok recomprimem de qualquer jeito); --max usa medium para arquivo de arquivo/YouTube
     preset = "ultrafast" if "--draft" in sys.argv else ("medium" if "--max" in sys.argv else "veryfast")
+    # prévia de um trecho (--de A --ate B): só as animações e os trechos de 4 s dessa janela; nada vira versão
+    previa = None
+    if "--de" in sys.argv and "--ate" in sys.argv:
+        previa = (float(sys.argv[sys.argv.index("--de") + 1]), float(sys.argv[sys.argv.index("--ate") + 1]))
+        preset = "ultrafast"
     paths = project_paths(project)
     proj = load_json(paths["project"])
     tl = load_json(paths["timeline"])
@@ -728,6 +733,8 @@ def main() -> None:
         from concurrent.futures import ThreadPoolExecutor
 
         from motion import hand_track, render_clip
+        if previa:  # prévia: só as animações que aparecem na janela
+            motions = [m for m in motions if m["t0"] < previa[1] and m["t1"] > previa[0]]
         novos = [m for m in motions if not (work / "motion" / f"clip_{chaves_motion[m.get('id')]}.mov").exists()]
         hands = hand_track(aroll, FPS, W, H) if any(m.get("hand") for m in novos) else None
 
@@ -759,16 +766,16 @@ def main() -> None:
     if tl["behind"]:
         log(f"   palavras atrás da pessoa: {len(behind)} | na frente (sem pessoa/cabeça instável): {len(front)}")
 
-    proj["version"] = proj.get("version", 0) + 1
+    proj["version"] = proj.get("version", 0) + (0 if previa else 1)
     v = proj["version"]
-    name = f"v{v}_{tl['style']}"
+    name = f"previa_{previa[0]:05.1f}-{previa[1]:05.1f}" if previa else f"v{v}_{tl['style']}"
     out = paths["renders"] / f"{name}.mp4"
     paths["renders"].mkdir(parents=True, exist_ok=True)
     etapa("palavras atrás")
     prep = preparar_composicao(tl, project, behind, front)
     rosto = proteger_rosto(clips, stats, tl, work, prep)
     etapa("rosto livre")
-    if os.environ.get("EDITOR_COMPOSICAO", "trechos") == "inteira":
+    if os.environ.get("EDITOR_COMPOSICAO", "trechos") == "inteira" and not previa:
         compose(tl, project, aroll, mask, behind, front, out, preset, clips, prep=prep)  # modo clássico (um grafo)
     else:
         from concurrent.futures import ThreadPoolExecutor
@@ -789,8 +796,9 @@ def main() -> None:
             os.replace(tmp, dst)
             reg.anota("trecho", ident, False, k, "algo mudou neste trecho", round(time.time() - t_ini, 1), janela=(a_, b_))
             return dst
+        js = [j for j in revisao.janelas(tl["duration"], FPS) if not previa or (j[0] < previa[1] and j[1] > previa[0])]
         with ThreadPoolExecutor(max_workers=2) as pool:
-            partes = list(pool.map(trecho, revisao.janelas(tl["duration"], FPS)))
+            partes = list(pool.map(trecho, js))
         ka = revisao.chave_audio(tl, chaves_planos)
         am = cache.caminho("audio", ka, ".m4a")
         if am.exists():
@@ -799,6 +807,17 @@ def main() -> None:
             t_ini = time.time()
             mix_audio(tl, aroll, prep, am)
             reg.anota("audio", "mix", False, ka, "voz, sons ou trilha mudaram", round(time.time() - t_ini, 1))
+        if previa:
+            a_, b_ = max(previa[0], 0.0), min(previa[1], tl["duration"])
+            bruto = work / "previa_video.mp4"
+            _concat(partes, bruto)
+            ffmpeg(["-ss", f"{a_ - js[0][0]:.3f}", "-t", f"{b_ - a_:.3f}", "-i", str(bruto), "-ss", f"{a_:.3f}",
+                    "-t", f"{b_ - a_:.3f}", "-i", str(am), "-map", "0:v", "-map", "1:a", "-c:v", "libx264",
+                    "-preset", "ultrafast", "-crf", "20", "-c:a", "aac", "-movflags", "+faststart", str(out)])
+            etapa("composição final")
+            log(f"OK prévia: {out} ({b_ - a_:.1f}s em {time.time() - t_start:.1f}s) | {reg.linha()}")
+            log("   tempos: " + " | ".join(f"{n} {s:.1f}s" for n, s in tempos if s >= 0.05))
+            return
         _concat(partes, out, inputs=["-i", str(am)],
                 extra=["-map", "0:v", "-map", "1:a", "-c", "copy", "-movflags", "+faststart"])
     etapa("composição final")
