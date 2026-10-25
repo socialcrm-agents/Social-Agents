@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- PASSA A MÃO NA TELA (layer: front, ~0,4 s): uma mão gigante cruza a tela na diagonal com rastro de movimento e
+     um feixe de luz, como se "limpasse" a cena para a próxima. Vem junto com o chicote (whip) no quadro.
+     params: direcao "esq" (default: da direita para a esquerda) | "dir", emoji (default ✋), cor do feixe -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  .m { position: absolute; font-size: 640px; line-height: 1; will-change: transform, opacity;
+       font-family: 'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; }
+  #feixe { position: absolute; top: -20%; height: 140%; width: 420px; will-change: transform, opacity;
+           filter: blur(28px); }
+</style></head>
+<body><div id="feixe"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const dir = p.direcao === 'dir' ? 1 : -1;
+const feixe = document.getElementById('feixe');
+feixe.style.background = `linear-gradient(90deg, transparent, ${p.cor || 'rgba(255,255,255,.75)'}, transparent)`;
+// a mão e 3 "fantasmas" atrás dela (rastro)
+const maos = Array.from({ length: 4 }, (_, i) => {
+  const d = document.createElement('div'); d.className = 'm'; d.textContent = p.emoji || '✋';
+  if (dir > 0) d.style.transform = 'scaleX(-1)';
+  document.body.appendChild(d); return d;
+});
+motion.onFrame((t) => {
+  maos.forEach((d, i) => {
+    const k = motion.prog(t - i * 0.022, 0, D * 0.95, 'inOutQuad');
+    const x = dir < 0 ? W * (0.95 - 1.55 * k) : W * (-0.6 + 1.55 * k);
+    const y = H * (0.66 - 0.3 * k);
+    const rot = dir * (-18 + 30 * k);
+    d.style.transform = `translate(${x}px, ${y - 330}px) rotate(${rot}deg) ${dir > 0 ? 'scaleX(-1)' : ''}`;
+    d.style.opacity = String(i === 0 ? 1 : 0.3 * (1 - i / 4));   // rastro só com transparência (blur de emoji
+    // gigante é caro demais no render por software)
+  });
+  const k = motion.prog(t, 0.02, D * 0.9, 'inOutCubic');
+  feixe.style.transform = `translateX(${dir < 0 ? W * (1.1 - 1.6 * k) : W * (-0.5 + 1.6 * k)}px) skewX(${-14 * dir}deg)`;
+  feixe.style.opacity = String(Math.sin(Math.PI * k) * 0.9);
+});
+</script></body></html>

@@ -75,7 +75,7 @@ async function openPage() {
   await page.addInitScript((cfg) => { window.__MOTION__ = cfg; }, { w, h, fps, duration, params: job.params || {} });
   await page.goto(`http://127.0.0.1:${port}${job.page}`, { waitUntil: 'load' });
   try {
-    await page.waitForFunction(() => typeof window.__motionSeek === 'function', null, { timeout: 20000 });
+    await page.waitForFunction(() => typeof window.__motionSeek === 'function', null, { timeout: 20000, polling: 100 });
   } catch {
     console.error(logs.join('\n'));
     throw new Error('A composição não registrou window.__motionSeek (importe /lib/runtime.js).');

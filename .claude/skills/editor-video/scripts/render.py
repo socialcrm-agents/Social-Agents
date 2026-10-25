@@ -323,13 +323,21 @@ def fx_chain(f: list[str], cur: str, fx: list[dict]) -> str:
         chain.append(f"eq=brightness=0.35:contrast=0.8:enable='{win('clarao')}'")
     if win("glitch"):
         chain.append(f"rgbashift=rh=-14:bh=14:gv=6:enable='{win('glitch')}',noise=alls=35:allf=t:enable='{win('glitch')}'")
+    if win("zoom_impacto"):
+        # soco de câmera: entra 14% mais perto num quadro e volta em curva (0,35 s), centrado no rosto/alto
+        z = "+".join(f"0.14*pow(max(0,1-(t-{e['t']:.3f})/{e.get('dur', DUR_FX['zoom_impacto']):.3f}),2)"
+                     f"*between(t,{e['t']:.3f},{e['t'] + e.get('dur', DUR_FX['zoom_impacto']):.3f})"
+                     for e in fx if e["type"] == "zoom_impacto")
+        chain.append(f"scale=w='2*trunc({W}*(1+{z})/2)':h='2*trunc({H}*(1+{z})/2)':eval=frame,"
+                     f"crop={W}:{H}:x='(in_w-{W})/2':y='(in_h-{H})*0.38'")
     if win("whip"):
-        chain.append(f"avgblur=sizeX=60:sizeY=1:enable='{win('whip')}'")
+        # chicote: a imagem corre para o lado com rastro (scroll + borrão horizontal forte) no instante da troca
+        chain.append(f"scroll=horizontal=0.045:enable='{win('whip')}',avgblur=sizeX=90:sizeY=1:enable='{win('whip')}'")
     f.append(f"[{cur}]{','.join(chain)},setsar=1[vfx]")
     return "vfx"
 
 
-DUR_FX = {"tremida": 0.3, "clarao": 0.08, "glitch": 0.22, "whip": 0.1}
+DUR_FX = {"tremida": 0.3, "clarao": 0.08, "glitch": 0.22, "whip": 0.12, "zoom_impacto": 0.35}
 
 
 VOZ = "highpass=f=80,afftdn=nf=-28,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=2,loudnorm=I={lufs}:TP=-1.5:LRA=9,aresample=48000"
@@ -378,7 +386,7 @@ def cadeia_limite() -> str:
     return LIMITE + (f",atrim=start={lat:.4f},asetpts=PTS-STARTPTS,apad" if lat > 0.001 else "")
 
 
-def proteger_rosto(clips: list, stats: list | None, tl: dict, work: Path) -> dict:
+def proteger_rosto(clips: list, stats: list | None, tl: dict, work: Path, prep: dict | None = None) -> dict:
     """Rosto nunca tampado: para cada animação na frente da pessoa, mede a cobertura de olhos/boca quadro a quadro e
     aplica a menor mudança que libera o rosto (m["guarda"], usado no overlay). Devolve o resumo para o QA."""
     import rosto_guarda
@@ -386,11 +394,14 @@ def proteger_rosto(clips: list, stats: list | None, tl: dict, work: Path) -> dic
     if not stats:
         return out
     frente = [(m, p) for m, p in sorted(clips, key=lambda c: c[0]["t0"]) if m.get("layer") == "front"]
+    fixos = rosto_guarda.fixos_da_timeline(tl, (prep or {}).get("gfx", []), W, H)
     for m, path in frente:
         if m.get("rosto") == "livre":  # pedido explícito para cobrir (ex.: máscara de efeito no rosto)
             continue
         outros = [(o, p) for o, p in frente if o is not m and o["t0"] < m["t1"] and o["t1"] > m["t0"]]
-        d = rosto_guarda.guarda(Path(path), m, stats, tl.get("recuo", []), W, H, FPS, work / "motion", outros)
+        # transições (mão que cruza a tela) passam por cima de tudo de propósito; o resto desvia de legenda/gráficos
+        d = rosto_guarda.guarda(Path(path), m, stats, tl.get("recuo", []), W, H, FPS, work / "motion", outros,
+                                fixos if m.get("template") not in ("passa_mao",) else None)
         item = {"id": m.get("id"), "template": m.get("template"), "antes": d["antes"], "depois": d["depois"]}
         out["medidas"].append(item)
         if d["s"] != 1.0 or d["x"] or d["y"]:
@@ -736,8 +747,6 @@ def main() -> None:
     tl["recuo"] = recuo_windows(motions, stats)
     if tl["recuo"]:
         log(f"   recuo (pessoa desce para abrir o topo): {len(tl['recuo'])} trecho(s)")
-    rosto = proteger_rosto(clips, stats, tl, work)
-    etapa("rosto livre")
     behind, front = place_behind(tl, stats)
     behind, moved = fit_behind(tl, behind)  # sem espaço acima da cabeça: a palavra sai (não vai para o rosto)
     if moved:
@@ -757,6 +766,8 @@ def main() -> None:
     paths["renders"].mkdir(parents=True, exist_ok=True)
     etapa("palavras atrás")
     prep = preparar_composicao(tl, project, behind, front)
+    rosto = proteger_rosto(clips, stats, tl, work, prep)
+    etapa("rosto livre")
     if os.environ.get("EDITOR_COMPOSICAO", "trechos") == "inteira":
         compose(tl, project, aroll, mask, behind, front, out, preset, clips, prep=prep)  # modo clássico (um grafo)
     else:

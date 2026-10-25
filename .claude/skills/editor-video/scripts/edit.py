@@ -37,6 +37,9 @@ Operações:
   --patch-clear ID               desfaz os patches de um elemento
   --icons on|off                 ícones automáticos nas palavras-chave
   --gatilhos on|off              mapa de gatilhos (frase/dinheiro/enumeração -> efeito + som)
+  --direcao premium|off          seletor por intenção: palavra-chave com emoji/cor, 2.5D no gancho, transições
+                                 no ritmo da fala, com controle de densidade (seletor.py)
+  --produto foto.png             foto do produto (recortada) para o produto 3D nas cenas que mostram o produto
   --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
   --sem-cortes on|off            vídeo já cortado: mantém tudo e o ritmo original (só embeleza)
   --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
@@ -96,6 +99,8 @@ def main() -> None:
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--icons", choices=["on", "off"])
     ap.add_argument("--gatilhos", choices=["on", "off"])
+    ap.add_argument("--direcao", choices=["premium", "off"])
+    ap.add_argument("--produto", help="foto do produto (PNG recortado) para o produto 3D da direção premium")
     ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
     ap.add_argument("--sem-cortes", choices=["on", "off"])
     ap.add_argument("--fx", action="append", default=[], help="efeito de impacto: tipo@palavra (tremida, clarao, glitch, whip)")
@@ -249,6 +254,15 @@ def main() -> None:
     if a.gatilhos:
         ov["triggers"] = a.gatilhos == "on"
         done.append(f"gatilhos automáticos: {a.gatilhos}")
+    if a.direcao:
+        if a.direcao == "premium":
+            ov["direcao"] = "premium"
+        else:
+            ov.pop("direcao", None)
+        done.append(f"direção: {a.direcao}")
+    if a.produto:
+        ov.setdefault("direcao_cfg", {})["produto"] = str(Path(a.produto).expanduser().resolve())
+        done.append(f"produto 3D: {Path(a.produto).name}")
     if a.sem_cortes:
         ov["sem_cortes"] = a.sem_cortes == "on"
         done.append(f"sem cortes: {a.sem_cortes}")

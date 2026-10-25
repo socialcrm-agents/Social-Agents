@@ -54,7 +54,8 @@ MOTION_DEFAULTS = {
     "final": {"layer": "full"}, "hud": {"layer": "front", "zona": "barra"}, "pontos": {"layer": "full", "needs_video": True},
     "recorte": {"layer": "full", "needs_video": True}, "maos": {"layer": "front", "zona": "barra"},
     "transcricao": {"layer": "full", "needs_video": True}, "tomadas": {"layer": "front", "zona": "topo"},
-    "estudio3d": {"layer": "full", "needs_video": True}, "profundidade": {"layer": "full", "needs_video": True}, "objeto3d": {"layer": "front"},
+    "estudio3d": {"layer": "full", "needs_video": True}, "profundidade": {"layer": "full", "needs_video": True},
+    "palavra_chave": {"layer": "front", "zona": "meio"}, "passa_mao": {"layer": "front", "rosto": "livre"}, "objeto3d": {"layer": "front"},
     "mapa": {"layer": "front"}, "infografico": {"layer": "front", "zona": "topo"}, "documentario": {"layer": "full"},
     "icone": {"layer": "front"},
     "tela_ia": {"layer": "full"}, "carrossel3d": {"layer": "full", "needs_video": True},
@@ -165,7 +166,7 @@ def motion_sfx(motion: list[dict], k: float = 1.0) -> list[dict]:
         tp, p, t0, t1 = m.get("template"), m.get("params", {}), m["t0"], m["t1"]
         if tp in (None, "icone", "vendas", "luz"):
             continue
-        if m.get("layer") != "full":
+        if m.get("layer") != "full" and tp != "palavra_chave":  # palavra-chave tem o som da emoção (seletor)
             add("whoosh", t0 - 0.08, 0.3)
         if tp == "pergunta":
             add("click", t0 + 0.1, 0.5)
@@ -210,6 +211,9 @@ def _desloca_cues(obj, atraso: float):
                 and not isinstance(v, bool) else _desloca_cues(v, atraso)) for k, v in obj.items()}
 
 
+TRANSICOES = {"passa_mao"}  # animações de transição: rápidas de propósito (o mínimo de 1 s é para leitura)
+
+
 def resolve_overlaps(items: list[dict]) -> list[dict]:
     """Animações de tela cheia têm prioridade: a anterior termina quando a próxima começa, e as de camada
     (front/behind) são cortadas para fora das janelas de tela cheia."""
@@ -229,7 +233,7 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
                     m["t0"] = f["t1"]
                 else:
                     m["t1"] = f["t0"]
-        if m["t1"] - m["t0"] >= 1.0:
+        if m["t1"] - m["t0"] >= 1.0 or m.get("template") in TRANSICOES:
             out.append(m)
         elif not m.get("auto"):
             log(f"   aviso: motion {m.get('id', '')} ({m.get('template')}): ficou com {m['t1'] - m['t0']:.2f}s "
@@ -247,10 +251,10 @@ def resolve_overlaps(items: list[dict]) -> list[dict]:
                 # os tempos internos (item marcado, clique, digitação) são relativos ao início: continuam na palavra
                 b["params"] = _desloca_cues(b.get("params", {}), atraso)
     for m in out:
-        if m["t1"] - m["t0"] < 1.0 and m.get("layer") != "full" and not m.get("auto"):
+        if m["t1"] - m["t0"] < 1.0 and m.get("layer") != "full" and not m.get("auto") and m.get("template") not in TRANSICOES:
             log(f"   aviso: motion {m.get('id', '')} ({m.get('template')}): {m['t1'] - m['t0']:.2f}s (< 1 s, mínimo "
                 f"de leitura); ignorado — estenda o 'until' ou o 'dur'")
-    out = [m for m in out if m["t1"] - m["t0"] >= 1.0 or m.get("layer") == "full"]
+    out = [m for m in out if m["t1"] - m["t0"] >= 1.0 or m.get("layer") == "full" or m.get("template") in TRANSICOES]
     return sorted(out, key=lambda m: m["t0"])
 
 
@@ -544,6 +548,16 @@ def main() -> None:
             m["id"] = f"a_{m['template']}_{wi}"
         motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
         fx += trig_fx
+    direcao = None
+    if ov.get("direcao") == "premium":  # seletor por intenção (seletor.py): decide cena a cena, com orçamento
+        import seletor
+        direcao = seletor.direcionar(words, motion, style["name"], total, ov)
+        for m in direcao["motion"]:
+            m.update({k: v for k, v in MOTION_DEFAULTS.get(m["template"], {}).items() if k not in m})
+            m["params"] = {**MOTION_DEFAULTS.get(m["template"], {}).get("params", {}), **m["params"]}
+        motion = resolve_overlaps(sorted(motion + direcao["motion"], key=lambda m: m["t0"]))
+        fx += direcao["fx"]
+        trig_sfx = trig_sfx + direcao["sfx"]
     motion = revisao.aplicar_patches("motion", motion, patches, usados)
     if motion and not perfil()["motion"]:
         log(f"   {len(motion)} animação(ões) puladas: elas fazem parte do Pacote Motion 3D (não instalado)")
@@ -635,6 +649,8 @@ def main() -> None:
         "music": ov.get("music") or brand.get("music"), "motion": motion, "brand": proj.get("brand"), "fx": fx,
         "revisao": {"zoom_sig": zoom_sig, "patches_aplicados": len(usados)},
     }
+    if direcao:
+        timeline["direcao"] = {"relatorio": direcao["relatorio"], "paleta": direcao["paleta"]}
     save_json(paths["timeline"], timeline)
     save_json(gerada_path, timeline)
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "

@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 BW, BH = 270, 480          # resolução de medida (9:16); 16:9 inverte
-VERSAO = 6                 # muda quando a regra de decisão muda (invalida o cache das decisões)
+VERSAO = 7                 # muda quando a regra de decisão muda (invalida o cache das decisões)
 LIMITE = 0.04              # fração da zona do rosto coberta que já conta como "tampou"
 TOLERA_QUADROS = 3         # até 3 quadros (0,1 s: entrada/saída da animação) não reprova
 # candidatos: (escala, âncora x 0..1, deslocamento y em fração da altura); ordem = preferência (menos mudança)
@@ -159,10 +159,45 @@ def decidir(a: np.ndarray, caixas: list, obst: np.ndarray | None = None) -> dict
     return {"s": s, "ax": ax, "dy": dy, "antes": ruins, "depois": c, "max_antes": base["max_antes"]}
 
 
-def obstaculos(outros: list[tuple[dict, Path]], t0: float, n: int, W: int, H: int, fps: int) -> np.ndarray | None:
-    """União do alfa das outras animações na frente durante a janela [t0, t0 + n quadros) (já com a guarda delas)."""
+def fixos_da_timeline(tl: dict, gfx: list, W: int, H: int) -> list[dict]:
+    """Obstáculos que não são animações: a faixa da legenda de cada página e os gráficos (CTA, gancho, título)."""
+    from PIL import Image
+    from assets import caption_y
+    w, h = (BW, BH) if H >= W else (BH, BW)
+    out = []
+    size = tl["captions"]["cfg"]["size"]
+    for pg in tl["captions"]["pages"]:
+        y = caption_y(tl, pg["t0"])
+        out.append({"t0": pg["t0"], "t1": pg["t1"],
+                    "ret": [int(w * 0.1), int((y - 2.4 * size) * h / H), int(w * 0.9), int((y + 0.2 * size) * h / H)]})
+    for png, g in gfx:
+        try:
+            a = np.asarray(Image.open(png).convert("RGBA").resize((w, h)), np.float32)[..., 3] / 255
+        except OSError:
+            continue
+        out.append({"t0": g["t0"], "t1": g["t1"], "alfa": a})
+    return out
+
+
+def obstaculos(outros: list[tuple[dict, Path]], t0: float, n: int, W: int, H: int, fps: int,
+               fixos: list[dict] | None = None) -> np.ndarray | None:
+    """União do que já ocupa a tela durante a janela [t0, t0 + n quadros): outras animações na frente (já com a
+    guarda delas), a faixa da legenda e os gráficos."""
     w, h = (BW, BH) if H >= W else (BH, BW)
     acc = None
+    for fx_ in fixos or []:
+        ini, fim = int(round((fx_["t0"] - t0) * fps)), int(round((fx_["t1"] - t0) * fps))
+        if fim <= 0 or ini >= n:
+            continue
+        mask = np.zeros((h, w), np.float32)
+        if "ret" in fx_:
+            x0, y0, x1, y1 = fx_["ret"]
+            mask[max(y0, 0):max(y1, 0), max(x0, 0):max(x1, 0)] = 1
+        else:
+            mask = fx_["alfa"]
+        buf = np.zeros((n, h, w), np.float32)
+        buf[max(ini, 0):min(fim, n)] = mask
+        acc = buf if acc is None else np.maximum(acc, buf)
     for m, clip in outros:
         a = alfas(Path(clip), w, h, fps)
         g = m.get("guarda")
@@ -179,12 +214,14 @@ def obstaculos(outros: list[tuple[dict, Path]], t0: float, n: int, W: int, H: in
 
 
 def guarda(clip: Path, m: dict, stats: list[dict], recuo: list[dict], W: int, H: int, fps: int, cache_dir: Path,
-           outros: list[tuple[dict, Path]] | None = None) -> dict:
+           outros: list[tuple[dict, Path]] | None = None, fixos: list[dict] | None = None) -> dict:
     """Decisão para uma animação (com cache: mesmo clipe + mesmos rostos + mesmo recuo + mesmos vizinhos)."""
     a_, b_ = int(round(m["t0"] * fps)), int(round(m["t1"] * fps))
     w, h = (BW, BH) if H >= W else (BH, BW)
     caixas = [com_recuo(c, (a_ + i) / fps, recuo, w, h) for i, c in enumerate(rostos_por_quadro(stats, a_, b_, w, h))]
     viz = [[Path(p).name, o["t0"], o.get("guarda")] for o, p in (outros or [])]
+    fixos = [f_ for f_ in (fixos or []) if f_["t0"] < m["t1"] and f_["t1"] > m["t0"]]
+    viz.append([[f_["t0"], f_["t1"], f_.get("ret") or float(f_["alfa"].sum())] for f_ in fixos])
     chave = hashlib.sha1(json.dumps([VERSAO, clip.name, clip.stat().st_size, caixas, recuo, m["t0"], m["t1"], viz],
                                     default=str).encode()).hexdigest()[:16]
     f = cache_dir / f"guarda_{chave}.json"
@@ -192,7 +229,7 @@ def guarda(clip: Path, m: dict, stats: list[dict], recuo: list[dict], W: int, H:
         return json.loads(f.read_text())
     a = alfas(clip, w, h, fps)[: len(caixas)]
     caixas = caixas[: len(a)]
-    obst = obstaculos(outros, m["t0"], len(a), W, H, fps) if outros else None
+    obst = obstaculos(outros or [], m["t0"], len(a), W, H, fps, fixos) if (outros or fixos) else None
     d = decidir(a, caixas, obst)
     s = d["s"]
     # em px do quadro final, para o overlay do clipe já escalado
