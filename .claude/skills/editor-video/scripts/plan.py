@@ -548,6 +548,18 @@ def main() -> None:
             m["id"] = f"a_{m['template']}_{wi}"
         motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
         fx += trig_fx
+    if ov.get("composicoes"):  # composições de referência (composicoes.py): pedido explícito, vence os automáticos
+        import composicoes
+        c_mo, c_fx, c_sfx, c_av = composicoes.expandir(ov["composicoes"], words, total, ov)
+        for m in c_mo:
+            m["params"] = {**MOTION_DEFAULTS.get(m["template"], {}).get("params", {}), **m["params"]}
+        for x in c_av:
+            log(f"   aviso: {x}")
+        janelas_c = [(m["t0"] - 0.2, m["t1"] + 0.2) for m in c_mo]
+        motion = [m for m in motion if not (m.get("auto") and any(m["t0"] < b_ and m["t1"] > a_ for a_, b_ in janelas_c))]
+        motion = resolve_overlaps(sorted(motion + c_mo, key=lambda m: m["t0"]))
+        fx += c_fx
+        trig_sfx = trig_sfx + c_sfx
     direcao = None
     if ov.get("direcao") == "premium":  # seletor por intenção (seletor.py): decide cena a cena, com orçamento
         import seletor
@@ -563,7 +575,8 @@ def main() -> None:
         log(f"   {len(motion)} animação(ões) puladas: elas fazem parte do Pacote Motion 3D (não instalado)")
         motion, trig_sfx = [], []
     # impacto automático: chicote + whoosh na entrada de animações de tela cheia
-    fx += [{"type": "whip", "t": round(max(m["t0"] - 0.05, 0), 3)} for m in motion if m.get("layer") == "full"]
+    fx += [{"type": "whip", "t": round(max(m["t0"] - 0.05, 0), 3)} for m in motion if m.get("layer") == "full"
+           and not any(f_["type"] == "whip" and abs(f_["t"] - m["t0"]) < 0.3 for f_ in fx)]
     # palavra gigante não aparece por cima de animação de tela cheia
     fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]

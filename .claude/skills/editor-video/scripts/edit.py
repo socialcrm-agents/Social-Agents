@@ -43,6 +43,10 @@ Operações:
   --direcao premium|off          seletor por intenção: palavra-chave com emoji/cor, 2.5D no gancho, transições
                                  no ritmo da fala, com controle de densidade (seletor.py)
   --produto foto.png             foto do produto (recortada) para o produto 3D nas cenas que mostram o produto
+  --composicao NOME@trecho       composição de referência no trecho falado: revelacao (2.5D + palavra entre o
+                                 cenário e a pessoa), produto_heroi (produto 3D pousa na mão), impacto (soco de
+                                 câmera + palavra gigante com emoji + clarão); repetível
+  --composicao-remove NOME@trecho  tira uma composição pedida
   --velocidade 1.15              acelera a fala sem mudar o tom (1 = original)
   --sem-cortes on|off            vídeo já cortado: mantém tudo e o ritmo original (só embeleza)
   --fx tipo@palavra              tremida | clarao | glitch | whip no instante em que a palavra é dita
@@ -107,6 +111,8 @@ def main() -> None:
     ap.add_argument("--gatilhos", choices=["on", "off"])
     ap.add_argument("--direcao", choices=["premium", "off"])
     ap.add_argument("--produto", help="foto do produto (PNG recortado) para o produto 3D da direção premium")
+    ap.add_argument("--composicao", action="append", default=[])
+    ap.add_argument("--composicao-remove", action="append", default=[])
     ap.add_argument("--velocidade", type=float, help="fala mais rápida/lenta, ex.: 1.15 (1 = original)")
     ap.add_argument("--sem-cortes", choices=["on", "off"])
     ap.add_argument("--fx", action="append", default=[], help="efeito de impacto: tipo@palavra (tremida, clarao, glitch, whip)")
@@ -300,6 +306,17 @@ def main() -> None:
         else:
             ov.pop("direcao", None)
         done.append(f"direção: {a.direcao}")
+    for c in a.composicao:
+        nome, _, at = c.partition("@")
+        lista = ov.setdefault("composicoes", [])
+        pedido = {"nome": nome.strip(), "at": at.strip()}
+        if pedido not in [{"nome": x["nome"], "at": x["at"]} for x in lista]:
+            lista.append(pedido)
+        done.append(f"composição {nome} em '{at}'")
+    for c in a.composicao_remove:
+        nome, _, at = c.partition("@")
+        ov["composicoes"] = [x for x in ov.get("composicoes", []) if not (x["nome"] == nome.strip() and x["at"] == at.strip())]
+        done.append(f"composição removida: {nome}@{at}")
     if a.produto:
         ov.setdefault("direcao_cfg", {})["produto"] = str(Path(a.produto).expanduser().resolve())
         done.append(f"produto 3D: {Path(a.produto).name}")

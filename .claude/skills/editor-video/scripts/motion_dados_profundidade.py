@@ -31,6 +31,43 @@ def _alfa(fdir: Path, i: int, forma) -> np.ndarray:
     return c[..., 3].astype(np.float32) / 255
 
 
+def lugar_do_texto(alfas: list[np.ndarray], texto: str, W: int, H: int, fator: float = 0.47) -> dict | None:
+    """Onde a palavra cabe MAIOR no cenário: ocupação MÉDIA da pessoa no trecho (quem se mexe muito ainda deixa parede
+    livre a maior parte do tempo) até 18% da caixa do texto. Sem lugar livre, o de menor ocupação no tamanho que cabe
+    em 88% da largura. Busca em 108x192 com imagem integral. Devolve x, y (topo) e tamanho em px."""
+    if not texto or not alfas:
+        return None
+    import cv2
+    w, h = 108, 192
+    media = np.mean([cv2.resize(a, (w, h), interpolation=cv2.INTER_AREA) for a in alfas], axis=0)
+    ocupa = cv2.dilate(media, np.ones((3, 3), np.uint8))
+    ii = np.pad(ocupa.cumsum(0).cumsum(1), ((1, 0), (1, 0)))
+    n = max(len(texto), 1)
+
+    def busca(fs: int, limite: float | None):
+        tw, th = int(n * fs * fator * w / W) + 2, int(fs * 0.95 * h / H) + 1
+        if tw >= w - 2:
+            return None
+        melhor = None
+        for y in range(int(h * 0.06), int(h * 0.58) - th):
+            for x in range(2, w - tw - 2, 2):
+                ocup = (ii[y + th, x + tw] - ii[y, x + tw] - ii[y + th, x] + ii[y, x]) / (tw * th)
+                if limite is not None and ocup > limite:
+                    continue
+                custo = ocup * 4 + abs((x + tw / 2) - w / 2) / w * 0.6 + y / h * 0.4   # livre, centrado, alto
+                if melhor is None or custo < melhor[0]:
+                    melhor = (custo, x, y)
+        return melhor
+
+    for fs in range(380, 96, -12):
+        m = busca(fs, 0.18)
+        if m:
+            return {"texto_x": round(m[1] * W / w), "texto_y": round(m[2] * H / h), "texto_tam": fs}
+    fs = max(96, min(300, int(W * 0.88 / (n * fator))))
+    m = busca(fs, None)
+    return {"texto_x": round(m[1] * W / w), "texto_y": round(m[2] * H / h), "texto_tam": fs} if m else None
+
+
 def enriquecer(tpl, params, item, work: Path, **_):
     if tpl != "profundidade" or not params.get("video"):
         return
@@ -65,6 +102,16 @@ def enriquecer(tpl, params, item, work: Path, **_):
             cv2.imwrite(str(fdir / "placa.jpg"), profundidade.placa_limpa(qs, al), [cv2.IMWRITE_JPEG_QUALITY, 93])
         feito.write_text(json.dumps({"modo": modo}))
         log(f"   profundidade: {n} mapas ({modo}){' + placa limpa' if limpo else ''}")
+    if params.get("texto") and "texto_tam" not in params:
+        import hashlib
+        lugar = fdir / f"lugar_{hashlib.sha1(params['texto'].encode()).hexdigest()[:10]}.json"
+        if not lugar.exists():
+            n = params["video"]["count"]
+            idx = sorted({round(k * (n - 1) / 15) + 1 for k in range(min(16, n))})
+            forma = cv2.imread(str(fdir / "plate" / "00001.jpg")).shape[:2]
+            al = [_alfa(fdir, i, forma) for i in idx]
+            lugar.write_text(json.dumps(lugar_do_texto(al, params["texto"], forma[1], forma[0])))
+        params.update(json.loads(lugar.read_text()) or {})
     params["prof_seq"] = f"/work/{rel}/prof/%05d.png"
     if limpo:
         params["placa"] = f"/work/{rel}/placa.jpg"

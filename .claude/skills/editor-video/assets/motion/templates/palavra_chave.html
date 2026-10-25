@@ -85,8 +85,8 @@ motion.onFrame((t) => {
   grupo.style.filter = sai > 0 ? `blur(${sai * 10}px)` : 'none';
   letras.forEach(({ s, g }, i) => {
     const k = motion.spring(t, i * passo, { dur: 0.5, bounce: 0.38 });
-    const y = (1 - k) * fs * 0.55;
-    s.style.transform = `translateY(${y}px) scale(${0.35 + 0.65 * k})`;
+    const y = (1 - k) * fs * 0.22;                       // percurso curto: a letra nasce no lugar (não varre o rosto)
+    s.style.transform = `translateY(${y}px) scale(${0.55 + 0.45 * k})`;
     s.style.opacity = String(Math.min(1, motion.prog(t, i * passo, 0.08)));
     s.style.filter = k < 0.85 ? `blur(${(1 - k) * 6}px)` : 'none';
     // brilho passando da esquerda para a direita em 0,35 s depois que a palavra assentou

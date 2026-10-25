@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 BW, BH = 270, 480          # resolução de medida (9:16); 16:9 inverte
-VERSAO = 7                 # muda quando a regra de decisão muda (invalida o cache das decisões)
+VERSAO = 8                 # muda quando a regra de decisão muda (invalida o cache das decisões)
 LIMITE = 0.04              # fração da zona do rosto coberta que já conta como "tampou"
 TOLERA_QUADROS = 3         # até 3 quadros (0,1 s: entrada/saída da animação) não reprova
 # candidatos: (escala, âncora x 0..1, deslocamento y em fração da altura); ordem = preferência (menos mudança)
@@ -33,6 +33,14 @@ def zona_do_rosto(face: list[float] | None, w: int, h: int) -> tuple[int, int, i
         return None
     x, y, fw, fh = face
     return (int((x + 0.1 * fw) * w), int((y + 0.22 * fh) * h), int((x + 0.9 * fw) * w), int((y + 1.02 * fh) * h))
+
+
+def _partes(c: tuple[int, int, int, int]) -> list[tuple[int, int, int, int]]:
+    """Olhos e boca dentro da zona do rosto: são eles que não podem ser tocados (limite mais rígido)."""
+    x0, y0, x1, y1 = c
+    fw, fh = x1 - x0, y1 - y0
+    return [(x0 + int(0.04 * fw), y0 + int(0.08 * fh), x1 - int(0.04 * fw), y0 + int(0.36 * fh)),   # olhos
+            (x0 + int(0.25 * fw), y0 + int(0.58 * fh), x1 - int(0.25 * fw), y0 + int(0.86 * fh))]   # boca
 
 
 def rostos_por_quadro(stats: list[dict], a: int, b: int, w: int = BW, h: int = BH, alcance: int = 60) -> list:
@@ -97,14 +105,19 @@ def _transforma(a: np.ndarray, s: float, ax: float, dy: float) -> np.ndarray:
 
 
 def cobertura(a: np.ndarray, caixas: list) -> np.ndarray:
-    """Fração da zona do rosto coberta (alfa > 0,5) em cada quadro; sem rosto = 0."""
+    """Por quadro: fração coberta (alfa > 0,5) da zona do rosto — e olhos/boca contam 2x mais rígido (qualquer
+    toque de 2% neles já vale como o limite). Sem rosto = 0."""
     out = np.zeros(len(a), np.float32)
     for i, (q, c) in enumerate(zip(a, caixas)):
         if c is None:
             continue
-        x0, y0, x1, y1 = max(c[0], 0), max(c[1], 0), min(c[2], q.shape[1]), min(c[3], q.shape[0])
-        if x1 > x0 and y1 > y0:
-            out[i] = float((q[y0:y1, x0:x1] > 0.5).mean())
+        v = 0.0
+        for k, (x0, y0, x1, y1) in enumerate([c] + _partes(c)):
+            x0, y0, x1, y1 = max(x0, 0), max(y0, 0), min(x1, q.shape[1]), min(y1, q.shape[0])
+            if x1 > x0 and y1 > y0:
+                f = float((q[y0:y1, x0:x1] > 0.5).mean())
+                v = max(v, f if k == 0 else f * LIMITE / 0.02)
+        out[i] = v
     return out
 
 

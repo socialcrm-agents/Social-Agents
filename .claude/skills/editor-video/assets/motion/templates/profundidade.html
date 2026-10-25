@@ -100,6 +100,10 @@ const txt = document.getElementById('txt');
 txt.textContent = p.texto || '';
 txt.style.color = p.cor || '#B794FF';
 txt.style.top = `${(p.y ?? 0.26) * H}px`;
+if (p.texto_tam) {   // lugar livre do cenário calculado pelo editor (motion_dados_profundidade.lugar_do_texto)
+  txt.style.fontSize = p.texto_tam + 'px'; txt.style.left = p.texto_x + 'px'; txt.style.right = 'auto';
+  txt.style.textAlign = 'left'; txt.style.top = p.texto_y + 'px'; txt.style.transformOrigin = '0% 50%';
+}
 const person = document.getElementById('person');
 
 // a câmera sai do quadro real e volta a ele: entra e sai sem emenda com o vídeo em volta
