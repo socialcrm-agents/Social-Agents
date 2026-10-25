@@ -89,11 +89,20 @@ recodificados). `--max` só se pedirem arquivo de máxima compressão.
 **8. Relatório final** — `ST relatorio <proj>` → `creative/relatorio-vN.md` (mapa, equipe e motivo, conflitos,
 decisões, QA, HIT/MISS de `versions/vN/revisao.json`, gaps). Resposta curta ao usuário com o arquivo e esse resumo.
 
+## Direção premium (máxima qualidade)
+
+Para "máxima qualidade"/"nível concorrente", o plano do diretor começa por `SK/references/direcao.md` seção 4c:
+`--direcao premium` + composições `revelacao@`, `impacto@`, `produto_heroi@` (com `--produto`), `--music auto:energia`,
+`--correcao auto --estabilizar auto`. Prévia de trecho: `PY SK/scripts/run.py previa <proj> --de A --ate B`.
+Ganchos A/B: `run.py ganchos <proj>`. Estilo de referência: `SK/scripts/referencia.py`. O `quality-director` confere
+`versions/vN/qa.json` (rosto, alertas) e `PY SK/scripts/seletor.py <proj>` (densidade e leitura).
+
 ## Gaps conhecidos (não prometa; registre em `gaps[]`)
 
-- SFX avulso num instante sem animação, trocar o som de uma animação específica, equalização por trecho, biblioteca
-  de trilhas (só `--music` com arquivo do usuário).
-- Estilo de legenda diferente por cena (a legenda é global: tamanho/posição/estilo para o vídeo inteiro).
+- SFX avulso num instante sem animação, trocar o som de uma animação específica, equalização por trecho (trilha
+  sem direitos existe: `--music auto:<clima>`, com ducking automático).
+- Estilo da legenda BASE por cena (é global). Por cena existe a palavra-chave gigante com emoji e cor da emoção
+  (`--direcao premium`, `--composicao impacto@trecho`).
 - Gerar **vídeo** de B-roll (imagem existe: `PY SK/scripts/imagens.py gerar "<prompt>" <proj>/midia/x.jpg`, grátis,
   e entra por `cenario`/`documentario`; vídeo só do usuário).
 - Cortar/acelerar vídeo marcado `ja_editado` (D02).

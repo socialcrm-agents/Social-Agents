@@ -108,6 +108,17 @@ def palavra_chave(words: list[dict], idx: list[int]) -> int | None:
     return melhor if melhor is not None and peso(melhor) >= 2 else None
 
 
+def _repete(texto: str, t: float, motion: list[dict], janela: float = 6.0) -> bool:
+    """A mesma palavra já foi destaque (texto de outro elemento) nos últimos 6 s."""
+    alvo = norm(texto)
+    for m in motion:
+        p = m.get("params") or {}
+        outros = " ".join(str(p.get(k, "")) for k in ("text", "texto", "linhas", "stats"))
+        if alvo and alvo in norm(outros.replace(" ", "")) and abs(t - m["t0"]) < janela:
+            return True
+    return False
+
+
 def _ocupado(t0: float, t1: float, motion: list[dict]) -> bool:
     """Há outro elemento de texto/tela cheia no intervalo exato (um herói por momento)."""
     return any(m["t0"] < t1 - 0.1 and m["t1"] > t0 + 0.1 and m.get("template") not in ("icone", "passa_mao")
@@ -180,6 +191,9 @@ def direcionar(words: list[dict], motion: list[dict], style_name: str, total: fl
             elif it == "produto" and produto and ult_tipo != "produto3d":
                 m = {"template": "produto3d", "t0": round(c["t0"], 3), "t1": round(min(c["t1"] + 0.4, total), 3),
                      "params": {"image": produto, "entrada": "voa"}}
+            elif texto and _repete(texto, w["t0"], motion + novos):
+                m = None
+                d["descartado"].append(f"herói: '{texto}' já foi destaque há menos de 6 s (repetição)")
             elif texto and (seguidas < 2 or c["t0"] - ult_heroi > 4.0):   # não 3 palavras-chave coladas
                 ini = w["t0"] - 0.06
                 m = {"template": "palavra_chave", "t0": round(ini, 3), "t1": round(min(max(w["t1"] + 0.9, ini + 1.2), total), 3),

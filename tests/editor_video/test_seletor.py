@@ -108,6 +108,15 @@ class Direcao(unittest.TestCase):
         self.assertFalse([m for m in r["motion"] if m["template"] in ("palavra_chave", "profundidade")])
 
 
+class SemRepeticao(unittest.TestCase):
+    def test_mesma_palavra_nao_vira_destaque_duas_vezes_em_6s(self):
+        w = falas("Custa só quinze reais hoje.", "Na promoção, reais de verdade.")
+        manual = [{"template": "palavra_chave", "t0": 0.2, "t1": 1.4, "layer": "front", "params": {"text": "QUINZE REAIS"}}]
+        r = seletor.direcionar(w, manual, "anuncio_conversao", w[-1]["t1"] + 0.5, {})
+        textos = [m["params"].get("text") for m in r["motion"] if m["template"] == "palavra_chave"]
+        self.assertNotIn("REAIS", textos)
+
+
 class Integracao(unittest.TestCase):
     def test_plano_com_direcao_premium_e_sem_ela(self):
         proj = util.preparar("semcortes")
