@@ -59,6 +59,11 @@ Referência (CPU de 4 núcleos, vídeo de 30 s com 4 animações): primeiro rend
   "máxima qualidade" / anúncio premium.
 - **Já editado?** Se ele disser que já cortou (CapCut etc.) ou pedir para não cortar/acelerar, crie com
   `--sem-cortes`: o vídeo fica inteiro, no ritmo original, e você só embeleza.
+- **Imagem de celular (luz, cor, pele, tremida).** Desligado por padrão. Ligue com
+  `edit.py <projeto> --correcao auto --estabilizar auto` quando: estilo `pro_clean` / "máxima qualidade";
+  vídeo escuro, granulado ou com cor puxada (luz de lâmpada); câmera na mão / selfie tremida; ou o pedido for
+  "melhora a imagem", "tira a tremida", "deixa a pele bonita". `--pele 0..1` (padrão 0.35 com correção; 0 desliga).
+  Tudo local e moderado (detalhes e custo em `SK/references/direcao.md`, seção 8c).
 - Formato: `9:16` (padrão: Reels/TikTok/Shorts), `16:9` (YouTube, aula, podcast, vídeo longo), `1:1`/`4:5` (feed).
 - Projeto: uma pasta nova por vídeo (ex.: `~/video-edits/<slug>`).
 

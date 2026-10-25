@@ -680,6 +680,8 @@ def main() -> None:
     }
     if direcao:
         timeline["direcao"] = {"relatorio": direcao["relatorio"], "paleta": direcao["paleta"]}
+    if ov.get("imagem"):  # correção de imagem/estabilização (só aparece quando pedida: timelines antigas não mudam)
+        timeline["imagem"] = ov["imagem"]
     save_json(paths["timeline"], timeline)
     save_json(gerada_path, timeline)
     log(f"OK: timeline {total:.1f}s | {len(plan_shots)} planos | {len(cap_pages)} legendas | "
