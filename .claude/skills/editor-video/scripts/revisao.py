@@ -260,7 +260,8 @@ def chave_trecho(tl: dict, a: float, b: float, chaves_planos: list[str], chaves_
         "janela": [round(a, 3), round(b, 3)],
         "planos": planos_na_janela(tl, chaves_planos, lo, hi),
         "mascara": tem_mascara,
-        "motion": [[chaves_motion.get(m.get("id")), m.get("layer"), m.get("zona"), m.get("libera"), m["t0"], m["t1"]]
+        "motion": [[chaves_motion.get(m.get("id")), m.get("layer"), m.get("zona"), m.get("libera"), m["t0"], m["t1"],
+                    m.get("guarda")]
                    for m in mot],
         "legendas": [[pg["t0"], pg["t1"], [tl["words"][i] for i in pg["words"]]]
                      for pg in tl["captions"]["pages"] if _sobre(pg, a, b, 0.5)],

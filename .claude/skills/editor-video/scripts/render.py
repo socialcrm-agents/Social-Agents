@@ -378,6 +378,35 @@ def cadeia_limite() -> str:
     return LIMITE + (f",atrim=start={lat:.4f},asetpts=PTS-STARTPTS,apad" if lat > 0.001 else "")
 
 
+def proteger_rosto(clips: list, stats: list | None, tl: dict, work: Path) -> dict:
+    """Rosto nunca tampado: para cada animação na frente da pessoa, mede a cobertura de olhos/boca quadro a quadro e
+    aplica a menor mudança que libera o rosto (m["guarda"], usado no overlay). Devolve o resumo para o QA."""
+    import rosto_guarda
+    out = {"medidas": [], "ajustadas": [], "tampado": []}
+    if not stats:
+        return out
+    frente = [(m, p) for m, p in sorted(clips, key=lambda c: c[0]["t0"]) if m.get("layer") == "front"]
+    for m, path in frente:
+        if m.get("rosto") == "livre":  # pedido explícito para cobrir (ex.: máscara de efeito no rosto)
+            continue
+        outros = [(o, p) for o, p in frente if o is not m and o["t0"] < m["t1"] and o["t1"] > m["t0"]]
+        d = rosto_guarda.guarda(Path(path), m, stats, tl.get("recuo", []), W, H, FPS, work / "motion", outros)
+        item = {"id": m.get("id"), "template": m.get("template"), "antes": d["antes"], "depois": d["depois"]}
+        out["medidas"].append(item)
+        if d["s"] != 1.0 or d["x"] or d["y"]:
+            m["guarda"] = {"s": d["s"], "x": d["x"], "y": d["y"], "ax": d["ax"], "dy": d["dy"]}
+            out["ajustadas"].append({**item, **m["guarda"]})
+            log(f"   rosto livre: {m.get('id')} ({m.get('template')}) {d['antes']}→{d['depois']} quadros cobrindo "
+                f"(escala {d['s']}, x {d['x']}, y {d['y']})")
+        else:
+            m.pop("guarda", None)
+        if d["depois"] > rosto_guarda.TOLERA_QUADROS:
+            out["tampado"].append(item)
+        if d["s"] < 0.7:  # rosto livre custou tamanho: conferir se o texto ainda lê no celular
+            out.setdefault("legibilidade", []).append({**item, "escala": d["s"]})
+    return out
+
+
 def preparar_composicao(tl: dict, project: Path, behind: list, front: list) -> dict:
     """Arquivos usados por toda a composição (uma vez por render): legendas, palavras atrás, gráficos e sons."""
     work = project / "work"
@@ -528,7 +557,15 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
 
     for k, (idx, m) in enumerate((i, m) for i, m in motion_idx if m.get("layer") in ("front", "full")):
         motion_in(idx, m, f"mf{k}")
-        f.append(f"[{cur}][mf{k}]overlay=0:0:eof_action=pass:enable='between(t,{m['t0']:.3f},{m['t1']:.3f})'[vm{k}]")
+        g = m.get("guarda")
+        xy = "0:0"
+        if g:  # rosto livre: a animação desce/sobe/vai para o lado/diminui (rosto_guarda.py)
+            f.append(f"[mf{k}]scale={round(W * g['s']) // 2 * 2}:{round(H * g['s']) // 2 * 2}[mf{k}g]")
+            xy = f"{g['x']}:{g['y']}"
+            motion_lbl = f"mf{k}g"
+        else:
+            motion_lbl = f"mf{k}"
+        f.append(f"[{cur}][{motion_lbl}]overlay={xy}:eof_action=pass:enable='between(t,{m['t0']:.3f},{m['t1']:.3f})'[vm{k}]")
         cur = f"vm{k}"
 
     if any(g["type"] == "progress" for g in tl["graphics"]):
@@ -699,6 +736,8 @@ def main() -> None:
     tl["recuo"] = recuo_windows(motions, stats)
     if tl["recuo"]:
         log(f"   recuo (pessoa desce para abrir o topo): {len(tl['recuo'])} trecho(s)")
+    rosto = proteger_rosto(clips, stats, tl, work)
+    etapa("rosto livre")
     behind, front = place_behind(tl, stats)
     behind, moved = fit_behind(tl, behind)  # sem espaço acima da cabeça: a palavra sai (não vai para o rosto)
     if moved:
@@ -761,6 +800,14 @@ def main() -> None:
     save_json(paths["project"], proj)
     report = qa(out, tl, paths["qa"], name)
     etapa("QA")
+    report["rosto"] = rosto
+    for x in rosto.get("legibilidade", []):
+        report.setdefault("alertas", []).append(f"{x['id']} diminuído para {x['escala']:.0%} para liberar o rosto: "
+                                                f"conferir leitura no celular")
+    if rosto["tampado"]:
+        report.setdefault("alertas", []).append(
+            "rosto tampado: " + ", ".join(f"{x['id']} ({x['depois']} quadros)" for x in rosto["tampado"]))
+        log("   ATENÇÃO rosto tampado (QA reprova): " + ", ".join(f"{x['id']} {x['depois']}q" for x in rosto["tampado"]))
     report.update(version=v, file=str(out), seconds=round(time.time() - t_start, 1),
                   behind_used=[b["text"] for b in behind], behind_front=[b["text"] for b in front],
                   tempos={n: round(s, 1) for n, s in tempos})
