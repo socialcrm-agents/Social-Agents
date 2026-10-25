@@ -104,7 +104,7 @@ def enriquecer(tpl, params, item, work: Path, **_):
         log(f"   profundidade: {n} mapas ({modo}){' + placa limpa' if limpo else ''}")
     if params.get("texto") and "texto_tam" not in params:
         import hashlib
-        lugar = fdir / f"lugar_{hashlib.sha1(params['texto'].encode()).hexdigest()[:10]}.json"
+        lugar = fdir / f"lugar_{hashlib.sha1((params['texto'] + Path(__file__).read_text(encoding='utf-8')).encode()).hexdigest()[:10]}.json"
         if not lugar.exists():
             n = params["video"]["count"]
             idx = sorted({round(k * (n - 1) / 15) + 1 for k in range(min(16, n))})

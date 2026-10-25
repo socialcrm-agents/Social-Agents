@@ -100,15 +100,22 @@ def person_mask(aroll: Path, out_mask: Path, W: int = 1080, H: int = 1920, fps: 
                 m = 0.65 * m + 0.35 * prev
             prev = m
             enc.stdin.write((m * 255).astype(np.uint8).tobytes())
-            face = None
+            face = pontos = None
             if n % 3 == 0:
                 d = det.detect(img).detections
                 if d:
-                    b = max(d, key=lambda x: x.bounding_box.width).bounding_box
+                    melhor = max(d, key=lambda x: x.bounding_box.width)
+                    b = melhor.bounding_box
                     face = [b.origin_x / w, b.origin_y / h, b.width / w, b.height / h]
+                    # pontos do rosto (BlazeFace: olho dir., olho esq., nariz, boca, orelhas), já 0..1: a proteção do
+                    # rosto usa olhos e boca de verdade (a caixa erra em close-up com o rosto cortado na borda)
+                    kp = [(round(k.x, 4), round(k.y, 4)) for k in (melhor.keypoints or [])]
+                    if len(kp) >= 4:
+                        pontos = {"olhos": [*kp[0], *kp[1]], "boca": list(kp[3])}
             rows = np.where(m[:, int(w * 0.3):int(w * 0.7)].max(axis=1) > 0.5)[0]
             stats.append({"cov": round(float(m.mean()), 3),
-                          "top": int(rows[0] * H / h) if len(rows) else None, "face": face})
+                          "top": int(rows[0] * H / h) if len(rows) else None, "face": face,
+                          **({"pontos": pontos} if pontos else {})})
     finally:
         enc.stdin.close()
         enc.wait()

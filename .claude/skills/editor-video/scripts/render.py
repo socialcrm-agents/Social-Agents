@@ -167,7 +167,8 @@ def mascara_por_plano(tl: dict, work: Path, chaves: list[str], reg: "revisao.Reg
     stamp = work / "mask.key"
     arquivos, stats = [], []
     for sh, k in zip(tl["shots"], chaves):
-        mp4, js = cache.caminho("mascaras", k, ".mp4"), cache.caminho("mascaras", k, ".json")
+        # "p2": as estatísticas passaram a guardar olhos/boca (pontos do rosto); máscaras antigas são refeitas uma vez
+        mp4, js = cache.caminho("mascaras", k, ".mp4"), cache.caminho("mascaras", k + "p2", ".json")
         if mp4.exists() and js.exists():
             reg and reg.anota("mascara", sh.get("id", "?"), True, k, janela=(sh["t0"], sh["t1"]))
         else:

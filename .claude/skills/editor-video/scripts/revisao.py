@@ -227,7 +227,12 @@ def usa_video(item: dict) -> bool:
 def chave_motion(item: dict, tl: dict, chaves_planos: list[str], tem_mascara: bool, work: Path) -> str:
     page = item.get("page") or f"/templates/{item.get('template')}.html"
     path = work / page[len("/work/"):] if page.startswith("/work/") else MOTION_DIR / page.lstrip("/")
-    pagina = bytes_hash([path, *sorted((MOTION_DIR / "lib").glob("*.*"))])
+    # a página, a biblioteca do navegador E o código que prepara os dados do clipe (quadros, profundidade, rosto,
+    # mãos): mudar qualquer um deles refaz a animação (antes um ajuste em motion_dados_*.py servia o clipe velho)
+    scripts = Path(__file__).resolve().parent
+    preparo = sorted(scripts.glob("motion_dados_*.py")) + [scripts / n for n in ("motion.py", "profundidade.py", "vision.py")
+                                                          if (scripts / n).exists()]
+    pagina = bytes_hash([path, *sorted((MOTION_DIR / "lib").glob("*.*")), *preparo])
     base = {k: v for k, v in item.items() if k not in ("t0", "t1", "id", "_patch", "auto", "trigger")}
     janela = planos_na_janela(tl, chaves_planos, item["t0"], item["t1"]) if usa_video(item) else None
     glob = hk([w["w"] for w in tl.get("words", [])], tl.get("duration")) if item.get("template") in MOTION_GLOBAIS else None

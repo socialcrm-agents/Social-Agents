@@ -102,7 +102,7 @@ txt.style.color = p.cor || '#B794FF';
 txt.style.top = `${(p.y ?? 0.26) * H}px`;
 if (p.texto_tam) {   // lugar livre do cenário calculado pelo editor (motion_dados_profundidade.lugar_do_texto)
   txt.style.fontSize = p.texto_tam + 'px'; txt.style.left = p.texto_x + 'px'; txt.style.right = 'auto';
-  txt.style.textAlign = 'left'; txt.style.top = p.texto_y + 'px'; txt.style.transformOrigin = '0% 50%';
+  txt.style.textAlign = 'left'; txt.style.top = p.texto_y + 'px'; txt.style.transformOrigin = '50% 50%';
 }
 const person = document.getElementById('person');
 
@@ -133,7 +133,8 @@ motion.onFrame(async (t) => {
     const at = p.texto_at ?? 0.25;
     const s = motion.prog(t, at, 0.45, 'outBack');
     txt.style.opacity = Math.min(motion.prog(t, at, 0.2), 1 - motion.prog(t, D - 0.35, 0.3));
-    txt.style.transform = `translate(${ox * amp * e * W * 0.5}px, ${(1 - s) * 80}px) scale(${0.7 + 0.3 * s + zoom * amp * e * 0.2})`;
+    // cresce a partir do centro e nunca passa de 100% (o empurrão da câmera não leva a palavra para fora da tela)
+    txt.style.transform = `translate(${ox * amp * e * W * 0.5}px, ${(1 - s) * 80}px) scale(${Math.min(1, 0.7 + 0.3 * s)})`;
   }
   await motion.setFrame(person, 'cut', t);
 });
