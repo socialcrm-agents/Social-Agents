@@ -117,6 +117,14 @@ class SemRepeticao(unittest.TestCase):
         self.assertNotIn("REAIS", textos)
 
 
+class Composicoes(unittest.TestCase):
+    def test_revelacao_mostra_uma_palavra_mesmo_sem_peso_emocional(self):
+        import composicoes
+        w = falas("Se eu fosse um corredor, um maratonista.")
+        mo, *_ = composicoes.expandir([{"nome": "revelacao", "at": "Se eu fosse um corredor"}], w, 5.0, {})
+        self.assertEqual(mo[0]["params"]["texto"], "CORREDOR")
+
+
 class Integracao(unittest.TestCase):
     def test_plano_com_direcao_premium_e_sem_ela(self):
         proj = util.preparar("semcortes")

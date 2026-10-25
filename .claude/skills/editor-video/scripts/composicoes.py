@@ -67,7 +67,9 @@ def expandir(pedidos: list[dict], words: list[dict], total: float, ov: dict) -> 
         if nome == "revelacao" and not p.get("params", {}).get("texto") and b > a:
             import seletor  # revelação lê UMA palavra: a mais forte do trecho
             k = seletor.palavra_chave(words, list(range(a, b + 1)))
-            texto = _texto(words, k, k) if k is not None else texto
+            if k is None:  # nenhuma com peso emocional: a mais significativa (mais longa, fora palavras curtas)
+                k = max(range(a, b + 1), key=lambda i: len(norm(words[i]["w"])))
+            texto = _texto(words, k, k)
         emo, emoji = emocao.da_palavra(words[a]["w"])
         cores = emocao.cor(p.get("params", {}).get("emocao") or (emo if emo != "neutro" else "curiosidade"))
         ident = p.get("id") or f"c_{nome}_{n}"

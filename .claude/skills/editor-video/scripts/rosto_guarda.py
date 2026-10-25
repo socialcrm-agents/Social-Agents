@@ -18,7 +18,7 @@ from pathlib import Path
 import numpy as np
 
 BW, BH = 270, 480          # resolução de medida (9:16); 16:9 inverte
-VERSAO = 12                 # muda quando a regra de decisão muda (invalida o cache das decisões)
+VERSAO = 13                 # muda quando a regra de decisão muda (invalida o cache das decisões)
 LIMITE = 0.04              # fração da zona do rosto coberta que já conta como "tampou"
 VISIVEL = 0.25             # alfa a partir do qual já se vê (letra entrando meio transparente também tampa)
 TOLERA_QUADROS = 1         # rosto sagrado: só 1 quadro de passagem (entrada/saída) é tolerado
@@ -224,8 +224,9 @@ def fixos_da_timeline(tl: dict, gfx: list, W: int, H: int) -> list[dict]:
     size = tl["captions"]["cfg"]["size"]
     for pg in tl["captions"]["pages"]:
         y = caption_y(tl, pg["t0"])
+        # faixa da legenda com respiro (0,8 da altura da letra) em cima e embaixo: nada encosta nela
         out.append({"t0": pg["t0"], "t1": pg["t1"],
-                    "ret": [int(w * 0.1), int((y - 2.4 * size) * h / H), int(w * 0.9), int((y + 0.2 * size) * h / H)]})
+                    "ret": [int(w * 0.1), int((y - 3.2 * size) * h / H), int(w * 0.9), int((y + 1.0 * size) * h / H)]})
     for png, g in gfx:
         try:
             a = np.asarray(Image.open(png).convert("RGBA").resize((w, h)), np.float32)[..., 3] / 255
