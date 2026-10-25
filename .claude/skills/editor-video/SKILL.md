@@ -149,6 +149,15 @@ PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v
 - Variações de gancho (ele grava 3 ganchos seguidos e depois o corpo): `PY SK/scripts/run.py variacoes <projeto> --ganchos 3`
   → `renders/gancho1.mp4`, `gancho2.mp4`, `gancho3.mp4`.
 - Versões curtas terminando em fim de frase: `PY SK/scripts/run.py curta <projeto> --segundos 30 15`.
+- Gancho testado (3 aberturas do MESMO vídeo para teste no anúncio): `PY SK/scripts/run.py ganchos <projeto> [--n 3]`
+  → `renders/gancho_A.mp4` (pergunta na tela), `_B` (manchete + zoom de impacto), `_C` (corte de gancho com a frase
+  mais forte; em vídeo sem cortes, 2.5D com a palavra forte) + `qa/ganchos.md` com o que muda e o custo HIT/MISS.
+  Só o começo é refeito; textos = palavras ditas; o projeto principal não muda. `--so-plano` só compara sem render.
+- Referência do concorrente (copiar ritmo/densidade/estilo, nunca o conteúdo):
+  `PY SK/scripts/referencia.py analisar <video_deles> --saida perfil.json` (cortes/min, plano médio, zoom, texto na
+  tela, faixa e tamanho da legenda, paleta, flashes, loudness, trilha, ritmo da fala) e depois
+  `PY SK/scripts/referencia.py aplicar perfil.json <projeto>` (estilo, zoom, legenda, cor de destaque, densidade,
+  efeitos nas NOSSAS palavras fortes, via edit.py sem renderizar). Mostre ao usuário o que mudou e renderize.
 
 ## 4. Confira antes de entregar (obrigatório)
 

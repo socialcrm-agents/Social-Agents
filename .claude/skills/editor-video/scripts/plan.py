@@ -113,7 +113,7 @@ def shots(segments, words, style) -> list[dict]:
                 cur_in = cut
         pieces.append((cur_in, seg["out"]))
         for a, b in pieces:
-            out.append({"clip": seg["clip"], "in": a, "out": b})
+            out.append({"clip": seg["clip"], "in": a, "out": b, **({"gancho": True} if seg.get("gancho") else {})})
     return out
 
 
@@ -123,7 +123,8 @@ def find_word(words: list[dict], phrase: str, after: float = 0.0, ultima: bool =
     target = [n for n in (norm(x) for x in phrase.split()) if n]
     seq = [norm(w["w"]) for w in words]
     for i in range(len(seq) - len(target) + 1):
-        if target and words[i]["t0"] >= after - 0.05 and seq[i:i + len(target)] == target:
+        # palavras do corte de gancho (repetidas no começo) não servem de âncora: vale o lugar original da fala
+        if target and words[i]["t0"] >= after - 0.05 and not words[i].get("gancho") and seq[i:i + len(target)] == target:
             return words[i + len(target) - 1] if ultima else words[i]
     return None
 
@@ -291,7 +292,7 @@ def plan_motion(words: list[dict], ov: dict, style: dict, total: float, busy: li
         for w in words:
             name = ICON_WORDS.get(norm(w["w"]))
             t0 = w["t0"] - 0.05
-            if not name or t0 - last < 4.5 or any(a - 1.0 < t0 < b + 0.2 for a, b in busy) \
+            if not name or w.get("gancho") or t0 - last < 4.5 or any(a - 1.0 < t0 < b + 0.2 for a, b in busy) \
                     or any(m["t0"] - 0.5 < t0 < m["t1"] + 0.5 for m in out):
                 continue
             out.append({"id": f"i{w.get('i', 0)}", "template": "icone", "layer": "front", "t0": round(t0, 3),
@@ -368,12 +369,12 @@ def main() -> None:
             punch = n % zcfg["punch_every"] == 1
             z0 = zcfg["punch"] if punch else zcfg["base"]
             z1 = z0 + zcfg["push"] + (0.03 if punch else 0.0)
-        sid = f"s{s['clip']}_{int(round(s['in'] * 1000))}"
+        sid = f"{'g' if s.get('gancho') else ''}s{s['clip']}_{int(round(s['in'] * 1000))}"
         if sid in zoom_ant:
             z0, z1 = zoom_ant[sid]
         plan_shots.append({"id": sid, "clip": s["clip"], "src": clips[s["clip"]]["path"], "in": s["in"], "out": s["out"],
                            "t0": round(t, 3), "t1": round(t + dur, 3), "zoom0": round(z0, 3), "zoom1": round(z1, 3),
-                           "cx": 0.5, "cy": 0.42, "speed": speed})
+                           "cx": 0.5, "cy": 0.42, "speed": speed, **({"gancho": True} if s.get("gancho") else {})})
         t += dur
     total = round(t, 3)
     plan_shots = revisao.aplicar_patches("shots", plan_shots, patches, usados)
@@ -389,7 +390,10 @@ def main() -> None:
                     continue
                 words.append({"w": fix_word(w["w"], fixes), "t0": round(sh["t0"] + max(w["t0"] - sh["in"], 0) / speed, 3),
                               "t1": round(min(sh["t0"] + (w["t1"] - sh["in"]) / speed, sh["t1"]), 3), "emph": False,
-                              "i": idx})
+                              "i": idx, **({"gancho": True} if sh.get("gancho") else {})})
+    # palavras do corte de gancho: aparecem na legenda, mas gatilhos, ícones, B-roll e palavras atrás usam o lugar
+    # original da fala (não disparam duas vezes)
+    words_fala = [w for w in words if not w.get("gancho")]
 
     # 3) ênfase: melhor palavra de cada frase + pedidos do usuário
     sentence, last_emph = [], -9.0
@@ -436,7 +440,7 @@ def main() -> None:
     enabled = bcfg["enabled"] if ov.get("behind_enabled") is None else ov["behind_enabled"]
     removed = {norm(x) for x in ov.get("behind_remove", [])}
     if enabled:
-        cands = sorted((i for i, w in enumerate(words) if w["emph"] and norm(w["w"]) not in removed),
+        cands = sorted((i for i, w in enumerate(words) if w["emph"] and norm(w["w"]) not in removed and not w.get("gancho")),
                        key=lambda i: -score_word(words[i]["w"]))
         for i in cands:
             w = words[i]
@@ -447,7 +451,7 @@ def main() -> None:
             behind.append({"id": f"b{w['i']}", "text": text, "t0": round(max(w["t0"] - 0.08, 0), 3),
                            "t1": round(min(w["t0"] + 1.9, total), 3)})
         for req in ov.get("behind_add", []):
-            hit = next((w for w in words if norm(w["w"]) == norm(req.get("at", req["text"]))), None)
+            hit = next((w for w in words_fala if norm(w["w"]) == norm(req.get("at", req["text"]))), None)
             if hit:
                 behind.append({"id": f"b{hit['i']}", "text": apply_case(req["text"], bcfg["case"]),
                                "t0": round(max(hit["t0"] - 0.08, 0), 3),
@@ -465,7 +469,7 @@ def main() -> None:
     if pool:
         cursor = {b["id"]: 0.0 for b in pool}
         k = 0
-        for w in words:
+        for w in words_fala:
             if norm(w["w"]) in VISUAL_CUES and w["t0"] > gfx_hook_end and w["t0"] + 1.0 < cta_start:
                 if broll and w["t0"] - broll[-1]["t1"] < rcfg["min_gap"]:
                     continue
@@ -483,7 +487,7 @@ def main() -> None:
         drop = set(ov.get("broll_remove", []))
         broll = [b for n, b in enumerate(broll, 1) if n not in drop]
     for k_req, req in enumerate(ov.get("broll_at", []), 1):
-        hit = next((w for w in words if norm(w["w"]) == norm(req["at"].split()[0])), None)
+        hit = next((w for w in words_fala if norm(w["w"]) == norm(req["at"].split()[0])), None)
         src = next((b for b in pool if b["id"] == req.get("src")), None) or (pool[0] if pool else None)
         if hit and src:
             broll.append({"id": f"ra{k_req}", "src": src["path"], "kind": src["kind"], "t0": hit["t0"],
@@ -533,14 +537,14 @@ def main() -> None:
     if ov.get("triggers", True):
         import triggers
         manual = [(m["t0"], m["t1"]) for m in motion if not m.get("auto")]
-        auto, trig_sfx, trig_fx = triggers.apply(words, triggers.load_rules(brand), style["name"], total,
+        auto, trig_sfx, trig_fx = triggers.apply(words_fala, triggers.load_rules(brand), style["name"], total,
                                                  brand.get("cta_keywords", ["PRODUTO"]), busy + manual)
         # gatilho automático não repete um bloco que você já pediu a menos de 6 s (ex.: o mesmo preço dito 2 vezes)
         auto = [m for m in auto if not any(x["template"] == m["template"] and abs(x["t0"] - m["t0"]) < 6
                                            for x in motion if not x.get("auto"))]
         for m in auto:
             m.update({k: v for k, v in MOTION_DEFAULTS.get(m["template"], {}).items() if k not in m})
-            wi = min(words, key=lambda w_: abs(w_["t0"] - m["t0"]))["i"] if words else 0
+            wi = min(words_fala, key=lambda w_: abs(w_["t0"] - m["t0"]))["i"] if words_fala else 0
             m["id"] = f"a_{m['template']}_{wi}"
         motion = resolve_overlaps(sorted(motion + auto, key=lambda m: m["t0"]))
         fx += trig_fx
@@ -549,7 +553,9 @@ def main() -> None:
         log(f"   {len(motion)} animação(ões) puladas: elas fazem parte do Pacote Motion 3D (não instalado)")
         motion, trig_sfx = [], []
     # impacto automático: chicote + whoosh na entrada de animações de tela cheia
-    fx += [{"type": "whip", "t": round(max(m["t0"] - 0.05, 0), 3)} for m in motion if m.get("layer") == "full"]
+    # id ligado ao da animação: uma animação nova antes não renumera os chicotes seguintes (trechos continuam HIT)
+    fx += [{"type": "whip", "t": round(max(m["t0"] - 0.05, 0), 3), "id": f"fx_whip_{m['id']}"}
+           for m in motion if m.get("layer") == "full"]
     # palavra gigante não aparece por cima de animação de tela cheia
     fulls = [(m["t0"], m["t1"]) for m in motion if m.get("layer") == "full"]
     behind = [b for b in behind if not any(b["t0"] < t1 and b["t1"] > t0 for t0, t1 in fulls)]
