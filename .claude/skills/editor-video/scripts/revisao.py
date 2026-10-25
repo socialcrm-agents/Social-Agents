@@ -275,10 +275,21 @@ def chave_trecho(tl: dict, a: float, b: float, chaves_planos: list[str], chaves_
     return hk("trecho", versao_render(), ent, tl["w"], tl["h"], tl["fps"], preset, fontes_sig)
 
 
+def sig_musica(musica: dict | None):
+    """Trilha automática (trilha.py): a chave é o pedido resolvido (clima, BPM, duração, semente e versão do
+    gerador), não o caminho — o mesmo pedido em outra pasta (dry-run) dá a mesma chave. Arquivo do usuário:
+    caminho + tamanho + data."""
+    if not musica:
+        return None
+    if musica.get("auto"):
+        return [{k: v for k, v in musica.items() if k != "path"}]
+    return [musica, arquivo_sig(musica["path"])]
+
+
 def chave_audio(tl: dict, chaves_planos: list[str]) -> str:
-    musica = tl.get("music")
-    return hk("audio", versao_render(), chaves_planos, tl["sfx"], tl["audio"], tl["duration"],
-             [musica, arquivo_sig(musica["path"])] if musica else None)
+    # os sons (sfx.py/dsp.py) entram na chave do áudio: mudou um efeito, o mix é refeito (os trechos de vídeo não)
+    return hk("audio", versao_render(), bytes_hash([SCRIPTS / "sfx.py", SCRIPTS / "dsp.py"]), chaves_planos,
+              tl["sfx"], tl["audio"], tl["duration"], sig_musica(tl.get("music")))
 
 
 def fontes_sig(work: Path) -> str:
