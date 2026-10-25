@@ -53,6 +53,8 @@ Status: ✅ pronto e testado aqui · 🟡 pronto, falta testar com material real
 | 43 | Som | Whoosh, boom, ding, tick, clique, glitch, "plim" de venda | sintetizados (`assets.py`), sem licença de terceiros | ✅ |
 | 44 | Som | −14 LUFS | automático | ✅ |
 | 45 | Som | Trilha que abaixa quando você fala | `--music trilha.mp3:0.1` (música licenciada sua) | ✅ |
+| 45b | Som | Trilha sem direitos gerada na hora (energia, inspirador, suspense, lofi, corporativo), na duração do vídeo e no ritmo da fala, já abaixando sob a voz | `--music auto:energia` (ou `--trilha lofi`, `--trilha-bpm 120`, `--trilha-semente 2`) | ✅ |
+| 45c | Som | Biblioteca de efeitos sintetizados: whoosh (doppler), hit, riser (Shepard), swoosh, swipe, camera_shutter, notification, cash, plim, pop_bolha | `sfx.py <pasta>` gera todos | ✅ |
 | 46 | Conectores | Descript, HeyGen, Canva, Moda, Pinterest, Instagram | `references/conectores.md` | 🟡 |
 | + | Pessoa | Pessoa duplicada / várias versões (ontem, hoje, amanhã) | `clones` | ✅ |
 | + | Cenário | Vários cenários trocando no tempo da fala | `cenario` com `scenes` | ✅ |

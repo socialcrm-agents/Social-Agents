@@ -11,7 +11,7 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
-from common import FONTS_DIR, SAFE_BOTTOM, SAFE_SIDE, SAFE_TOP, H, W, ffmpeg, safe_zone
+from common import FONTS_DIR, SAFE_BOTTOM, SAFE_SIDE, SAFE_TOP, H, W, safe_zone
 
 FONT_FILES = {
     ("Anton", False): "Anton-Regular.ttf",
@@ -291,37 +291,7 @@ def graphic_png(kind: str, text: str, style: str, g: dict, out: Path, top: bool 
 
 # ---------- efeitos sonoros sintetizados ----------
 
-SFX_RECIPES = {
-    "whoosh": ["-f", "lavfi", "-i", "anoisesrc=d=0.45:c=pink:a=0.9:r=48000",
-               "-af", "highpass=f=400,lowpass=f=5000,afade=t=in:d=0.28:curve=exp,afade=t=out:st=0.28:d=0.17,volume=0.8"],
-    "pop": ["-f", "lavfi", "-i",
-            "aevalsrc='0.9*sin(2*PI*(380+1600*exp(-38*t))*t)*exp(-22*t)':d=0.16:s=48000"],
-    "boom": ["-f", "lavfi", "-i",
-             "aevalsrc='0.95*sin(2*PI*(46+70*exp(-9*t))*t)*exp(-4.5*t)+0.25*(random(0)-0.5)*exp(-18*t)':d=0.9:s=48000",
-             "-af", "lowpass=f=900"],
-    "ding": ["-f", "lavfi", "-i",
-             "aevalsrc='0.5*sin(2*PI*1320*t)*exp(-5*t)+0.25*sin(2*PI*2640*t)*exp(-7*t)':d=0.8:s=48000"],
-    "tick": ["-f", "lavfi", "-i", "aevalsrc='0.8*sin(2*PI*2200*t)*exp(-260*t)':d=0.05:s=48000"],
-    "click": ["-f", "lavfi", "-i", "aevalsrc='(random(0)-0.5)*1.6*exp(-420*t)':d=0.04:s=48000",
-              "-af", "highpass=f=1800"],
-    "glitch": ["-f", "lavfi", "-i",
-               "aevalsrc='0.5*sgn(sin(2*PI*(220+880*floor(mod(t*28,4)))*t))*lt(mod(t,0.07),0.045)':d=0.35:s=48000",
-               "-af", "lowpass=f=5000,volume=0.6"],
-    "venda": ["-f", "lavfi", "-i",
-              "aevalsrc='0.45*sin(2*PI*1568*t)*exp(-6*t)*lt(t,0.6)+0.45*sin(2*PI*2093*(t-0.09))*exp(-5*(t-0.09))*gte(t,0.09)"
-              "+0.15*sin(2*PI*4186*(t-0.09))*exp(-9*(t-0.09))*gte(t,0.09)':d=0.9:s=48000"],
-    "riser": ["-f", "lavfi", "-i",
-              "aevalsrc='0.35*sin(2*PI*(180*t+260*t*t))*min(t/1.1,1)':d=1.25:s=48000",
-              "-af", "afade=t=out:st=1.1:d=0.15"],
-}
-
-
 def make_sfx(folder: Path) -> dict[str, Path]:
-    folder.mkdir(parents=True, exist_ok=True)
-    out = {}
-    for name, args in SFX_RECIPES.items():
-        p = folder / f"{name}.wav"
-        if not p.exists():
-            ffmpeg([*args, "-ac", "2", str(p)])
-        out[name] = p
-    return out
+    """Biblioteca de SFX sem direitos (sintetizada em sfx.py, refeita só quando o código dos sons muda)."""
+    from sfx import biblioteca
+    return biblioteca(folder)

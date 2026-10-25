@@ -26,6 +26,9 @@ Operações:
   --caption-y N                  posição vertical da base da legenda (px, máx 1470)
   --zoom off|on|suave|forte      intensidade dos zooms
   --music ARQUIVO[:volume]       trilha (com ducking automático sob a voz)
+  --music auto[:clima[:volume]]  trilha sem direitos gerada na hora (energia, inspirador, suspense, lofi,
+                                 corporativo), na duração do vídeo e no ritmo da fala; "--music off" tira
+  --trilha CLIMA                 o mesmo que --music auto:CLIMA  (--trilha-bpm N, --trilha-semente N)
   --format 9:16|16:9|1:1|4:5     formato de saída (Reels/Shorts, YouTube/aula, feed)
   --brand SLUG|nenhuma           aplica o kit de marca (cores, fontes, logo, CTAs, correções de palavras)
   --motion JSON|@arquivo.json    animação: {"template": "moldura", "at": "trecho falado", "dur": 5, "params": {...}}
@@ -86,6 +89,9 @@ def main() -> None:
     ap.add_argument("--caption-y", type=int)
     ap.add_argument("--zoom", choices=["off", "on", "suave", "forte"])
     ap.add_argument("--music")
+    ap.add_argument("--trilha", help="trilha sintetizada: energia | inspirador | suspense | lofi | corporativo")
+    ap.add_argument("--trilha-bpm", type=float)
+    ap.add_argument("--trilha-semente", type=int)
     ap.add_argument("--format", choices=["9:16", "16:9", "1:1", "4:5"])
     ap.add_argument("--brand", help="aplica o kit de marca brands/<slug> (ou 'nenhuma')")
     ap.add_argument("--motion", action="append", default=[])
@@ -186,10 +192,44 @@ def main() -> None:
         ov["zoom"] = {"off": {"off": True}, "on": {}, "suave": {"punch": 1 + (st["punch"] - 1) * 0.5, "push": st["push"] * 0.5},
                       "forte": {"punch": 1 + (st["punch"] - 1) * 1.5, "push": st["push"] * 1.5 + 0.02}}[a.zoom]
         done.append(f"zoom {a.zoom}")
-    if a.music:
-        path, _, vol = a.music.partition(":")
-        ov["music"] = {"path": str(Path(path).expanduser().resolve()), "volume": float(vol or 0.12)}
+    if a.trilha:
+        a.music = f"auto:{a.trilha}"
+    if a.music and a.music.strip().lower() in ("off", "nenhuma", "sem"):
+        ov.pop("music", None)
+        done.append("sem trilha")
+    elif a.music and a.music.split(":")[0].strip().lower() == "auto":
+        import trilha
+        _, clima, vol = (a.music.split(":") + ["", ""])[:3]
+        pedido = {"auto": True}
+        if clima.strip():
+            try:
+                pedido["clima"] = trilha.nome_clima(clima)
+            except ValueError as exc:
+                raise EditorError(str(exc)) from exc
+        if vol.strip():
+            pedido["volume"] = float(vol)
+        ov["music"] = pedido
+        done.append(f"trilha automática {pedido.get('clima') or '(clima do estilo)'}")
+    elif a.music:
+        # "C:\\musica.mp3:0.2" no Windows: o volume é só o que vem depois do ÚLTIMO ':' e se for número
+        path, sep, vol = a.music.rpartition(":")
+        try:
+            volume = float(vol) if sep else 0.12
+        except ValueError:
+            path, volume = a.music, 0.12
+        if not sep:
+            path = a.music
+        ov["music"] = {"path": str(Path(path).expanduser().resolve()), "volume": volume}
         done.append(f"trilha {Path(path).name}")
+    if (a.trilha_bpm or a.trilha_semente is not None):
+        if not (ov.get("music") or {}).get("auto"):
+            raise EditorError("--trilha-bpm/--trilha-semente valem para a trilha automática (--music auto ou --trilha).")
+        if a.trilha_bpm:
+            ov["music"]["bpm"] = a.trilha_bpm
+            done.append(f"trilha {a.trilha_bpm:.0f} BPM")
+        if a.trilha_semente is not None:
+            ov["music"]["semente"] = a.trilha_semente
+            done.append(f"trilha variação {a.trilha_semente}")
 
     if a.brand:
         from common import load_brand

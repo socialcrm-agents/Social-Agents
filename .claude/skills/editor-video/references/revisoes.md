@@ -23,6 +23,7 @@ Várias operações podem ir no mesmo comando (uma versão nova por rodada).
 | "sobe a legenda" | `--caption-y 1100` (base da legenda em px; máx 1470) |
 | "menos zoom", "sem zoom", "zoom mais agressivo" | `--zoom suave` / `--zoom off` / `--zoom forte` |
 | "coloca essa música baixinha" | `--music trilha.mp3:0.10` (ducking automático sob a voz) |
+| "põe uma música animada / sem direitos" | `--music auto:energia` (climas: energia, inspirador, suspense, lofi, corporativo; `:0.4` = volume; `--music off` tira) |
 | "me coloca numa moldura e explica X do lado" | `--motion '{"template":"moldura","at":"trecho","until":"trecho","params":{"title":"...","items":[...]}}'` |
 | "separa em camadas de vidro" | `--motion '{"template":"camadas","at":"trecho","dur":4,"params":{"graphic":"..."}}'` |
 | "troca meu fundo por um estúdio 3D" | `--motion '{"template":"estudio3d","at":"trecho","dur":5,"params":{"wall_text":"..."}}'` |
