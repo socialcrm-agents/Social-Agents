@@ -17,9 +17,13 @@ color: cyan
   (`sfx.motion`) e por presença do bloco;
 - `--fx tremida|clarao|glitch|whip@palavra` (impacto visual + som do gatilho quando houver);
 - `--music arquivo[:volume]` com ducking automático sob a voz (arquivo do usuário/licenciado);
+- `--music auto:CLIMA` (energia, inspirador, suspense, lofi, corporativo): trilha sem direitos na duração e no ritmo
+  da fala — música por IA (ACE-Step) quando o servidor está no ar, senão sintetizada; `--trilha-motor ia|sintetizada`;
+- `--voz estudio`: voz limpa (ruído, embolado, chiado do S) — proponha quando o QA medir ruído nas pausas
+  acima de −45 dBFS (`python scripts/voz.py medir arquivo.wav`);
 - loudness alvo do estilo (−14 LUFS anúncio/viral).
 **Gaps conhecidos (marque `"suportado": false`):** inserir um SFX avulso num instante específico sem animação;
-trocar o tipo de som de uma animação específica; equalização por trecho; biblioteca de trilhas.
+trocar o tipo de som de uma animação específica; equalização por trecho.
 
 **Bash:** só análise (`ffprobe`, `ffmpeg -af ebur128 -f null -`, extração de trecho de áudio para ouvir). Nunca
 render.

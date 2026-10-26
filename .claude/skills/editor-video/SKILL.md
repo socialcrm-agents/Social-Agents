@@ -181,6 +181,44 @@ PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v
   `PY SK/scripts/referencia.py aplicar perfil.json <projeto>` (estilo, zoom, legenda, cor de destaque, densidade,
   efeitos nas NOSSAS palavras fortes, via edit.py sem renderizar). Mostre ao usuário o que mudou e renderize.
 
+## 3c. Ciclo de vendas: fábrica, resultado e aprendizado (2026-10-26)
+
+Cada render sai com um **código** no nome (`v3_reels_viral_EV-7F3A2C.mp4`) e uma ficha (o que tem no vídeo) em
+`~/.editor-viral/criativos.jsonl`. O código é o que liga o vídeo ao resultado do anúncio: diga ao usuário para
+subir o arquivo com esse nome (ou pôr o código no nome do anúncio / do vídeo no Vturb).
+
+- **Voz de estúdio**: `edit.py <proj> --voz estudio` (já na receita premium). Limpeza local; com Resemble
+  Enhance instalado (`setup.py --voz-ia`) usa IA. Só o áudio é refeito.
+- **Trilha de verdade**: com o servidor do ACE-Step no ar no PC do usuário (`musica_ia.py status`),
+  `--music auto:CLIMA` gera música por IA; fora do ar, usa a sintetizada. `--trilha-motor ia|sintetizada|auto`.
+- **Fábrica de variações** ("faz 10 versões pra testar"): `PY SK/scripts/run.py fabrica <proj> [--n 10]
+  [--fatores gancho,trilha,cta] [--trilhas energia,inspirador,sem] [--ctas "TEXTO 1|TEXTO 2"]`. Rode antes com
+  `--so-plano` e mostre o que cada versão muda. Saída: `renders/fabrica/V01_EV-....mp4` (V01 = controle),
+  `manifesto.csv`, `qa/fabrica.md`. Teste A/B no Vturb (com aprovação): suba as versões (`start_video_upload` →
+  PUT → `complete_video_upload`), `create_ab_test` com os players (rascunho) e só `start_ab_test` depois do "sim"
+  do usuário (teste iniciado não volta atrás). No Meta: todas no mesmo conjunto de anúncios, nome = arquivo.
+- **Aprender com as vendas** ("o que está funcionando?", "aprende com meus anúncios"): busque os números e grave
+  em arquivos JSON, depois importe:
+  1. Meta: `ads_get_ad_accounts` → `ads_get_ad_entities` (level `ad`, `date_preset` last_30d/last_90d, fields:
+     `id, name, amount_spent, impressions, video_play_actions, video_p25_watched_actions, video_p50_watched_actions,
+     video_p75_watched_actions, video_p100_watched_actions, video_thruplay_watched_actions,
+     video_avg_time_watched_actions, ctr, purchase_roas, cost_per_omni_purchase`; pagine até o fim). Grave a
+     resposta inteira em `meta.json` e rode `PY SK/scripts/aprender.py importar meta meta.json`.
+  2. Vturb: `list_companies` → `list_players` (grave em `players.json`) → `get_player_stats` de cada player cujo
+     nome tem `EV-` (grave a lista em `vturb.json`) → `aprender.py importar vturb vturb.json --nomes players.json`.
+  3. `aprender.py analisar` (relatório em `~/.editor-viral/aprendizado.md`): ranking, o que os vencedores têm em
+     comum com o grau de certeza, e onde as pessoas saem acima do normal e o que estava na tela. Explique em
+     português simples; certeza baixa = sugestão de teste, nunca regra. Com o "pode aplicar" do usuário:
+     `aprender.py analisar --aplicar` (grava a receita `aprendida`) e `run.py padrao aprendida`.
+- **Espionar vencedores** ("o que os concorrentes estão fazendo", "anúncios que mais vendem no meu nicho"):
+  busque na Biblioteca de Anúncios (`v1_facebook_adLibrary_search_ads` com `media_type` VIDEO, `country` BR,
+  `status` ACTIVE, `trim` true; repita com 2-3 palavras do nicho) e grave cada resposta; `PY SK/scripts/vencedores.py
+  ranquear busca.json --nicho <nicho>` (nota = dias no ar + versões + ativo). Para os 5-8 primeiros, pegue a
+  transcrição (`v1_facebook_adLibrary_ad_transcript`, 1 crédito cada; grave `{id: transcrição}`) e rode
+  `vencedores.py analisar --nicho <nicho> --transcricoes trs.json` (baixa e mede os vídeos; relatório em
+  `~/.editor-viral/nichos/<nicho>/nicho.md`). `vencedores.py aplicar --nicho <nicho> <proj>` leva o ritmo ao
+  projeto. Ganchos dos concorrentes = inspiração de formato; nunca copie frase, roteiro ou marca.
+
 ## 4. Confira antes de entregar (obrigatório)
 
 1. Abra `qa/vN_<estilo>_cortes.jpg` (um quadro por plano) e olhe: legenda legível, nada cortado nas bordas,

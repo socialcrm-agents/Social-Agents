@@ -209,6 +209,14 @@ def cmd_ganchos(a) -> None:
     ganchos.gerar(Path(a.project).resolve(), a.n, a.draft, a.so_plano)
 
 
+def cmd_fabrica(a) -> None:
+    """Fábrica de variações: N versões equilibradas (gancho x trilha x CTA) para o teste A/B (veja fabrica.py)."""
+    import fabrica
+    fabrica.gerar(Path(a.project).resolve(), a.n, [f.strip() for f in a.fatores.split(",") if f.strip()],
+                  [t.strip() for t in a.trilhas.split(",")] if a.trilhas else None,
+                  a.ctas.split("|") if a.ctas else None, a.draft, a.so_plano)
+
+
 def cmd_revisar(a) -> None:
     import revisao
     revisao.imprimir(revisao.prever(Path(a.project).resolve(), preset="ultrafast" if a.draft else
@@ -333,6 +341,14 @@ def main() -> None:
     g.add_argument("--n", type=int, default=3)
     g.add_argument("--draft", action="store_true")
     g.add_argument("--so-plano", action="store_true", help="só planeja e compara (não renderiza)")
+    fb = sub.add_parser("fabrica", help="1 vídeo -> N versões (gancho x trilha x CTA) para teste A/B")
+    fb.add_argument("project")
+    fb.add_argument("--n", type=int, default=10)
+    fb.add_argument("--fatores", default="gancho,trilha,cta")
+    fb.add_argument("--trilhas", help="ex.: energia,inspirador,sem")
+    fb.add_argument("--ctas", help="textos separados por |")
+    fb.add_argument("--draft", action="store_true")
+    fb.add_argument("--so-plano", action="store_true")
     r = sub.add_parser("revisar", help="dry-run: o que o próximo render refaria")
     r.add_argument("project")
     r.add_argument("--draft", action="store_true")
@@ -351,7 +367,7 @@ def main() -> None:
     a = ap.parse_args()
     {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "previa": cmd_previa, "padrao": cmd_padrao, "styles": cmd_styles,
      "variacoes": cmd_variacoes, "curta": cmd_curta, "revisar": cmd_revisar, "versoes": cmd_versoes,
-     "rollback": cmd_rollback, "limpar-cache": cmd_limpar, "ganchos": cmd_ganchos}[a.cmd](a)
+     "rollback": cmd_rollback, "limpar-cache": cmd_limpar, "ganchos": cmd_ganchos, "fabrica": cmd_fabrica}[a.cmd](a)
 
 
 if __name__ == "__main__":
