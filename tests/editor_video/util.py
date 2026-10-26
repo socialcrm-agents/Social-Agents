@@ -16,6 +16,8 @@ SCRIPTS = SK / "scripts"
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 # vídeo de referência (opcional): testes de render só rodam se ele existir ou se a variável apontar para ele
 REF_VIDEO = Path(os.environ.get("EDITOR_REF_VIDEO", "")) if os.environ.get("EDITOR_REF_VIDEO") else None
+# fichas/resultados do aprendizado dos testes NÃO vão para ~/.editor-viral do usuário
+os.environ.setdefault("EDITOR_VIRAL_DIR", tempfile.mkdtemp(prefix="ev_viral_"))
 
 
 def preparar(fixture: str, clip: Path | None = None) -> Path:

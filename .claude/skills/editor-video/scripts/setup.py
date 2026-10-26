@@ -4,6 +4,14 @@
   python3 setup.py            só verifica e imprime STATUS de cada item
   python3 setup.py --install  instala pacotes Python que faltam (pip --user)
   python3 setup.py --models   baixa os modelos (~680 MB) para ~/.cache/editor-video/models
+  python3 setup.py --voz-ia   instala a voz limpa por IA (Resemble Enhance, MIT; ~1 GB com o PyTorch)
+
+Opcionais (o editor funciona sem eles, com as versões locais):
+- Voz limpa por IA: Resemble Enhance (--voz-ia). Sem ele, voz.py usa a limpeza local.
+- Música por IA: ACE-Step 1.5 (MIT), instalado à parte e rodando como servidor no seu PC:
+    Windows: baixe https://files.acemusic.ai/acemusic/win/ACE-Step-1.5.7z, extraia e rode start_api_server.bat
+    Mac/Linux: git clone https://github.com/ace-step/ACE-Step-1.5 && ./start_api_server.sh (macOS: _macos.sh)
+  Com o servidor no ar (porta 8001), "--music auto:CLIMA" usa música de verdade; fora do ar, a sintetizada.
 
 Fontes de download dos modelos (todas públicas):
 - Parakeet TDT 0.6B v3 int8 (NVIDIA, CC-BY-4.0) empacotado pelo projeto sherpa-onnx (Apache-2.0),
@@ -139,6 +147,18 @@ def check_motion() -> bool:
     return True
 
 
+def check_opcionais(voz_ia: bool) -> None:
+    """Extras de qualidade (nunca bloqueiam o READY)."""
+    import importlib.util
+    if voz_ia and importlib.util.find_spec("resemble_enhance") is None:
+        subprocess.run([sys.executable, "-m", "pip", "install", "--user", "resemble-enhance"], check=False)
+    tem = importlib.util.find_spec("resemble_enhance") is not None
+    print(f"STATUS voz_ia (Resemble Enhance) {'OK' if tem else 'OPCIONAL -> setup.py --voz-ia (sem ele: limpeza local)'}")
+    import musica_ia
+    print(f"STATUS musica_ia (ACE-Step em {musica_ia.URL}) "
+          f"{'OK' if musica_ia.disponivel() else 'OPCIONAL -> veja o topo do setup.py (sem ele: trilha sintetizada)'}")
+
+
 def main() -> None:
     install, fetch = "--install" in sys.argv, "--models" in sys.argv
     p = perfil()
@@ -146,6 +166,7 @@ def main() -> None:
     results = [check_ffmpeg(), check_python(install), check_models(fetch)]
     if p["motion"]:
         results.append(check_motion())  # Node + Chromium só são necessários para as animações
+    check_opcionais("--voz-ia" in sys.argv)
     print("READY" if all(results) else "NOT READY (veja as linhas STATUS acima)")
 
 

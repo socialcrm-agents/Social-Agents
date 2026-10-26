@@ -111,9 +111,10 @@ def cmd_padrao(a) -> None:
         receitas.definir_padrao(None if a.receita == "off" else a.receita)
     atual = receitas.padrao()
     log(f"Padrão para vídeos novos: {atual or 'nenhum (edição normal)'}")
+    todas = receitas._receitas()
     if atual:
-        log("   " + " ".join(receitas.RECEITAS[atual]))
-    log(f"Receitas: {', '.join(receitas.RECEITAS)}  (python run.py padrao <nome> | off)")
+        log("   " + " ".join(todas.get(atual, ["(receita não existe mais neste computador)"])))
+    log(f"Receitas: {', '.join(todas)}  (python run.py padrao <nome> | off)")
 
 
 def cmd_all(a) -> None:

@@ -29,6 +29,8 @@ Operações:
   --music auto[:clima[:volume]]  trilha sem direitos gerada na hora (energia, inspirador, suspense, lofi,
                                  corporativo), na duração do vídeo e no ritmo da fala; "--music off" tira
   --trilha CLIMA                 o mesmo que --music auto:CLIMA  (--trilha-bpm N, --trilha-semente N)
+  --trilha-motor auto|ia|sintetizada   música de verdade por IA (ACE-Step rodando no seu PC, musica_ia.py) ou
+                                 a sintetizada; auto = IA quando o ACE-Step está no ar
   --format 9:16|16:9|1:1|4:5     formato de saída (Reels/Shorts, YouTube/aula, feed)
   --brand SLUG|nenhuma           aplica o kit de marca (cores, fontes, logo, CTAs, correções de palavras)
   --motion JSON|@arquivo.json    animação: {"template": "moldura", "at": "trecho falado", "dur": 5, "params": {...}}
@@ -58,6 +60,7 @@ Operações:
   --correcao auto|off            luz/cor/ruído/nitidez automáticos por clipe (vídeo de celular escuro, cor puxada)
   --estabilizar auto|on|off      tira a tremida da câmera na mão e mantém o rosto centralizado (zoom mín. 1,06)
   --pele 0..1                    suavização só nos tons de pele (padrão 0.35 com --correcao auto; 0 desliga)
+  --voz estudio|off              voz limpa de estúdio: tira ruído do ambiente, embolado e chiado do S (voz.py)
   --dry-run                      mostra o que seria refeito (HIT/MISS por componente) sem gravar nem renderizar
 
 Pedidos de --motion com "id" substituem o pedido anterior com o mesmo id; um pedido idêntico a outro já existente é
@@ -107,6 +110,8 @@ def main() -> None:
     ap.add_argument("--trilha", help="trilha sintetizada: energia | inspirador | suspense | lofi | corporativo")
     ap.add_argument("--trilha-bpm", type=float)
     ap.add_argument("--trilha-semente", type=int)
+    ap.add_argument("--trilha-motor", choices=["auto", "ia", "sintetizada"],
+                    help="música por IA (ACE-Step no ar) ou sintetizada; auto = IA quando disponível")
     ap.add_argument("--format", choices=["9:16", "16:9", "1:1", "4:5"])
     ap.add_argument("--brand", help="aplica o kit de marca brands/<slug> (ou 'nenhuma')")
     ap.add_argument("--motion", action="append", default=[])
@@ -129,6 +134,7 @@ def main() -> None:
     ap.add_argument("--correcao", choices=["auto", "off"], help="luz, cor, ruído e nitidez automáticos")
     ap.add_argument("--estabilizar", choices=["auto", "on", "off"], help="tira a tremida e mantém o rosto centralizado")
     ap.add_argument("--pele", type=float, help="suavização de pele 0..1 (0 = desliga; padrão com --correcao auto: 0.35)")
+    ap.add_argument("--voz", choices=["estudio", "off"], help="voz limpa de estúdio (ruído, embolado, sibilância)")
     ap.add_argument("--note", default="")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
@@ -246,7 +252,7 @@ def main() -> None:
             path = a.music
         ov["music"] = {"path": str(Path(path).expanduser().resolve()), "volume": volume}
         done.append(f"trilha {Path(path).name}")
-    if (a.trilha_bpm or a.trilha_semente is not None):
+    if (a.trilha_bpm or a.trilha_semente is not None or a.trilha_motor):
         if not (ov.get("music") or {}).get("auto"):
             raise EditorError("--trilha-bpm/--trilha-semente valem para a trilha automática (--music auto ou --trilha).")
         if a.trilha_bpm:
@@ -255,6 +261,12 @@ def main() -> None:
         if a.trilha_semente is not None:
             ov["music"]["semente"] = a.trilha_semente
             done.append(f"trilha variação {a.trilha_semente}")
+        if a.trilha_motor:
+            if a.trilha_motor == "auto":
+                ov["music"].pop("motor", None)
+            else:
+                ov["music"]["motor"] = a.trilha_motor
+            done.append(f"trilha: motor {a.trilha_motor}")
 
     if a.brand:
         from common import load_brand
@@ -347,6 +359,12 @@ def main() -> None:
                 val = round(min(max(val, 0.0), 1.0), 2)
             ov.setdefault("imagem", {})[chave] = val
             done.append(f"imagem {chave}: {val}")
+    if a.voz:
+        if a.voz == "off":
+            ov.pop("voz", None)
+        else:
+            ov["voz"] = a.voz
+        done.append(f"voz: {a.voz}")
     for spec in a.fx:
         kind, _, at = spec.partition("@")
         ov.setdefault("fx_requests", []).append({"type": kind, "at": at})

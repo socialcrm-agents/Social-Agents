@@ -295,8 +295,12 @@ def sig_musica(musica: dict | None):
 
 def chave_audio(tl: dict, chaves_planos: list[str]) -> str:
     # os sons (sfx.py/dsp.py) entram na chave do áudio: mudou um efeito, o mix é refeito (os trechos de vídeo não)
+    extra = []
+    if (tl.get("audio") or {}).get("voz") == "estudio":   # voz de estúdio: o código e a rota (IA/local) entram
+        import voz
+        extra = [bytes_hash([SCRIPTS / "voz.py"]), voz.tem_ia(), [[w["t0"], w["t1"]] for w in tl.get("words", [])]]
     return hk("audio", versao_render(), bytes_hash([SCRIPTS / "sfx.py", SCRIPTS / "dsp.py"]), chaves_planos,
-              tl["sfx"], tl["audio"], tl["duration"], sig_musica(tl.get("music")))
+              tl["sfx"], tl["audio"], tl["duration"], sig_musica(tl.get("music")), *extra)
 
 
 def fontes_sig(work: Path) -> str:

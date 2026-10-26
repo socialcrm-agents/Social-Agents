@@ -362,6 +362,8 @@ DUR_FX = {"tremida": 0.3, "clarao": 0.08, "glitch": 0.22, "whip": 0.12, "zoom_im
 
 
 VOZ = "highpass=f=80,afftdn=nf=-28,acompressor=threshold=-20dB:ratio=3:attack=5:release=90:makeup=2,loudnorm=I={lufs}:TP=-1.5:LRA=9,aresample=48000"
+# voz de estúdio (voz.py já tirou ruído, graves, embolado e sibilância): aqui só nivela
+VOZ_ESTUDIO = "acompressor=threshold=-20dB:ratio=2.5:attack=5:release=90:makeup=1.5,loudnorm=I={lufs}:TP=-1.5:LRA=9,aresample=48000"
 LIMITE = "alimiter=limit=0.95"
 _LAT: dict = {}
 
@@ -395,11 +397,21 @@ def latencia(filtro: str) -> float:
     return _LAT[filtro]
 
 
-def cadeia_voz(lufs) -> str:
+def cadeia_voz(lufs, estudio: bool = False) -> str:
     """Tratamento da voz + compensação do atraso dos filtros (som e boca no mesmo quadro)."""
-    voz = VOZ.format(lufs=lufs)
-    lat = latencia(VOZ.format(lufs=-14))
+    base = VOZ_ESTUDIO if estudio else VOZ
+    voz = base.format(lufs=lufs)
+    lat = latencia(base.format(lufs=-14))
     return voz + (f",atrim=start={lat:.4f},asetpts=PTS-STARTPTS" if lat > 0.001 else "")
+
+
+def entrada_voz(tl: dict, aroll: Path, work: Path) -> Path | None:
+    """WAV da voz de estúdio (voz.py, em cache pela chave do A-roll) ou None (voz direto do A-roll)."""
+    if (tl.get("audio") or {}).get("voz") != "estudio":
+        return None
+    import voz
+    stamp = work / "aroll.key"
+    return voz.voz_do_projeto(tl, aroll, work, stamp.read_text() if stamp.exists() else str(aroll.stat().st_mtime))
 
 
 def cadeia_limite() -> str:
@@ -520,6 +532,11 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
     if tl.get("music") and audio:
         inputs += ["-stream_loop", "-1", "-i", tl["music"]["path"]]
         music_idx, n_in = n_in, n_in + 1
+    voz_src = "0:a"
+    vz = entrada_voz(tl, aroll, work) if audio else None
+    if vz:
+        inputs += ["-i", str(vz)]
+        voz_src, n_in = f"{n_in}:a", n_in + 1
 
     splits = [b_ for b_ in brolls if b_["mode"] == "split"]
     f: list[str] = []
@@ -628,7 +645,7 @@ def compose(tl: dict, project: Path, aroll: Path, mask: Path | None, behind: lis
         return
 
     lufs = tl["audio"]["lufs"]
-    f.append(f"[0:a]{cadeia_voz(lufs)}[voice]")
+    f.append(f"[{voz_src}]{cadeia_voz(lufs, bool(vz))}[voice]")
     mix = ["[voice]"]
     if music_idx is not None:
         mv = tl["music"].get("volume", 0.12)
@@ -669,9 +686,14 @@ def mix_audio(tl: dict, aroll: Path, prep: dict, out: Path) -> None:
     if tl.get("music"):
         inputs += ["-stream_loop", "-1", "-i", tl["music"]["path"]]
         music_idx, n_in = n_in, n_in + 1
+    voz_src = "0:a"
+    vz = entrada_voz(tl, aroll, aroll.parent)
+    if vz:
+        inputs += ["-i", str(vz)]
+        voz_src, n_in = f"{n_in}:a", n_in + 1
     f: list[str] = []
     lufs = tl["audio"]["lufs"]
-    f.append(f"[0:a]{cadeia_voz(lufs)}[voice]")
+    f.append(f"[{voz_src}]{cadeia_voz(lufs, bool(vz))}[voice]")
     mix = ["[voice]"]
     if music_idx is not None:
         mv = tl["music"].get("volume", 0.12)
@@ -789,7 +811,9 @@ def main() -> None:
 
     proj["version"] = proj.get("version", 0) + (0 if previa else 1)
     v = proj["version"]
-    name = f"previa_{previa[0]:05.1f}-{previa[1]:05.1f}" if previa else f"v{v}_{tl['style']}"
+    import aprender
+    cod = None if previa else aprender.codigo(project, v)   # código do criativo no nome: o aprendizado acha o vídeo
+    name = f"previa_{previa[0]:05.1f}-{previa[1]:05.1f}" if previa else f"v{v}_{tl['style']}_{cod}"
     out = paths["renders"] / f"{name}.mp4"
     paths["renders"].mkdir(parents=True, exist_ok=True)
     etapa("palavras atrás")
@@ -865,7 +889,14 @@ def main() -> None:
     save_json(vdir / "qa.json", report)
     save_json(vdir / "revisao.json", {"versao": v, "resumo": reg.resumo(), "itens": reg.itens,
                                       "segundos": report["seconds"], "tempos": report["tempos"]})
+    if cod:
+        try:
+            aprender.registrar(project, v, tl, proj, str(out))
+        except Exception as exc:  # noqa: BLE001 — a ficha nunca derruba um render
+            log(f"   aviso: ficha do criativo não gravada ({exc})")
     log(f"OK: {out} ({report['duration']}s, {report['lufs']} LUFS, render {report['seconds']}s)")
+    if cod:
+        log(f"   código do criativo: {cod} (já está no nome do arquivo; o aprendizado usa ele)")
     log(f"   revisão: {reg.linha()}")
     log(f"   contato dos cortes: {report['sheet']}")
     log("   tempos: " + " | ".join(f"{n} {s:.1f}s" for n, s in tempos if s >= 0.05))

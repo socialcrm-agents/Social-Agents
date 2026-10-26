@@ -665,7 +665,8 @@ def main() -> None:
         import trilha
         musica = trilha.trilha_do_projeto(paths["work"], musica, total, words, style["name"])
         a_ = musica["auto"]
-        log(f"   trilha: {a_['clima']} {a_['bpm']:.0f} BPM ({a_['palavras_por_s'] or '?'} palavras/s), "
+        log(f"   trilha{' (IA)' if a_.get('motor') == 'ia' else ''}: {a_['clima']} {a_['bpm']:.0f} BPM "
+            f"({a_['palavras_por_s'] or '?'} palavras/s), "
             f"{a_['dur']:.1f} s, volume {musica['volume']}")
     timeline = {
         "style": style["name"], "w": fw, "h": fh, "fps": 30, "duration": total, "format": proj.get("format", "9:16"),
@@ -674,7 +675,8 @@ def main() -> None:
                 m["template"] in ("pergunta", "final", "transcricao", "botao_cta") and m["params"].get("esconde_legenda", True)
                 and m["t0"] - 0.05 <= (pg["t0"] + pg["t1"]) / 2 <= m["t1"] for m in motion if m.get("template"))]},
         "behind": behind, "behind_cfg": bcfg, "broll": broll, "graphics": graphics, "graphics_cfg": g,
-        "sfx": sfx, "grade": style["grade"], "audio": style["audio"],
+        "sfx": sfx, "grade": style["grade"],
+        "audio": {**style["audio"], "voz": ov["voz"]} if ov.get("voz") else style["audio"],
         "music": musica, "motion": motion, "brand": proj.get("brand"), "fx": fx,
         "revisao": {"zoom_sig": zoom_sig, "patches_aplicados": len(usados)},
     }

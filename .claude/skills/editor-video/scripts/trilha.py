@@ -746,14 +746,37 @@ def trilha_do_projeto(work: Path, pedido: dict, dur: float, words: list[dict], e
     dur = round(float(dur), 3)
     abaixa = float(pedido.get("abaixa_fala_db", ABAIXA_FALA_DB))
     fala = [[round(a, 2), round(b, 2)] for a, b in regioes_fala(words, dur)[0]] if abaixa else []
-    k = chave(clima, bpm, dur, semente, fala, abaixa)
-    path = Path(work) / f"trilha_{k}.wav"
-    if not path.exists():
-        Path(work).mkdir(parents=True, exist_ok=True)
-        gerar_arquivo(clima, path, dur, bpm, semente, fala, abaixa)
-    return {"path": str(path.resolve()), "volume": float(pedido.get("volume") or VOLUME_AUTO),
-            "auto": {"clima": clima, "bpm": bpm, "dur": dur, "semente": semente, "abaixa_fala_db": abaixa,
-                     "chave": k, "palavras_por_s": round(pps, 2) if pps else None}}
+    motor = usado = pedido.get("motor", "auto")
+    path = None
+    if motor in ("auto", "ia"):
+        # música de verdade com IA (ACE-Step no ar neste computador); em cache como a sintetizada
+        import musica_ia
+        k = musica_ia.chave(clima, bpm, dur, semente, fala, abaixa)
+        cand = Path(work) / f"trilha_ia_{k}.wav"
+        if cand.exists():
+            path, usado = cand, "ia"
+        elif musica_ia.disponivel():
+            try:
+                Path(work).mkdir(parents=True, exist_ok=True)
+                print(f"   trilha: pedindo a música ao ACE-Step ({clima}, {bpm:.0f} BPM, {dur:.1f}s) ...")
+                musica_ia.gerar_arquivo(clima, cand, dur, bpm, semente, fala, abaixa)
+                path, usado = cand, "ia"
+            except Exception as exc:  # noqa: BLE001 — IA falhou: segue com a sintetizada
+                print(f"   aviso: ACE-Step falhou ({exc}); usando a trilha sintetizada", file=sys.stderr)
+        elif motor == "ia":
+            print(f"   aviso: ACE-Step fora do ar ({musica_ia.URL}); usando a trilha sintetizada", file=sys.stderr)
+    if path is None:
+        usado = "sintetizada"
+        k = chave(clima, bpm, dur, semente, fala, abaixa)
+        path = Path(work) / f"trilha_{k}.wav"
+        if not path.exists():
+            Path(work).mkdir(parents=True, exist_ok=True)
+            gerar_arquivo(clima, path, dur, bpm, semente, fala, abaixa)
+    auto = {"clima": clima, "bpm": bpm, "dur": dur, "semente": semente, "abaixa_fala_db": abaixa,
+            "chave": k, "palavras_por_s": round(pps, 2) if pps else None}
+    if usado == "ia" or motor != "auto":   # trilha sintetizada pedida do jeito antigo: timeline idêntica
+        auto["motor"] = usado
+    return {"path": str(path.resolve()), "volume": float(pedido.get("volume") or VOLUME_AUTO), "auto": auto}
 
 
 # ---------------------------------------------------------------------------------------------------------------
