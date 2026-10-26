@@ -40,6 +40,8 @@ Operações:
   --patch-clear ID               desfaz os patches de um elemento
   --icons on|off                 ícones automáticos nas palavras-chave
   --gatilhos on|off              mapa de gatilhos (frase/dinheiro/enumeração -> efeito + som)
+  --receita premium|efeitos       aplica um jeito de editar salvo (receitas.py): premium = efeitos + trilha +
+                                 correção + estabilização, igual ao teste aprovado; efeitos = só os efeitos
   --direcao premium|off          seletor por intenção: palavra-chave com emoji/cor, 2.5D no gancho, transições
                                  no ritmo da fala, com controle de densidade (seletor.py)
   --produto foto.png             foto do produto (recortada) para o produto 3D nas cenas que mostram o produto
@@ -131,7 +133,8 @@ def main() -> None:
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--draft", action="store_true")
     ap.add_argument("--max", action="store_true", help="compressão mais lenta, arquivo menor")
-    a = ap.parse_args()
+    import receitas  # --receita NOME vira as opções da receita (as escritas depois valem por cima)
+    a = ap.parse_args(receitas.expandir(sys.argv[1:]))
 
     project = Path(a.project).resolve()
     paths = project_paths(project)

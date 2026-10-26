@@ -30,7 +30,7 @@ from common import norm
 INTENCOES = {
     "cta": r"\b(comenta|comente|clica|clique|toque|toca|link|segue|siga|compra|compre|carrinho|garanta|chama|manda)",
     "pergunta": r"\?$|^(voce sabia|por que|porque|como|o que|qual|sera que|ja pensou)",
-    "dor": r"\b(problema|dificil|cansad|travad|perde|perdeu|sofre|nao consegue|frustr|medo|erro|errad|dor)",
+    "dor": r"\b(problema|dificil|cansad|travad|perde|perdeu|sofre|nao consegue|frustr|medo|erro|errad|dor|estrag|prejudic|destr|queima|afunda)",
     "prova": r"\b(resultado|comprovad|cliente|vendi|faturei|depoimento|consegui|funcionou|prova)",
     "virada": r"^(mas|so que|porem|entao|ai|agora|e se|na verdade|o segredo)\b",
     "lista": r"\b(primeiro|segundo|terceiro|dois|duas|tres|passos|dicas|sabores|opcoes|tipos)\b",

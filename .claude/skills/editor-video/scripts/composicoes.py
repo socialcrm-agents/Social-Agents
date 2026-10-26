@@ -49,12 +49,48 @@ def _texto(words: list[dict], a: int, b: int) -> str:
     return re.sub(r"[.,;:!?…\"“”]", "", " ".join(w["w"] for w in words[a:b + 1])).upper()
 
 
+def _peso(w: dict) -> float:
+    """Força de uma palavra para virar destaque: emoção/emoji do léxico, número, tamanho (nunca palavra curta)."""
+    n = norm(w["w"])
+    if len(n) < 3:
+        return 0.0
+    e, emo = emocao.da_palavra(w["w"])
+    return (3 if emo else 0) + (2 if e != "neutro" else 0) + (2 if any(c.isdigit() for c in w["w"]) else 0) \
+        + min(len(n), 10) / 10 + (0.5 if w.get("emph") else 0)
+
+
+def automatico(nome: str, words: list[dict]) -> tuple[int, int] | None:
+    """Composição em modo automático (receita): o editor acha o trecho sozinho, em qualquer vídeo.
+    revelacao -> a primeira batida (o gancho); impacto -> a frase mais forte depois do gancho
+    (dor > número > prova > virada > a de palavra mais emocional), na palavra de mais peso."""
+    import seletor
+    bs = seletor.cenas(words)
+    if not bs:
+        return None
+    if nome == "revelacao":
+        return bs[0]["i"][0], bs[0]["i"][-1]
+    fim_gancho = min(bs[0]["t0"] + 4.5, bs[0]["t1"] + 3.2)
+    candidatas = [c for n, c in enumerate(bs) if n and c["t0"] >= fim_gancho - 0.5]
+    if not candidatas:
+        candidatas = bs[1:] or bs
+    ordem = {"dor": 0, "numero": 1, "prova": 2, "virada": 3}
+    def nota(c):
+        it = seletor.intencao(c, 1)
+        return (ordem.get(it, 9), -max(_peso(words[i]) for i in c["i"]), c["t0"])
+    melhor = min((c for c in candidatas if seletor.intencao(c, 1) not in ("cta", "pergunta")), key=nota, default=None)
+    if not melhor:
+        return None
+    k = max(melhor["i"], key=lambda i: _peso(words[i]))
+    return k, k
+
+
 def expandir(pedidos: list[dict], words: list[dict], total: float, ov: dict) -> tuple[list, list, list, list[str]]:
-    """Pedidos de composição -> (motion, fx, sfx, avisos)."""
+    """Pedidos de composição -> (motion, fx, sfx, avisos). "at": "auto" = o editor escolhe o trecho."""
     motion, fx, sfx, avisos = [], [], [], []
     for n, p in enumerate(pedidos, 1):
         nome = p.get("nome")
-        achou = _acha(words, str(p.get("at", "")))
+        achou = automatico(nome, words) if str(p.get("at", "")).strip().lower() == "auto" \
+            else _acha(words, str(p.get("at", "")))
         if nome not in NOMES:
             avisos.append(f"composição '{nome}' não existe ({', '.join(NOMES)})")
             continue

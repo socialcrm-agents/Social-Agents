@@ -89,6 +89,12 @@ recodificados). `--max` só se pedirem arquivo de máxima compressão.
 **8. Relatório final** — `ST relatorio <proj>` → `creative/relatorio-vN.md` (mapa, equipe e motivo, conflitos,
 decisões, QA, HIT/MISS de `versions/vN/revisao.json`, gaps). Resposta curta ao usuário com o arquivo e esse resumo.
 
+## Jeito aprovado do usuário (D11)
+
+Comece todo plano pela receita aprovada: `PY SK/scripts/edit.py <proj> --receita premium --no-render` (ou o que
+`PY SK/scripts/run.py padrao` mostrar). Os especialistas só acrescentam toques sob medida por cima (ex.: ícones 3D do
+que é falado, CTA coerente com o fim do vídeo) e trocam o trecho de uma composição automática quando houver motivo.
+
 ## Direção premium (máxima qualidade)
 
 Para "máxima qualidade"/"nível concorrente", o plano do diretor começa por `SK/references/direcao.md` seção 4c:

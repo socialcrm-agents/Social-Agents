@@ -97,6 +97,23 @@ def cmd_new(a) -> None:
                       "sem_cortes": a.sem_cortes},
     })
     log(f"Projeto criado: {project} ({len(clips)} clipe(s), {len(broll)} B-roll, estilo {a.style}, formato {a.format})")
+    import receitas
+    nome = a.receita or (None if a.sem_receita else receitas.padrao())
+    if nome:  # o jeito de editar salvo (padrão do usuário): todo vídeo novo já nasce com ele
+        step("edit.py", project, "--receita", nome, "--no-render", "--note", f"receita {nome}")
+        log(f"   receita '{nome}' aplicada (padrão: {receitas.padrao() or 'nenhum'})")
+
+
+def cmd_padrao(a) -> None:
+    """Define o jeito de editar de TODO vídeo novo (fica fora da skill: reinstalar não apaga)."""
+    import receitas
+    if a.receita:
+        receitas.definir_padrao(None if a.receita == "off" else a.receita)
+    atual = receitas.padrao()
+    log(f"Padrão para vídeos novos: {atual or 'nenhum (edição normal)'}")
+    if atual:
+        log("   " + " ".join(receitas.RECEITAS[atual]))
+    log(f"Receitas: {', '.join(receitas.RECEITAS)}  (python run.py padrao <nome> | off)")
 
 
 def cmd_all(a) -> None:
@@ -289,6 +306,8 @@ def main() -> None:
     n.add_argument("--sem-cortes", action="store_true",
                    help="vídeo já cortado (CapCut etc.): não remove pausas/erros nem acelera; só embeleza")
     n.add_argument("--force", action="store_true")
+    n.add_argument("--receita", default=None, help="aplica uma receita (premium, efeitos) neste projeto")
+    n.add_argument("--sem-receita", action="store_true", help="ignora o padrão salvo (run.py padrao) neste projeto")
     for name in ("all", "plan", "render"):
         sp = sub.add_parser(name)
         sp.add_argument("project")
@@ -299,6 +318,8 @@ def main() -> None:
     pv.add_argument("project")
     pv.add_argument("--de", type=float, required=True)
     pv.add_argument("--ate", type=float, required=True)
+    pd = sub.add_parser("padrao", help="jeito de editar de todo vídeo novo: premium | efeitos | off")
+    pd.add_argument("receita", nargs="?")
     sub.add_parser("styles")
     v = sub.add_parser("variacoes", help="uma versão por gancho gravado")
     v.add_argument("project")
@@ -327,7 +348,7 @@ def main() -> None:
     lc.add_argument("project")
     lc.add_argument("--manter", type=int, default=5)
     a = ap.parse_args()
-    {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "previa": cmd_previa, "styles": cmd_styles,
+    {"new": cmd_new, "all": cmd_all, "plan": cmd_plan, "render": cmd_render, "previa": cmd_previa, "padrao": cmd_padrao, "styles": cmd_styles,
      "variacoes": cmd_variacoes, "curta": cmd_curta, "revisar": cmd_revisar, "versoes": cmd_versoes,
      "rollback": cmd_rollback, "limpar-cache": cmd_limpar, "ganchos": cmd_ganchos}[a.cmd](a)
 

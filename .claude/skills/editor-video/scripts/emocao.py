@@ -28,7 +28,7 @@ LEXICO = {
     "rapido": ("urgencia", "⚡"), "agora": ("urgencia", "⏰"), "hoje": ("urgencia", "⏰"), "ultim*": ("urgencia", "⏳"),
     "corre": ("urgencia", "🏃"), "acaba*": ("urgencia", "⏳"), "urgente": ("urgencia", "🚨"),
     "cuidado": ("alerta", "⚠️"), "erro": ("alerta", "❌"), "errado": ("alerta", "❌"), "nunca": ("alerta", "🚫"),
-    "pare": ("alerta", "✋"), "problema": ("alerta", "⚠️"), "perig*": ("alerta", "⚠️"), "golpe": ("alerta", "🚨"),
+    "pare": ("alerta", "✋"), "estrag*": ("alerta", "⚠️"), "jamais": ("alerta", "🚫"), "prejudic*": ("alerta", "⚠️"), "problema": ("alerta", "⚠️"), "perig*": ("alerta", "⚠️"), "golpe": ("alerta", "🚨"),
     "segredo": ("curiosidade", "🤫"), "descobri": ("curiosidade", "💡"), "ideia": ("curiosidade", "💡"),
     "olha": ("curiosidade", "👀"), "olhadinha": ("curiosidade", "👀"), "veja": ("curiosidade", "👀"),
     "imagina": ("curiosidade", "💭"), "sabia": ("curiosidade", "🤔"),

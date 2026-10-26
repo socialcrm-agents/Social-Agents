@@ -49,6 +49,13 @@ Regras:
 
 Referência (CPU de 4 núcleos, vídeo de 30 s com 4 animações): primeiro render ~85 s, re-render após correção ~30 s.
 
+## 0d. Padrão do usuário (leia antes de editar)
+
+`PY scripts/run.py padrao` mostra o jeito de editar salvo. Com padrão (ex.: `premium`), todo `run.py new` já aplica a
+receita sozinho. Pedidos como "do mesmo jeito", "como sempre", "igual ao último" = `edit.py <proj> --receita premium`.
+Para definir: `run.py padrao premium` (ou `efeitos`, ou `off`). As receitas estão em `scripts/receitas.py`; as
+composições da receita são automáticas (`revelacao@auto` no gancho, `impacto@auto` na frase mais forte).
+
 ## 1. Intake
 
 - Clipes: os arquivos que o usuário indicar (vários clipes = várias tomadas do mesmo roteiro, na ordem de gravação).
