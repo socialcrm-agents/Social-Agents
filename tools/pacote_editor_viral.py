@@ -211,6 +211,32 @@ motion de nível agência. [botão]
 """
 
 
+def guia_pdf(lanc: Path) -> Path:
+    """Guia do cliente (início + método) em PDF, via Chromium do Playwright."""
+    import markdown
+    md = (lanc / "guia-inicio.md").read_text(encoding="utf-8") + "\n\n<div style='page-break-before:always'></div>\n\n" \
+        + (SK / "references" / "metodo.md").read_text(encoding="utf-8")
+    css = ("@page{size:A4;margin:16mm}body{font-family:Poppins,Arial,sans-serif;color:#1a1a1a;font-size:11.5pt;"
+           "line-height:1.5}h1{font-size:26pt;border-bottom:4px solid #FFD400;padding-bottom:6px}h2{margin-top:22px;"
+           "border-left:6px solid #FFD400;padding-left:10px}table{border-collapse:collapse;width:100%;font-size:10pt}"
+           "th,td{border:1px solid #ddd;padding:6px 8px;text-align:left;vertical-align:top}th{background:#FFF6CC}"
+           "code{background:#f3f3f3;padding:1px 4px;border-radius:4px}blockquote{border-left:4px solid #ddd;"
+           "margin:0;padding-left:12px;color:#444}")
+    html = CACHE / "guia.html"
+    html.parent.mkdir(parents=True, exist_ok=True)
+    html.write_text(f"<html><head><meta charset='utf-8'><style>{css}</style></head><body>"
+                    f"{markdown.markdown(md, extensions=['tables'])}</body></html>", encoding="utf-8")
+    pdf = lanc / "Guia-Editor-Viral.pdf"
+    js = CACHE / "pdf.cjs"
+    js.write_text("const{chromium}=require('playwright');(async()=>{const b=await chromium.launch();"
+                  "const p=await b.newPage();await p.goto('file://'+process.argv[2]);await p.pdf({path:process.argv[3],"
+                  "format:'A4',printBackground:true});await b.close();})();")
+    raiz_npm = subprocess.run(["npm", "root", "-g"], capture_output=True, text=True).stdout.strip()
+    subprocess.run(["node", str(js), str(html), str(pdf)], check=True, env={**__import__("os").environ,
+                                                                          "NODE_PATH": raiz_npm})
+    return pdf
+
+
 def main() -> None:
     data = datetime.date.today().isoformat()
     out = RAIZ / "dist" / f"Editor-Viral-Lancamento-{data}"
@@ -245,6 +271,14 @@ def main() -> None:
     pag.mkdir()
     (pag / "textos-da-pagina.md").write_text(PAGINA, encoding="utf-8")
     (out / "LEIA-ME-PRIMEIRO.txt").write_text(LEIA_ME.format(data=data), encoding="utf-8")
+    # os 2 arquivos para a conversa que monta a página: o briefing e o zip do que a página disponibiliza
+    lanc = SK / "lancamento"
+    pdf = guia_pdf(lanc)
+    shutil.copy2(lanc / "BRIEFING-PAGINA-DE-ACESSO.md", pag / "BRIEFING-PAGINA-DE-ACESSO.md")
+    zipar(pag / "ARQUIVOS-PARA-A-PAGINA.zip",
+          [(cli / "editor-viral-claude.zip", "editor-viral-claude.zip"), (pdf, "Guia-Editor-Viral.pdf"),
+           (cli / "COMO-USAR-NO-CLAUDE.txt", "COMO-USAR-NO-CLAUDE.txt"),
+           (cli / "COMO-USAR-NO-CHATGPT.txt", "COMO-USAR-NO-CHATGPT.txt")])
     for p in sorted(out.rglob("*")):
         if p.is_file() and "SE-O-ZIP" not in str(p):
             print(f"{p.stat().st_size / 1e6:8.1f} MB  {p.relative_to(out)}")
