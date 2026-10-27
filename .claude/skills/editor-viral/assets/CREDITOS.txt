@@ -1,0 +1,4 @@
+Fontes: Anton e Poppins (SIL Open Font License 1.1) - licenças nesta pasta.
+Emojis: Twemoji (c) Twitter/X e colaboradores, licença CC-BY 4.0 - https://github.com/jdecked/twemoji
+Transcrição: Whisper (OpenAI, MIT) via sherpa-onnx (Apache-2.0); detector de voz Silero VAD (MIT).
+ffmpeg: imageio-ffmpeg (BSD) com o binário estático do ffmpeg (GPL) quando o sistema não tem ffmpeg.
