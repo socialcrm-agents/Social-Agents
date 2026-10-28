@@ -94,6 +94,13 @@ a tabela de gatilhos fala → elemento, a densidade por tipo de vídeo, as recei
 EDIÇÃO (tempo | fala | função | elemento) e aplique tudo de uma vez com `--motion @motion.json`. Editar só com
 legenda e zoom é o erro mais comum: siga a densidade do manual.
 
+**Proposta criativa (obrigatória, todo vídeo).** Você é o diretor criativo: a pessoa não precisa saber pedir.
+Leia `SK/references/repertorio-criativo.md`, cruze o que é DITO com o repertório e proponha **3 ideias ousadas**
+no formato da seção 4 dele (momento, o que aparece, como fazemos, custo). Use os conectores sem esperar pedido:
+imagem de fundo ou cenário (Canva `generate-image` 9:16 ou Hugging Face), maquete 3D para imóvel, `cena3d` para
+produto/objeto, tipografia cinética no gancho. Pedidos ditos no vídeo ("muda o fundo", "imagina…") valem como
+ordem. Se a pessoa disse "faz tudo"/"capricha", execute direto; senão espere o "sim" e execute.
+
 Leia `transcript.txt` inteiro. Depois (pule no modo sem cortes):
 ```bash
 PY SK/scripts/analyze.py <projeto>        # escolhe tomadas e corta pausas -> qa/takes.md, edl.json

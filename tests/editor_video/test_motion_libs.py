@@ -81,6 +81,14 @@ class Bibliotecas(unittest.TestCase):
         a = self.alfas(mov)
         self.assertTrue(a and max(a) > 0.02, "modelo 3D não apareceu")
 
+    def test_maquete_monta_casa(self):
+        comodos = [{"nome": "Sala", "tipo": "sala", "w": 5, "d": 4, "x": 0, "z": 0, "at": 0.1},
+                   {"nome": "Quarto", "tipo": "quarto", "w": 3.4, "d": 3.5, "x": 5, "z": 0, "at": 0.2}]
+        mov = self.render("maq", "/templates/maquete.html", {"comodos": comodos, "monta_ate": 0.2,
+                                                            "titulo": "Casa"}, dur=0.4, webgl=True)
+        a = self.alfas(mov)
+        self.assertTrue(a and max(a) > 0.02, "maquete não apareceu")
+
     def test_deterministico(self):
         p = {"text": "Mesmo quadro sempre", "estilo": "explode"}
         h = [hashlib.md5(self.render(f"det{i}", "/templates/cinetico.html", p).read_bytes()).hexdigest() for i in (1, 2)]

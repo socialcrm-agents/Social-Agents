@@ -1,0 +1,226 @@
+<!doctype html>
+<!-- MAQUETE 3D (layer: front ou full, webgl): a planta do imóvel vira uma maquete de arquitetura em 3D que se
+     MONTA sozinha (piso, depois as paredes subindo cômodo a cômodo, depois os móveis caindo no lugar) e então a
+     câmera passeia de cômodo em cômodo no tempo da fala, com a etiqueta "QUARTO · 12 m²" aparecendo em cada um.
+     Para corretor, consórcio, arquiteto, construtora, decoração.
+     params: comodos: [{nome, w, d (metros), x, z (posição do canto, metros), tipo ("quarto"|"sala"|"cozinha"|
+               "banheiro"|"varanda"|"area"|"garagem"|"suite"), at (s em que é falado; opcional), cor}],
+             titulo ("Casa 3 quartos · 98 m²"), total_m2 (se omitido, soma dos cômodos),
+             monta_ate (s em que a montagem termina, padrão 2.4), fundo ("transparente" | "estudio" | "#hex"),
+             acento (cor das etiquetas, padrão #FACC15), y (0..1 centro da maquete na tela, padrão 0.5),
+             tamanho (fração da largura, padrão 0.9), altura_parede (metros, padrão 1.25: maquete cortada). Sem comodos: uma casa de exemplo de 2 quartos. -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<script type="importmap">{"imports": {"three": "/vendor/three/three.module.min.js"}}</script>
+<style>
+  canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }
+  .tag { position: absolute; transform: translate(-50%, -100%); padding: 14px 26px 16px; border-radius: 22px;
+         background: rgba(12, 14, 22, .88); border: 3px solid var(--ac); color: #fff; text-align: center;
+         font-family: 'Anton'; letter-spacing: 1px; white-space: nowrap; box-shadow: 0 18px 40px rgba(0,0,0,.45);
+         will-change: transform, opacity; }
+  .tag b { display: block; font-size: 58px; line-height: 1; text-transform: uppercase; }
+  .tag i { display: block; font-style: normal; font-size: 86px; line-height: 1.05; color: var(--ac); }
+  .tag:after { content: ''; position: absolute; left: 50%; bottom: -16px; margin-left: -12px; border: 12px solid transparent;
+               border-top-color: var(--ac); border-bottom: 0; }
+  #titulo { position: absolute; left: 0; right: 0; top: 230px; text-align: center; font-family: 'Anton';
+            font-size: 92px; line-height: 1; text-transform: uppercase; color: #fff; will-change: transform, opacity;
+            -webkit-text-stroke: 7px rgba(8,6,20,.92); paint-order: stroke fill; text-shadow: 0 12px 30px rgba(0,0,0,.45); }
+  #titulo span { color: var(--ac); }
+</style></head>
+<body><div id="titulo"></div>
+<script type="module">
+import * as THREE from 'three';
+import motion from '/lib/runtime.js';
+import { RoomEnvironment } from '/vendor/three/addons/RoomEnvironment.js';
+
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const ac = p.acento || '#FACC15';
+document.body.style.setProperty('--ac', ac);
+const comodos = (p.comodos && p.comodos.length) ? p.comodos : [
+  { nome: 'Sala', tipo: 'sala', w: 5, d: 4, x: 0, z: 0 },
+  { nome: 'Cozinha', tipo: 'cozinha', w: 3, d: 4, x: 5, z: 0 },
+  { nome: 'Quarto', tipo: 'quarto', w: 3.5, d: 3.4, x: 0, z: 4 },
+  { nome: 'Suíte', tipo: 'suite', w: 4.5, d: 3.4, x: 3.5, z: 4 },
+  { nome: 'Banheiro', tipo: 'banheiro', w: 2, d: 2, x: 6, z: 2 },
+];
+const m2 = (c) => Math.round((c.m2 ?? c.w * c.d) * 10) / 10;
+const total = p.total_m2 ?? Math.round(comodos.reduce((s, c) => s + m2(c), 0));
+const montaAte = p.monta_ate ?? 2.4;
+
+// ---------------------------------------------------------------------------------------- cena e luz
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.prepend(renderer.domElement);
+const scene = new THREE.Scene();
+const fundo = p.fundo || 'transparente';
+if (fundo === 'estudio') scene.background = new THREE.Color('#1b1e27');
+else if (fundo !== 'transparente') scene.background = new THREE.Color(fundo);
+else renderer.setClearColor(0, 0);
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const sol = new THREE.DirectionalLight(0xfff3e0, 2.6);
+sol.position.set(8, 14, 6);
+sol.castShadow = true;
+sol.shadow.mapSize.set(2048, 2048);
+sol.shadow.bias = -0.0005;
+scene.add(sol, new THREE.HemisphereLight(0xdfe8ff, 0x4a3f35, 0.6));
+
+// limites da planta
+let minX = 1e9, maxX = -1e9, minZ = 1e9, maxZ = -1e9;
+for (const c of comodos) { minX = Math.min(minX, c.x); maxX = Math.max(maxX, c.x + c.w); minZ = Math.min(minZ, c.z); maxZ = Math.max(maxZ, c.z + c.d); }
+const cx = (minX + maxX) / 2, cz = (minZ + maxZ) / 2, span = Math.max(maxX - minX, maxZ - minZ);
+const casa = new THREE.Group();
+casa.position.set(-cx, 0, -cz);
+scene.add(casa);
+sol.shadow.camera.left = sol.shadow.camera.bottom = -span;
+sol.shadow.camera.right = sol.shadow.camera.top = span;
+
+// base da maquete (placa branca com borda)
+const base = new THREE.Mesh(new THREE.BoxGeometry(maxX - minX + 1.6, 0.25, maxZ - minZ + 1.6),
+  new THREE.MeshStandardMaterial({ color: 0xf2efe9, roughness: 0.9 }));
+base.position.set(cx, -0.13, cz);
+base.receiveShadow = true;
+casa.add(base);
+
+const PISO = { quarto: 0xd9b48f, suite: 0xd9b48f, sala: 0xc9a27a, cozinha: 0xe7e3dc, banheiro: 0xdfe7ea,
+               varanda: 0xbfa58a, area: 0xe2ddd5, garagem: 0xbdbdbd };
+const matParede = new THREE.MeshStandardMaterial({ color: 0xfbfaf7, roughness: 0.85 });
+const ALT = p.altura_parede ?? 1.25, ESP = 0.14;   // parede baixa de maquete: o interior aparece
+const pecas = [];   // {obj, t0, tipo: 'piso'|'parede'|'movel'}
+
+function caixa(w, h, d, cor, rough = 0.7) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color: cor, roughness: rough }));
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+function moveis(c, g) {
+  const t = c.tipo || 'sala', add = (m, x, z, y = 0) => { m.position.set(c.x + x, y + m.geometry.parameters.height / 2, c.z + z); g.push(m); };
+  if (t === 'quarto' || t === 'suite') {
+    add(caixa(1.6, 0.45, 2.0, 0xffffff, 0.9), c.w / 2, c.d - 1.2);
+    add(caixa(1.6, 0.18, 0.5, 0x8fa6c8, 0.9), c.w / 2, c.d - 0.45, 0.45);
+    add(caixa(0.5, 0.5, 0.45, 0x7a5a40), c.w / 2 - 1.15, c.d - 0.4);
+    add(caixa(1.8, 2.0, 0.55, 0xe8e2d8), c.w / 2, 0.4);
+  } else if (t === 'sala') {
+    add(caixa(2.2, 0.75, 0.9, 0x4f5d75, 0.95), c.w / 2, c.d - 0.6);
+    add(caixa(1.1, 0.4, 0.6, 0x7a5a40), c.w / 2, c.d / 2);
+    add(caixa(1.8, 0.5, 0.35, 0x2b2b2b), c.w / 2, 0.3);
+    add(caixa(1.2, 0.75, 0.8, 0xa07850), 0.9, 0.9);
+  } else if (t === 'cozinha') {
+    add(caixa(c.w - 0.4, 0.9, 0.6, 0xf4f4f4, 0.5), c.w / 2, 0.45);
+    add(caixa(0.7, 1.8, 0.65, 0xcfd6dc, 0.3), c.w - 0.55, c.d - 0.5);
+    add(caixa(1.2, 0.75, 0.8, 0xa07850), c.w / 2, c.d / 2 + 0.3);
+  } else if (t === 'banheiro') {
+    add(caixa(0.45, 0.4, 0.6, 0xffffff, 0.3), 0.45, c.d - 0.45);
+    add(caixa(0.9, 0.85, 0.45, 0xffffff, 0.3), c.w - 0.6, 0.35);
+    add(caixa(0.9, 0.06, 0.9, 0xa9c6d6, 0.2), c.w - 0.55, c.d - 0.55);
+  } else if (t === 'garagem') {
+    add(caixa(1.8, 1.2, 4.0, 0xc0392b, 0.35), c.w / 2, c.d / 2);
+  } else if (t === 'varanda' || t === 'area') {
+    add(caixa(0.6, 0.45, 0.6, 0x6d8b5e), 0.5, 0.5);
+    add(caixa(1.4, 0.4, 0.7, 0xa07850), c.w / 2, c.d / 2);
+  }
+}
+
+const N = comodos.length;
+comodos.forEach((c, i) => {
+  const ordem = i / Math.max(N, 1);
+  const piso = caixa(c.w - 0.02, 0.06, c.d - 0.02, c.cor ? new THREE.Color(c.cor) : (PISO[c.tipo] ?? 0xd8cfc2), 0.8);
+  piso.castShadow = false;
+  piso.position.set(c.x + c.w / 2, 0.03, c.z + c.d / 2);
+  casa.add(piso);
+  pecas.push({ obj: piso, t0: 0.15 + ordem * 0.5, tipo: 'piso' });
+  // 4 paredes (com uma "porta": a parede da frente fica com uma abertura no meio)
+  const lados = [
+    [c.w, ESP, c.x + c.w / 2, c.z],                 // frente (abertura)
+    [c.w, ESP, c.x + c.w / 2, c.z + c.d],
+    [ESP, c.d, c.x, c.z + c.d / 2],
+    [ESP, c.d, c.x + c.w, c.z + c.d / 2],
+  ];
+  lados.forEach(([w, d, x, z], k) => {
+    const partes = k === 0 && c.w > 1.6 ? [[(c.w - 0.9) / 2, x - (c.w + 0.9) / 4], [(c.w - 0.9) / 2, x + (c.w + 0.9) / 4]] : [[w, x]];
+    for (const [ww, xx] of partes) {
+      const par = new THREE.Mesh(new THREE.BoxGeometry(k === 0 ? ww : w, ALT, d), matParede);
+      par.castShadow = true; par.receiveShadow = true;
+      par.position.set(k === 0 ? xx : x, ALT / 2, z);
+      casa.add(par);
+      pecas.push({ obj: par, t0: 0.6 + ordem * 0.9 + k * 0.05, tipo: 'parede' });
+    }
+  });
+  const mv = [];
+  moveis(c, mv);
+  mv.forEach((m, k) => { casa.add(m); pecas.push({ obj: m, t0: 1.4 + ordem * 0.8 + k * 0.06, tipo: 'movel', y0: m.position.y }); });
+});
+// escala os tempos de montagem para terminar em montaAte
+const maxT = Math.max(...pecas.map((x) => x.t0)) + 0.5;
+pecas.forEach((x) => { x.t0 *= montaAte / maxT; });
+
+// etiquetas
+const tags = comodos.map((c) => {
+  const el = document.createElement('div');
+  el.className = 'tag';
+  el.innerHTML = `<b>${c.nome}</b><i>${String(m2(c)).replace('.', ',')} m²</i>`;
+  document.body.appendChild(el);
+  return { el, c, pos: new THREE.Vector3(c.x + c.w / 2 - cx, ALT + 0.3, c.z + c.d / 2 - cz) };
+});
+// quando cada cômodo é "visitado": o `at` da fala ou distribuído depois da montagem
+const livres = tags.filter((t) => t.c.at == null);
+tags.forEach((t) => { if (t.c.at == null) t.at = montaAte + 0.3 + livres.indexOf(t) * Math.max((D - montaAte - 1.2) / Math.max(livres.length, 1), 0.8); else t.at = t.c.at; });
+tags.sort((a, b) => a.at - b.at);
+const titulo = document.getElementById('titulo');
+titulo.innerHTML = p.titulo ? String(p.titulo).replace(/(\d[\d.,]*\s*m²)/, '<span>$1</span>') : `<span>${total} m²</span>`;
+
+// ---------------------------------------------------------------------------------------- câmera
+const cam = new THREE.PerspectiveCamera(30, W / H, 0.1, 500);
+const tam = p.tamanho ?? 0.9;
+// distância para a planta inteira caber na LARGURA do quadro vertical (o campo horizontal é o mais estreito)
+const fovH = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * (W / H));
+const distBase = (span * 0.62) / Math.tan(fovH / 2) / tam;
+function poseVisao(t) {
+  // 1) visão geral girando enquanto monta; 2) foco no cômodo da vez (interpola entre focos)
+  const giro = -0.7 + 0.25 * Math.sin(t * 0.35);
+  let alvo = new THREE.Vector3(0, 0, 0), dist = distBase, alt = 1.05, ang = giro;
+  const atual = [...tags].reverse().find((g) => t >= g.at - 0.4);
+  if (atual) {
+    const k = motion.ease.inOutCubic(motion.clamp((t - atual.at + 0.4) / 0.8));
+    const anterior = tags[tags.indexOf(atual) - 1];
+    const de = anterior ? new THREE.Vector3(anterior.pos.x, 0, anterior.pos.z) : new THREE.Vector3();
+    alvo = de.lerp(new THREE.Vector3(atual.pos.x, 0, atual.pos.z), k);
+    dist = THREE.MathUtils.lerp(anterior ? distBase * 0.7 : distBase, distBase * 0.7, k);
+    alt = THREE.MathUtils.lerp(1.05, 0.95, k);
+  }
+  const y = p.y ?? 0.5;
+  cam.position.set(alvo.x + Math.sin(ang) * dist, alt * dist, alvo.z + Math.cos(ang) * dist);
+  cam.lookAt(alvo.x, -(y - 0.5) * dist * 0.6, alvo.z);
+}
+
+motion.onFrame((t) => {
+  for (const pc of pecas) {
+    const k = motion.spring(t, pc.t0, { dur: 0.55, bounce: pc.tipo === 'movel' ? 0.35 : 0.12 });
+    pc.obj.visible = t >= pc.t0;
+    if (pc.tipo === 'parede') { pc.obj.scale.y = Math.max(k, 0.001); pc.obj.position.y = ALT * pc.obj.scale.y / 2; }
+    else if (pc.tipo === 'movel') { pc.obj.position.y = pc.y0 + (1 - k) * 3; }
+    else pc.obj.scale.set(Math.max(k, 0.001), 1, Math.max(k, 0.001));
+  }
+  poseVisao(t);
+  casa.updateMatrixWorld(true);
+  renderer.render(scene, cam);
+  // etiquetas presas ao cômodo (projeção 3D -> tela)
+  tags.forEach((g, i) => {
+    const prox = tags[i + 1];
+    const fim = prox ? prox.at - 0.1 : D - 0.3;
+    const k = motion.spring(t, g.at, { dur: 0.5, bounce: 0.35 }) * (1 - motion.exitK(t, fim, 0.25));
+    const v = g.pos.clone().project(cam);
+    g.el.style.left = `${(v.x + 1) / 2 * W}px`;
+    g.el.style.top = `${(1 - v.y) / 2 * H}px`;
+    g.el.style.opacity = t >= g.at ? Math.min(1, k * 1.6) : 0;
+    g.el.style.transform = `translate(-50%, -100%) scale(${0.6 + 0.4 * k})`;
+  });
+  const kt = motion.spring(t, 0.2, { dur: 0.7, bounce: 0.2 }) * (1 - motion.exitK(t, D, 0.3));
+  titulo.style.opacity = Math.min(1, kt * 1.5);
+  titulo.style.transform = `translateY(${(1 - kt) * 40}px)`;
+  if (fundo === 'transparente') renderer.domElement.style.opacity = 1 - motion.exitK(t, D, 0.3);
+});
+</script></body></html>
