@@ -143,6 +143,8 @@ Tipografia cinética (After Effects) com Anime.js:
 `--motion '{"template":"cinetico","at":"frase dita","dur":2.5,"params":{"text":"FRASE DITA","estilo":"sobe|onda|explode|maquina","destaque":"PALAVRA"}}'`;
 animação Lottie (JSON do LottieFiles/After Effects que o usuário tem direito de usar):
 `--motion '{"template":"lottie","at":"palavra","dur":2,"params":{"src":"/caminho/seta.json"}}'`
+Cena 3D de verdade (modelo .glb com animação, câmera de cinema e vista explodida em blocos):
+`--motion '{"template":"cena3d","at":"trecho","dur":3,"layer":"full","params":{"modelo":"/caminho/produto.glb","camera":"orbita","explodir":true,"fundo":"estudio"}}'`
 (ver `references/motion.md`, seção "Animação de After Effects").
 
 ## 2c. Direção premium (máxima qualidade / nível concorrente)

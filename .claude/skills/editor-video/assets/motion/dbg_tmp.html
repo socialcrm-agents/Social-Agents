@@ -1,0 +1,10 @@
+<!doctype html><html><head><script type="importmap">{"imports": {"three": "/vendor/three/three.module.min.js"}}</script></head><body><script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from '/vendor/three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from '/vendor/three/addons/loaders/DRACOLoader.js';
+const d=new DRACOLoader(); d.setDecoderPath('/vendor/three/addons/libs/draco/gltf/');
+const l=new GLTFLoader(); l.setDRACOLoader(d);
+l.load('/modelos/LittlestTokyo.glb',(g)=>{const m=g.scene; m.updateMatrixWorld(true);
+const b=new THREE.Box3().setFromObject(m); const sp=b.getBoundingSphere(new THREE.Sphere());
+window.R={min:b.min.toArray(),max:b.max.toArray(),c:sp.center.toArray(),r:sp.radius,scale:m.scale.toArray(),anims:g.animations.length};},undefined,(e)=>{window.R={err:String(e)}});
+</script></body></html>

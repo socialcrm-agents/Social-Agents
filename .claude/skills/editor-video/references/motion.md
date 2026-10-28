@@ -141,7 +141,11 @@ Clipes ficam em cache (`work/motion/clip_<hash>.mov`): só renderizam de novo se
 | template | layer | o que faz | params |
 |---|---|---|---|
 | `cinetico` | front (zona topo) | Tipografia cinética com Anime.js: a frase entra letra por letra (`sobe` = mola em cascata do centro, `onda` = fica ondulando, `explode` = sai do centro girando com elástico, `maquina` = máquina de escrever com cursor), palavra de destaque em outra cor, saída limpa | `text`, `estilo`, `destaque`, `cor`, `cor2`, `y`, `tamanho`, `fonte` |
+| `cena3d` | front ou full (webgl) | **Modelo 3D completo** (.glb/.gltf do Sketchfab, Poly Pizza, Blender ou o produto do cliente) com as animações dele tocando, luz de estúdio, sombra no chão e câmera de cinema (`orbita`, `dolly`, `voo`, `frente`); `explodir: true` faz a **vista explodida** (o modelo se separa em blocos e remonta, estilo vídeo de produto da Apple). Demo: `/modelos/LittlestTokyo.glb` (CC-BY 4.0, Glen Fox — dar crédito) | `modelo`, `camera`, `explodir`, `explodir_at`, `explodir_dist`, `animacao`, `velocidade`, `fundo` (`transparente`/`estudio`/`#hex`), `y`, `tamanho`, `rotacao`, `sombra`, `exposicao` |
 | `lottie` | front | Toca uma animação Lottie (JSON do After Effects/LottieFiles: setas, checks, likes, confete, "toque aqui") no tempo exato, com pop de entrada e saída | `src` (.json local), `x`, `y`, `tamanho`, `loop`, `velocidade`, `sombra` |
+
+`cena3d` é pesado (~2 s por quadro em CPU, 1080×1920): use 2-4 s num momento de impacto (abertura, revelação
+do produto), não como fundo do vídeo inteiro. Com `fundo: "estudio"` vira cena de tela cheia (`"layer": "full"`).
 
 Quando usar: `cinetico` no gancho escrito (frase curta de 3-7 palavras dita no vídeo) ou numa virada; `lottie`
 para reforço visual de uma ação ("clica", "salva", "comenta") com um JSON que o usuário tem direito de usar

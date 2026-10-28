@@ -45,10 +45,10 @@ class Bibliotecas(unittest.TestCase):
     def tearDownClass(cls):
         shutil.rmtree(cls.d, ignore_errors=True)
 
-    def render(self, nome: str, page: str, params: dict, dur: float = 1.6) -> Path:
+    def render(self, nome: str, page: str, params: dict, dur: float = 1.6, webgl: bool = False) -> Path:
         out = self.d / f"{nome}.mov"
         job = {"page": page, "out": str(out), "w": 540, "h": 960, "fps": 30, "duration": dur, "params": params,
-               "opaque": False, "webgl": False, "roots": {"/": str(MOTION), "/fonts/": str(util.SK / "assets" / "fonts"),
+               "opaque": False, "webgl": webgl, "roots": {"/": str(MOTION), "/fonts/": str(util.SK / "assets" / "fonts"),
                                                           "/work/": str(self.d / "work")}}
         jf = self.d / f"{nome}.job.json"
         jf.write_text(json.dumps(job))
@@ -74,6 +74,12 @@ class Bibliotecas(unittest.TestCase):
     def test_lottie_toca_no_tempo(self):
         a = self.alfas(self.render("lot", "/templates/lottie.html", {"src": "/work/anim.json", "tamanho": 300}))
         self.assertGreater(max(a), 0.02)
+
+    def test_cena3d_carrega_modelo_anima_e_explode(self):
+        mov = self.render("c3d", "/templates/cena3d.html", {"camera": "frente", "explodir": True, "explodir_at": 0.0,
+                                                            "tamanho": 0.9}, dur=0.4, webgl=True)
+        a = self.alfas(mov)
+        self.assertTrue(a and max(a) > 0.02, "modelo 3D não apareceu")
 
     def test_deterministico(self):
         p = {"text": "Mesmo quadro sempre", "estilo": "explode"}

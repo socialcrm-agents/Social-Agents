@@ -25,7 +25,7 @@ from common import FONTS_DIR, SKILL_DIR, EditorError, ffmpeg, log
 
 MOTION_DIR = SKILL_DIR / "assets" / "motion"
 RENDERER = Path(__file__).resolve().parent / "motion_render.mjs"
-WEBGL = {"estudio3d", "objeto3d", "profundidade", "produto3d"}  # templates Three.js (render com WebGL/SwiftShader, mais lento)
+WEBGL = {"estudio3d", "objeto3d", "profundidade", "produto3d", "cena3d"}  # templates Three.js (render com WebGL/SwiftShader, mais lento)
 
 
 def page_for(item: dict) -> str:
@@ -107,7 +107,7 @@ def render_clip(item: dict, project: Path, aroll: Path, mask: Path | None, tl: d
             return {k: localize(v, k) for k, v in obj.items()}
         if isinstance(obj, list):
             return [localize(v, key) for v in obj]
-        if isinstance(obj, str) and key in ("image", "images", "imagens", "imagem", "src", "logo", "photo", "foto") and not obj.startswith("/work/") \
+        if isinstance(obj, str) and key in ("image", "images", "imagens", "imagem", "src", "logo", "photo", "foto", "modelo") and not obj.startswith("/work/") \
                 and Path(obj).expanduser().is_file():
             src = Path(obj).expanduser()
             dst = mdir / "assets" / f"{hashlib.sha1(str(src).encode()).hexdigest()[:8]}_{src.name}"
