@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Gera o material de lançamento do Editor Viral (versão leve que roda dentro do Claude e do ChatGPT).
 
-  python3 tools/pacote_editor_viral.py        -> dist/Editor-Viral-Lancamento-AAAA-MM-DD/
+  python3 tools/pacote_editor_viral.py              -> dist/Editor-Viral-Lancamento-AAAA-MM-DD/
+  python3 tools/pacote_editor_viral.py --idioma es  -> dist/Editor-Viral-Espanol-AAAA-MM-DD/ (tudo em espanhol)
 
 Saída:
   1-PARA-O-CLIENTE/editor-viral-claude.zip      a skill (o cliente sobe no Claude)
@@ -74,12 +75,21 @@ def zipar(destino: Path, arquivos: list[tuple[Path, str]], comprimir: bool = Tru
     return destino
 
 
-def skill_arquivos(prefixo: str = "editor-viral/") -> list[tuple[Path, str]]:
+def skill_arquivos(prefixo: str = "editor-viral/", idioma: str = "pt") -> list[tuple[Path, str]]:
+    """A skill para o zip do Claude. Em espanhol, os textos de es/ substituem os de mesmo caminho."""
+    es = SK / "es"
     out = []
     for p in sorted(SK.rglob("*")):
         rel = p.relative_to(SK).as_posix()
-        if p.is_file() and "__pycache__" not in rel and not rel.startswith("chatgpt/"):
-            out.append((p, prefixo + rel))
+        if not p.is_file() or "__pycache__" in rel or rel.startswith(("chatgpt/", "es/", "lancamento/")):
+            continue
+        if idioma == "es" and rel.startswith("references/"):
+            continue
+        out.append((p, prefixo + rel))
+    if idioma == "es":
+        out = [(p, n) for p, n in out if n != prefixo + "SKILL.md"]
+        for rel in ("SKILL.md", "idioma.txt", "references/metodo.md"):
+            out.append((es / rel, prefixo + rel))
     return out
 
 
@@ -211,11 +221,11 @@ motion de nível agência. [botão]
 """
 
 
-def guia_pdf(lanc: Path) -> Path:
+def guia_pdf(lanc: Path, metodo: Path | None = None, nome: str = "Guia-Editor-Viral.pdf") -> Path:
     """Guia do cliente (início + método) em PDF, via Chromium do Playwright."""
     import markdown
     md = (lanc / "guia-inicio.md").read_text(encoding="utf-8") + "\n\n<div style='page-break-before:always'></div>\n\n" \
-        + (SK / "references" / "metodo.md").read_text(encoding="utf-8")
+        + (metodo or SK / "references" / "metodo.md").read_text(encoding="utf-8")
     css = ("@page{size:A4;margin:16mm}body{font-family:Poppins,Arial,sans-serif;color:#1a1a1a;font-size:11.5pt;"
            "line-height:1.5}h1{font-size:26pt;border-bottom:4px solid #FFD400;padding-bottom:6px}h2{margin-top:22px;"
            "border-left:6px solid #FFD400;padding-left:10px}table{border-collapse:collapse;width:100%;font-size:10pt}"
@@ -226,7 +236,7 @@ def guia_pdf(lanc: Path) -> Path:
     html.parent.mkdir(parents=True, exist_ok=True)
     html.write_text(f"<html><head><meta charset='utf-8'><style>{css}</style></head><body>"
                     f"{markdown.markdown(md, extensions=['tables'])}</body></html>", encoding="utf-8")
-    pdf = lanc / "Guia-Editor-Viral.pdf"
+    pdf = lanc / nome
     js = CACHE / "pdf.cjs"
     js.write_text("const{chromium}=require('playwright');(async()=>{const b=await chromium.launch();"
                   "const p=await b.newPage();await p.goto('file://'+process.argv[2]);await p.pdf({path:process.argv[3],"
@@ -285,5 +295,59 @@ def main() -> None:
     print(f"OK: {out}")
 
 
+def main_es() -> None:
+    """Mesmo pacote, com tudo que o cliente vê em espanhol (textos em .claude/skills/editor-viral/es/)."""
+    import pacote_editor_viral_es as T
+    es = SK / "es"
+    data = datetime.date.today().isoformat()
+    out = RAIZ / "dist" / f"Editor-Viral-Espanol-{data}"
+    if out.exists():
+        shutil.rmtree(out)
+    rodas = baixar_rodas()
+    modelo = baixar_modelo()
+    cli = out / "1-PARA-EL-CLIENTE"
+    zipar(cli / "editor-viral-claude-es.zip", skill_arquivos(idioma="es"))
+    zipar(cli / "modelo-voz-editor-viral.zip", [(p, p.name) for p in modelo], comprimir=False)
+    (cli / "COMO-USAR-EN-CLAUDE.txt").write_text(T.COMO_CLAUDE, encoding="utf-8")
+    (cli / "COMO-USAR-EN-CHATGPT.txt").write_text(T.COMO_GPT.format(link_gpt="[pega aquí el enlace del GPT]"),
+                                                  encoding="utf-8")
+    gpt = out / "2-TU-CREAS-EL-GPT"
+    sub = gpt / "ARCHIVOS-PARA-SUBIR"
+    sub.mkdir(parents=True)
+    for nome in ("editor_viral.py", "dsp.py", "trilha.py"):
+        shutil.copy2(SK / "scripts" / nome, sub / nome)
+    shutil.copy2(es / "references" / "metodo.md", sub / "metodo.md")
+    shutil.copy2(es / "idioma.txt", sub / "idioma.txt")
+    zipar(sub / "recursos-editor-viral.zip", [(p, p.relative_to(SK / "assets").as_posix())
+                                             for p in sorted((SK / "assets").rglob("*")) if p.is_file()])
+    zipar(sub / "programas-editor-viral.zip", [(p, p.name) for p in rodas
+                                               if not p.name.startswith("vosk")], comprimir=False)
+    shutil.copy2(cli / "modelo-voz-editor-viral.zip", sub / "modelo-voz-editor-viral.zip")
+    reserva = gpt / "SI-EL-ZIP-ES-RECHAZADO"
+    for z in sub.glob("*.zip"):
+        with zipfile.ZipFile(z) as zz:
+            zz.extractall(reserva / z.stem)
+    shutil.copy2(es / "chatgpt" / "instrucciones-del-gpt.txt", gpt / "instrucciones-del-gpt.txt")
+    (gpt / "COMO-CREAR-EL-GPT.txt").write_text(T.COMO_CRIAR_GPT.format(n=len(list(sub.iterdir()))),
+                                               encoding="utf-8")
+    pag = out / "3-PAGINA-DE-DESCARGA"
+    pag.mkdir()
+    (pag / "textos-de-la-pagina.md").write_text(T.PAGINA, encoding="utf-8")
+    (out / "LEIA-ME-PRIMEIRO.txt").write_text(T.LEIA_ME.format(data=data), encoding="utf-8")
+    lanc = es / "lancamento"
+    pdf = guia_pdf(lanc, es / "references" / "metodo.md", "Guia-Editor-Viral-ES.pdf")
+    shutil.copy2(lanc / "BRIEFING-PAGINA-DE-ACCESO.md", pag / "BRIEFING-PAGINA-DE-ACCESO.md")
+    shutil.copy2(pdf, cli / pdf.name)
+    zipar(pag / "ARCHIVOS-PARA-LA-PAGINA.zip",
+          [(cli / "editor-viral-claude-es.zip", "editor-viral-claude-es.zip"), (pdf, pdf.name),
+           (cli / "COMO-USAR-EN-CLAUDE.txt", "COMO-USAR-EN-CLAUDE.txt"),
+           (cli / "COMO-USAR-EN-CHATGPT.txt", "COMO-USAR-EN-CHATGPT.txt")])
+    for p in sorted(out.rglob("*")):
+        if p.is_file() and "SI-EL-ZIP" not in str(p):
+            print(f"{p.stat().st_size / 1e6:8.1f} MB  {p.relative_to(out)}")
+    print(f"OK: {out}")
+
+
 if __name__ == "__main__":
-    main()
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    main_es() if sys.argv[1:3] == ["--idioma", "es"] else main()

@@ -44,6 +44,9 @@ BUSCA = [AQUI, AQUI.parent, Path("/mnt/data"), Path("/mnt/user-data/uploads"), P
          Path.cwd(), CASA]
 MODELO_URL = "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/"
 W, H, FPS = 1080, 1920, 30
+# idioma da fala (transcrição e emojis): "pt" ou "es" — vem do idioma.txt da skill ou de EDITOR_VIRAL_IDIOMA
+IDIOMA = (os.environ.get("EDITOR_VIRAL_IDIOMA") or next((p.read_text(encoding="utf-8").strip() for p in
+          (AQUI / "idioma.txt", AQUI.parent / "idioma.txt") if p.exists()), "") or "pt").lower()[:2]
 SR16 = 16000
 
 
@@ -304,7 +307,7 @@ def _pedacos(x, a: float, b: float, alvo: float = 2.6) -> list[tuple[float, floa
 
 
 def _silabas(p: str) -> int:
-    return max(1, len(re.findall(r"[aeiouáéíóúâêôãõày]+", p.lower())))
+    return max(1, len(re.findall(r"[aeiouáéíóúâêôãõàüy]+", p.lower())))
 
 
 def _colocar(texto: str, a: float, b: float, x) -> list[dict]:
@@ -331,7 +334,7 @@ def _colocar(texto: str, a: float, b: float, x) -> list[dict]:
     return out
 
 
-def transcrever(video: Path, idioma: str = "pt") -> dict:
+def transcrever(video: Path, idioma: str = IDIOMA) -> dict:
     video = Path(video).resolve()
     d = pasta_de(video)
     info = sondar(video)
@@ -424,6 +427,38 @@ LEXICO = {
 }
 CURTAS = {"que", "uma", "pra", "para", "com", "por", "isso", "esse", "essa", "aqui", "voce", "mais", "como", "mas",
           "quando", "porque", "entao", "tambem", "muito", "sobre", "tipo", "tudo", "nao", "sim", "ele", "ela", "eles"}
+
+# léxico em espanhol (mesmas emoções e emojis)
+LEXICO_ES = {
+    "dinero": ("dinero", "💰"), "plata": ("dinero", "💸"), "pesos": ("dinero", "💸"), "dolares": ("dinero", "💸"),
+    "ganancia*": ("dinero", "📈"), "vender": ("dinero", "🤑"), "venta*": ("dinero", "🤑"), "vendi*": ("dinero", "🤑"),
+    "factur*": ("dinero", "💰"), "promocion": ("dinero", "🏷️"), "oferta": ("dinero", "🏷️"), "descuento": ("dinero", "🏷️"),
+    "barato": ("dinero", "🏷️"), "comprar": ("dinero", "🛒"), "compra*": ("dinero", "🛒"),
+    "gratis": ("alegria", "🎁"), "regalo": ("alegria", "🎁"), "bono": ("alegria", "🎁"), "bonus": ("alegria", "🎁"),
+    "rapido": ("urgencia", "⚡"), "ahora": ("urgencia", "⏰"), "hoy": ("urgencia", "⏰"), "ultim*": ("urgencia", "⏳"),
+    "corre": ("urgencia", "🏃"), "acaba*": ("urgencia", "⏳"), "urgente": ("urgencia", "🚨"),
+    "cuidado": ("alerta", "⚠️"), "error*": ("alerta", "❌"), "equivoc*": ("alerta", "❌"), "nunca": ("alerta", "🚫"),
+    "deja": ("alerta", "✋"), "jamas": ("alerta", "🚫"), "problema*": ("alerta", "⚠️"),
+    "peligr*": ("alerta", "⚠️"), "estafa": ("alerta", "🚨"),
+    "secreto": ("curiosidad", "🤫"), "descubri": ("curiosidad", "💡"), "idea": ("curiosidad", "💡"),
+    "mira": ("curiosidad", "👀"), "miren": ("curiosidad", "👀"), "imagina": ("curiosidad", "💭"),
+    "sabias": ("curiosidad", "🤔"), "verdad": ("curiosidad", "🤯"),
+    "metodo": ("confianza", "🧠"), "garantia": ("confianza", "🛡️"), "seguro": ("confianza", "🛡️"),
+    "comprobado": ("confianza", "✅"), "resultado*": ("confianza", "📈"), "funciona": ("confianza", "✅"),
+    "facil": ("confianza", "👌"), "simple": ("confianza", "👌"), "paso": ("confianza", "📌"),
+    "rico": ("deseo", "😋"), "delicioso": ("deseo", "😋"), "hermos*": ("deseo", "😍"), "lind*": ("deseo", "😍"),
+    "amo": ("deseo", "❤️"), "perfecto": ("deseo", "🤩"), "increible": ("alegria", "🤩"), "fuego": ("alegria", "🔥"),
+    "viral": ("alegria", "🚀"), "crecer": ("alegria", "🚀"), "exito": ("alegria", "🏆"), "ganar": ("dinero", "💰"),
+    "gan*": ("dinero", "💰"), "cliente*": ("dinero", "🤝"), "audiencia": ("alegria", "📊"), "seguidor*": ("alegria", "🚀"),
+}
+CURTAS_ES = {"que", "una", "uno", "para", "con", "por", "eso", "esto", "esta", "este", "aqui", "tu", "mas", "como",
+             "pero", "cuando", "porque", "entonces", "tambien", "muy", "sobre", "todo", "no", "si", "el", "ella",
+             "ellos", "los", "las", "del", "les", "nos", "vos", "usted"}
+# nomes das emoções em espanhol -> mesmas cores
+EMOCOES.update({"dinero": EMOCOES["dinheiro"], "curiosidad": EMOCOES["curiosidade"],
+                "confianza": EMOCOES["confianca"], "deseo": EMOCOES["desejo"]})
+if IDIOMA == "es":
+    LEXICO, CURTAS = LEXICO_ES, CURTAS_ES
 
 
 def emocao(p: str) -> tuple[str, str | None]:
