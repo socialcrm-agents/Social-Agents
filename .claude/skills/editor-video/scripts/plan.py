@@ -67,6 +67,7 @@ MOTION_DEFAULTS = {
     "giro": {"layer": "front"}, "luz": {"layer": "front"},
     "vendas": {"layer": "front"}, "tabela": {"layer": "front"}, "cronometro": {"layer": "front"},
     "produto3d": {"layer": "front"},
+    "cinetico": {"layer": "front", "zona": "topo"}, "lottie": {"layer": "front"},
 }
 DEFAULT_CTA = {"reels_viral": "SEGUE PRA VER MAIS", "anuncio_conversao": "CLIQUE EM SAIBA MAIS", "editorial_premium": "Link na bio",
                "pro_clean": "SEGUE PRA VER MAIS"}

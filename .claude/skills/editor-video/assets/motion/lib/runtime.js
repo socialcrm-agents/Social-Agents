@@ -201,8 +201,56 @@ const motion = {
     await img.decode().catch(() => {});
   },
 
+  // ---------------------------------------------------------------------------------------------------------
+  // Bibliotecas de animação no relógio do render (determinístico: o quadro t sempre sai igual).
+  // ---------------------------------------------------------------------------------------------------------
+
+  /**
+   * Anime.js v4 (MIT, /vendor/animejs/anime.esm.min.js): crie a animação ou timeline com {autoplay: false} e
+   * registre aqui; a cada quadro ela vai para (t - t0). Ex.:
+   *   import { createTimeline, stagger, splitText } from '/vendor/animejs/anime.esm.min.js';
+   *   motion.anime(createTimeline({ autoplay: false }).add(chars, { y: [80, 0], delay: stagger(30) }), 0.2);
+   */
+  anime(inst, t0 = 0) {
+    this._seekers.push((t) => inst.seek(Math.max(0, (t - t0) * 1000)));
+    return inst;
+  },
+
+  /**
+   * Lottie (MIT, /vendor/lottie/lottie.min.js): animação do After Effects / LottieFiles (JSON) no quadro certo.
+   * src = caminho/URL do .json ou o objeto JSON. opts: {t0 (s), speed, loop (true), renderer ('svg')}.
+   * Devolve a promessa do carregamento (o primeiro quadro espera).
+   */
+  lottie(container, src, opts = {}) {
+    const carrega = (window.lottie ? Promise.resolve() : new Promise((ok, erro) => {
+      const s = document.createElement('script');
+      s.src = '/vendor/lottie/lottie.min.js';
+      s.onload = ok;
+      s.onerror = () => erro(new Error('lottie.min.js não carregou'));
+      document.head.appendChild(s);
+    })).then(() => new Promise((ok) => {
+      const anim = window.lottie.loadAnimation({
+        container, renderer: opts.renderer || 'svg', loop: false, autoplay: false,
+        ...(typeof src === 'string' ? { path: src } : { animationData: src }),
+      });
+      anim.addEventListener('DOMLoaded', () => {
+        const total = anim.getDuration(true), fr = anim.frameRate || 30;
+        this._seekers.push((t) => {
+          let f = Math.max(0, (t - (opts.t0 || 0)) * fr * (opts.speed || 1));
+          f = opts.loop === false ? Math.min(f, total - 1) : f % total;
+          anim.goToAndStop(f, true);
+        });
+        ok(anim);
+      });
+    }));
+    return this.waitFor(carrega);
+  },
+
+  _seekers: [],
+
   async _seek(t) {
     await Promise.all(this._ready);
+    for (const fn of this._seekers) fn(t);
     for (const fn of this._frame) await fn(t, this.params);
   },
 };

@@ -171,10 +171,17 @@ def baixar(url: str, destino: Path) -> Path | None:
         with urllib.request.urlopen(req, timeout=60) as r, destino.open("wb") as fh:
             fh.write(r.read())
         return destino
-    except Exception as exc:  # noqa: BLE001 — link expirado/bloqueado: segue sem esse vídeo
-        log(f"   não baixou {destino.name}: {exc}")
+    except Exception as exc:  # noqa: BLE001 — link expirado/bloqueado: tenta o yt-dlp (página do anúncio/post)
         destino.unlink(missing_ok=True)
-        return None
+        try:
+            import shutil as _sh
+
+            import referencia
+            _sh.copy2(referencia.obter_video(url), destino)
+            return destino
+        except Exception:  # noqa: BLE001
+            log(f"   não baixou {destino.name}: {exc}")
+            return None
 
 
 def _mediana(v: list[float]) -> float | None:

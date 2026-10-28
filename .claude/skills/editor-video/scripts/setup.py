@@ -154,6 +154,8 @@ def check_opcionais(voz_ia: bool) -> None:
         subprocess.run([sys.executable, "-m", "pip", "install", "--user", "resemble-enhance"], check=False)
     tem = importlib.util.find_spec("resemble_enhance") is not None
     print(f"STATUS voz_ia (Resemble Enhance) {'OK' if tem else 'OPCIONAL -> setup.py --voz-ia (sem ele: limpeza local)'}")
+    tem_ydl = importlib.util.find_spec("yt_dlp") is not None
+    print(f"STATUS yt-dlp (referência por link) {'OK' if tem_ydl else 'OPCIONAL -> pip install yt-dlp'}")
     import musica_ia
     print(f"STATUS musica_ia (ACE-Step em {musica_ia.URL}) "
           f"{'OK' if musica_ia.disponivel() else 'OPCIONAL -> veja o topo do setup.py (sem ele: trilha sintetizada)'}")

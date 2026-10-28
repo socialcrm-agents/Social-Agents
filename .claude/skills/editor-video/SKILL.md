@@ -139,6 +139,11 @@ Efeitos de impacto: `--fx tremida@palavra`, `clarao`, `glitch`, `whip` (chicote 
 Ritmo: no máximo uma animação de tela cheia a cada ~6-8 s num Reels; num vídeo longo, use nos pontos-chave.
 Ícones em palavras-chave entram sozinhos no Viral/Anúncio (`--icons off` desliga).
 Não invente números, endereços ou dados: só o que a pessoa disse ou o usuário forneceu.
+Tipografia cinética (After Effects) com Anime.js:
+`--motion '{"template":"cinetico","at":"frase dita","dur":2.5,"params":{"text":"FRASE DITA","estilo":"sobe|onda|explode|maquina","destaque":"PALAVRA"}}'`;
+animação Lottie (JSON do LottieFiles/After Effects que o usuário tem direito de usar):
+`--motion '{"template":"lottie","at":"palavra","dur":2,"params":{"src":"/caminho/seta.json"}}'`
+(ver `references/motion.md`, seção "Animação de After Effects").
 
 ## 2c. Direção premium (máxima qualidade / nível concorrente)
 
@@ -176,7 +181,7 @@ PY SK/scripts/run.py render <projeto>     # analyze -> plan -> render: renders/v
   mais forte; em vídeo sem cortes, 2.5D com a palavra forte) + `qa/ganchos.md` com o que muda e o custo HIT/MISS.
   Só o começo é refeito; textos = palavras ditas; o projeto principal não muda. `--so-plano` só compara sem render.
 - Referência do concorrente (copiar ritmo/densidade/estilo, nunca o conteúdo):
-  `PY SK/scripts/referencia.py analisar <video_deles> --saida perfil.json` (cortes/min, plano médio, zoom, texto na
+  `PY SK/scripts/referencia.py analisar <video_deles ou link do Reels/TikTok/YouTube> --saida perfil.json` (cortes/min, plano médio, zoom, texto na
   tela, faixa e tamanho da legenda, paleta, flashes, loudness, trilha, ritmo da fala) e depois
   `PY SK/scripts/referencia.py aplicar perfil.json <projeto>` (estilo, zoom, legenda, cor de destaque, densidade,
   efeitos nas NOSSAS palavras fortes, via edit.py sem renderizar). Mostre ao usuário o que mudou e renderize.

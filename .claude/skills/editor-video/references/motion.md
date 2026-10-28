@@ -136,6 +136,23 @@ Clipes ficam em cache (`work/motion/clip_<hash>.mov`): só renderizam de novo se
 | `comentario` | front | Caixa de comentário estilo Instagram com a palavra-chave sendo digitada e botão de enviar pulsando; opcional notificação de direct deslizando depois | `texto`, `chamada` (palavra-chave em destaque), `placeholder`, `digitar_ate`, `dm: {nome, texto, app, selo, at}`, `accent`, `y` |
 | `final` | full | Tela final: rótulo ("COMENTA"), palavra-chave gigante em degradê, chevrons descendo e cartão de perfil (foto ou iniciais, nome, site) que sobe por cima da palavra | `rotulo`, `palavra`, `nome`, `site`, `foto`, `cores`, `perfil_at`, `fundo` |
 
+## Animação de After Effects: Anime.js e Lottie (2026-10-28)
+
+| template | layer | o que faz | params |
+|---|---|---|---|
+| `cinetico` | front (zona topo) | Tipografia cinética com Anime.js: a frase entra letra por letra (`sobe` = mola em cascata do centro, `onda` = fica ondulando, `explode` = sai do centro girando com elástico, `maquina` = máquina de escrever com cursor), palavra de destaque em outra cor, saída limpa | `text`, `estilo`, `destaque`, `cor`, `cor2`, `y`, `tamanho`, `fonte` |
+| `lottie` | front | Toca uma animação Lottie (JSON do After Effects/LottieFiles: setas, checks, likes, confete, "toque aqui") no tempo exato, com pop de entrada e saída | `src` (.json local), `x`, `y`, `tamanho`, `loop`, `velocidade`, `sombra` |
+
+Quando usar: `cinetico` no gancho escrito (frase curta de 3-7 palavras dita no vídeo) ou numa virada; `lottie`
+para reforço visual de uma ação ("clica", "salva", "comenta") com um JSON que o usuário tem direito de usar
+(LottieFiles gratuitos: licença Lottie Simple, uso comercial permitido; confira cada arquivo).
+
+Em composição própria: `motion.anime(timeline, t0)` coloca qualquer animação do Anime.js v4
+(`import { createTimeline, animate, stagger } from '/vendor/animejs/anime.esm.min.js'`, sempre com
+`autoplay: false`) no relógio do render; `motion.lottie(elemento, src, {loop, speed, t0})` faz o mesmo com um
+Lottie. Os dois são determinísticos (o quadro t sai sempre igual). **GSAP não entra**: a licença gratuita não
+cobre produto pago para o usuário final.
+
 # Templates de visão computacional (fork B)
 
 Linhas para a tabela de templates em motion.md. Coordenadas por quadro vêm de `scripts/motion_dados_visao.py`

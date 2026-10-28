@@ -601,9 +601,43 @@ def operacoes(perfil: dict, proj: dict, tl: dict | None, fala_nossa: float | Non
     return ops, porque
 
 
+def obter_video(fonte: str) -> Path:
+    """Arquivo local, link direto de vídeo ou link de página (Reels, TikTok, YouTube, X...) baixado com o yt-dlp
+    (Unlicense; pip install yt-dlp) em ~/.cache/editor-video/referencias. Uso: estudar ritmo e estilo, nunca
+    republicar o conteúdo de outra pessoa."""
+    import hashlib
+    from common import MODELS_DIR
+    if not str(fonte).startswith(("http://", "https://")):
+        return Path(fonte)
+    pasta = MODELS_DIR.parent / "referencias"
+    pasta.mkdir(parents=True, exist_ok=True)
+    alvo = pasta / f"{hashlib.sha1(fonte.encode()).hexdigest()[:12]}.mp4"
+    if alvo.exists() and alvo.stat().st_size > 1000:
+        return alvo
+    try:
+        import yt_dlp
+    except ImportError:
+        if subprocess.run([sys.executable, "-m", "pip", "install", "-q", "yt-dlp"]).returncode:
+            raise EditorError("Para analisar por link, instale o yt-dlp: pip install yt-dlp")
+        import yt_dlp
+    opts = {"outtmpl": str(alvo.with_suffix(".%(ext)s")), "format": "bv*[height<=1080]+ba/b[height<=1080]/b",
+            "merge_output_format": "mp4", "quiet": True, "noprogress": True, "noplaylist": True}
+    try:
+        with yt_dlp.YoutubeDL(opts) as y:
+            y.download([fonte])
+    except Exception as exc:  # noqa: BLE001
+        raise EditorError(f"Não deu para baixar {fonte} ({exc}). Baixe o vídeo e passe o arquivo.") from exc
+    feito = next((p for p in pasta.glob(alvo.stem + ".*") if p.suffix in (".mp4", ".mkv", ".webm", ".mov")), None)
+    if not feito:
+        raise EditorError(f"yt-dlp não gerou o vídeo de {fonte}")
+    return feito
+
+
 def cmd_analisar(a) -> None:
-    perfil = analisar(Path(a.video), a.fps, com_rosto=not a.sem_rosto)
-    saida = Path(a.saida) if a.saida else Path(a.video).with_suffix(".perfil.json")
+    video = obter_video(a.video)
+    perfil = analisar(video, a.fps, com_rosto=not a.sem_rosto)
+    saida = Path(a.saida) if a.saida else (video.with_suffix(".perfil.json") if not str(a.video).startswith("http")
+                                            else Path.cwd() / f"{video.stem}.perfil.json")
     save_json(saida, perfil)
     m, t = perfil["medidas"], perfil["traducao"]
     leg = m["legenda"]
@@ -657,7 +691,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="Copia ritmo, densidade e estilo de um vídeo de referência (sem conteúdo).")
     sub = ap.add_subparsers(dest="cmd", required=True)
     an = sub.add_parser("analisar", help="mede o vídeo e grava perfil.json")
-    an.add_argument("video")
+    an.add_argument("video", help="arquivo ou link (Reels, TikTok, YouTube...: baixado com o yt-dlp)")
     an.add_argument("--saida")
     an.add_argument("--fps", type=float, default=15.0)
     an.add_argument("--sem-rosto", action="store_true", help="pula a detecção de rosto (mais rápido)")
