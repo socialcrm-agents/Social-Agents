@@ -9,7 +9,11 @@ export default function criar(T, k) {
                 [2.0, 0.82], [2.08, 0.5], [2.0, 0.25]];
   g.add(k.malha(k.extrusao(lado, 1.6, 0.08), pint));
   const vid = k.vidro('#1b2433', 0.92);
-  g.add(k.malha(k.extrusao([[-0.82, 0.95], [-0.42, 1.32], [0.78, 1.34], [1.32, 0.95]], 1.64, 0.02), vid));
+  // vidros laterais um pouco para fora da lataria (a carroceria tem 1,6 + chanfro de 0,08 de cada lado)
+  for (const [a, b] of [[-0.8, 0.22], [0.3, 1.28]])
+    g.add(k.malha(k.extrusao([[a, 0.96], [Math.max(a, -0.4) + (a < 0 ? 0.04 : 0), 1.3], [b - (b > 1 ? 0.45 : 0), 1.31], [b, 0.96]], 1.8, 0.01), vid));
+  g.add(k.malha(k.caixa(0.04, 0.36, 1.5, 0.02), vid, [1.17, 1.14, 0], [0, 0, 0.62]));       // para-brisa
+  g.add(k.malha(k.caixa(0.04, 0.34, 1.5, 0.02), vid, [-0.66, 1.12, 0], [0, 0, -0.85]));     // vidro traseiro
   for (const z of [-0.82, 0.82]) {
     for (const x of [-1.25, 1.3]) {
       const roda = k.peca(k.malha(k.anel(0.3, 0.13, 48), k.borracha('#15171b'), [0, 0, 0]),

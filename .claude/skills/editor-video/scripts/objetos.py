@@ -115,7 +115,7 @@ def previa(nome: str, saida: Path | None = None, params: dict | None = None) -> 
     if r.returncode:
         sys.exit("Erro no render do objeto (confira o .js):\n" + r.stderr[-1500:])
     quadros = []
-    for i, t in enumerate((0.25, 0.6, 1.2, 2.0)):
+    for i, t in enumerate((0.45, 0.8, 1.3, 2.1)):
         f = tmp / f"q{i}.png"
         subprocess.run(["ffmpeg", "-v", "error", "-y", "-f", "lavfi", "-i", "color=c=0x2a2f3a:s=1080x1920",
                         "-ss", str(t), "-i", str(tmp / "o.mov"), "-filter_complex",

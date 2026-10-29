@@ -7,7 +7,7 @@ export default function criar(T, k) {
   for (let i = 0; i < 7; i++) {
     const m = k.peca(k.malha(geo, ouro), k.malha(borda, ouro, [0, 0, 0], [Math.PI / 2, 0, 0]));
     const fim = new T.Vector3((k.rnd() - 0.5) * 0.06, -0.42 + i * 0.075, (k.rnd() - 0.5) * 0.06);
-    pilha.push({ m, fim, atraso: i * 0.11, giro: 2 + k.rnd() * 3 }); g.add(m);
+    m.position.copy(fim); pilha.push({ m, fim, atraso: i * 0.11, giro: 2 + k.rnd() * 3 }); g.add(m);
   }
   const frente = k.peca(k.malha(k.cilindro(0.3, 0.3, 0.06, 64), ouro, [0, 0, 0], [Math.PI / 2, 0, 0]),
                         k.malha(k.anel(0.19, 0.02), ouro, [0, 0, 0.035]));

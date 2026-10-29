@@ -82,7 +82,10 @@ async function carregar() {
   if (mod.animar) extra = (s, t) => mod.animar(obj, k, s, t);      // complemento depois da entrada padrão
   // normaliza: maior medida = 1 unidade, centro na origem (o modelador não precisa pensar em escala)
   obj.updateMatrixWorld(true);
-  const caixa = new THREE.Box3().setFromObject(obj, true), tam = caixa.getSize(new THREE.Vector3());
+  // mede só o que é sólido (halos e luzes não contam no tamanho)
+  const caixa = new THREE.Box3();
+  obj.traverse((o) => { if ((o.isMesh || o.isPoints) && !o.isSprite) caixa.expandByObject(o, false); });
+  const tam = caixa.getSize(new THREE.Vector3());
   const s = 1 / Math.max(tam.y, tam.x * 0.85, tam.z * 0.85, 1e-6);
   const centro = caixa.getCenter(new THREE.Vector3());
   const pivo = new THREE.Group(), ajuste = new THREE.Group();
