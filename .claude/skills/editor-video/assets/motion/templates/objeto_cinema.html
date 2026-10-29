@@ -1,0 +1,376 @@
+<!doctype html>
+<!-- OBJETO DE CINEMA (layer: front, webgl): objetos 3D modelados no código, com material de verdade (ouro, vidro,
+     metal, holograma), luz de estúdio, brilho e uma ANIMAÇÃO PRÓPRIA de cada objeto, no tempo da palavra:
+       moedas   — moedas de ouro caem girando e empilham, com faíscas
+       casa     — a casa se monta em peças (piso, paredes, telhado, porta e janelas acendendo)
+       funil    — funil de vidro: bolinhas (leads) caem em cima e sai uma moeda dourada embaixo
+       chip     — processador com pinos; linhas de energia correm pela placa e o núcleo acende
+       lampada  — lâmpada de vidro desce, o filamento esquenta e ela ACENDE com halo
+       cerebro  — cérebro holográfico: nuvem de pontos ciano se forma, gira, com anel de varredura
+       grafico  — barras 3D sobem uma a uma com a seta de crescimento
+     params: objeto, at (s ou palavra), x, y (0..1 do centro; padrão 0.5, 0.36), size (fração da altura; 0.30),
+             cor (destaque; padrão depende do objeto), giro (true: gira devagar), valores ([..] só no grafico),
+             brilho (0..1, halo; padrão 0.8) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<script type="importmap">{"imports": {"three": "/vendor/three/three.module.min.js"}}</script>
+<style>canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }</style></head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from '/vendor/three/addons/RoomEnvironment.js';
+import motion from '/lib/runtime.js';
+
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const { clamp, lerp, ease } = motion;
+const AT = p.at ?? 0;
+const OBJ = (p.objeto || 'moedas').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+const COR = {moedas: '#FFC83D', casa: '#FFB547', funil: '#59D2FF', chip: '#3DF5B0', lampada: '#FFD66B',
+             cerebro: '#41E2FF', grafico: '#22C55E'};
+const ACC = new THREE.Color(p.cor || COR[OBJ] || '#FFC83D');
+const BRILHO = p.brilho ?? 0.8;
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.1;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const FOV = 30, DIST = 10;
+const cam = new THREE.PerspectiveCamera(FOV, W / H, 0.1, 100);
+cam.position.set(0, 0, DIST);
+const visH = 2 * DIST * Math.tan(THREE.MathUtils.degToRad(FOV / 2)), visW = visH * W / H;
+scene.add(new THREE.HemisphereLight('#ffffff', '#30283a', 0.6));
+const key = new THREE.DirectionalLight('#fff1e0', 2.2); key.position.set(-3, 4, 5); scene.add(key);
+const rim = new THREE.DirectionalLight('#bfe0ff', 2.6); rim.position.set(4, 2, -4); scene.add(rim);
+
+// onde o objeto fica na tela (x, y em fração) e com que tamanho (fração da altura)
+const raiz = new THREE.Group();
+raiz.position.set(((p.x ?? 0.5) - 0.5) * visW, (0.5 - (p.y ?? 0.36)) * visH, 0);
+const ESC = (p.size ?? 0.30) * visH;
+raiz.scale.setScalar(ESC);
+scene.add(raiz);
+const obj = new THREE.Group();          // o objeto em si, com ~1 unidade de altura
+raiz.add(obj);
+
+// halo: sprite aditivo com degradê radial
+function texHalo() {
+  const c = document.createElement('canvas'); c.width = c.height = 256;
+  const g = c.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.2, 'rgba(255,255,255,.5)');
+  gr.addColorStop(0.55, 'rgba(255,255,255,.12)'); gr.addColorStop(0.92, 'rgba(255,255,255,0)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+const HALO = texHalo();
+function halo(cor, s) {
+  const m = new THREE.SpriteMaterial({ map: HALO, color: cor, depthWrite: false, transparent: true, opacity: 0,
+                                       toneMapped: false });
+  const sp = new THREE.Sprite(m); sp.scale.setScalar(s); return sp;
+}
+// número pseudoaleatório fixo (o render tem que ser igual quadro a quadro)
+let semente = 7;
+const rnd = () => ((semente = (semente * 16807) % 2147483647) / 2147483647);
+
+const ouro = new THREE.MeshStandardMaterial({ color: '#f5c04a', metalness: 1, roughness: 0.22 });
+const vidro = new THREE.MeshPhysicalMaterial({ color: '#ffffff', metalness: 0, roughness: 0.05, transmission: 1,
+  thickness: 0.15, ior: 1.45, transparent: true, opacity: 0.55, envMapIntensity: 1.4 });
+const fosco = (c, r = 0.55, m = 0.05) => new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m });
+const emissivo = (c, i = 2) => new THREE.MeshStandardMaterial({ color: '#000', emissive: c, emissiveIntensity: i });
+
+// ---------------------------------------------------------------------------------------------------------------
+// cada objeto: monta(obj) devolve anima(k, t) — k = segundos desde a entrada
+// ---------------------------------------------------------------------------------------------------------------
+const OBJETOS = {
+  moedas() {
+    const geo = new THREE.CylinderGeometry(0.34, 0.34, 0.07, 64);
+    const borda = new THREE.TorusGeometry(0.34, 0.012, 8, 64);
+    const N = 7, pilha = [];
+    for (let i = 0; i < N; i++) {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(geo, ouro));
+      const b = new THREE.Mesh(borda, ouro); b.rotation.x = Math.PI / 2; g.add(b);
+      const fim = new THREE.Vector3((rnd() - 0.5) * 0.06, -0.42 + i * 0.075, (rnd() - 0.5) * 0.06);
+      pilha.push({ g, fim, atraso: i * 0.11, giro: 2 + rnd() * 3 });
+      obj.add(g);
+    }
+    // moeda de frente, grande, na frente da pilha
+    const frente = new THREE.Group();
+    const f = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.06, 64), ouro); f.rotation.x = Math.PI / 2;
+    frente.add(f);
+    const cifra = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.02, 8, 48), ouro); cifra.position.z = 0.035;
+    frente.add(cifra);
+    frente.position.set(0.42, 0.05, 0.25); obj.add(frente);
+    const h = halo(ACC, 2.2); obj.add(h);
+    const fagulhas = Array.from({ length: 14 }, () => { const s = halo('#fff2b0', 0.09); obj.add(s);
+      return { s, a: rnd() * Math.PI * 2, v: 0.6 + rnd() * 0.8, d: rnd() * 0.5 }; });
+    return (k, t) => {
+      for (const c of pilha) {
+        const q = motion.spring(k, c.atraso, { dur: 0.55, bounce: 0.3 });
+        c.g.position.set(c.fim.x, lerp(1.6, c.fim.y, q), c.fim.z);
+        c.g.rotation.x = (1 - q) * c.giro;
+        c.g.visible = k > c.atraso;
+      }
+      const qf = motion.spring(k, 0.75, { dur: 0.7, bounce: 0.35 });
+      frente.scale.setScalar(qf); frente.rotation.y = (1 - qf) * 6 + Math.sin(t * 1.4) * 0.35;
+      h.material.opacity = 0.5 * BRILHO * qf;
+      for (const f of fagulhas) {
+        const u = clamp((k - 0.8 - f.d) / 0.7);
+        f.s.position.set(Math.cos(f.a) * u * f.v, -0.1 + Math.sin(f.a) * u * f.v * 0.8 + u * 0.3, 0.3);
+        f.s.material.opacity = u > 0 && u < 1 ? (1 - u) * BRILHO : 0;
+      }
+    };
+  },
+
+  casa() {
+    const parede = fosco('#f4efe6', 0.7), telha = fosco('#c4492f', 0.5), madeira = fosco('#7b4b2a', 0.6);
+    const pecas = [];
+    const add = (m, pos, atraso, de = 1.4) => { m.position.copy(pos); obj.add(m); pecas.push({ m, pos, atraso, de }); };
+    add(new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.05, 0.85), fosco('#9fb59a', 0.8)), new THREE.Vector3(0, -0.46, 0), 0);
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.65), parede), new THREE.Vector3(0, -0.19, 0), 0.15);
+    const tel = new THREE.Mesh(new THREE.CylinderGeometry(0.01, 0.62, 0.38, 4, 1), telha);
+    tel.rotation.y = Math.PI / 4; tel.scale.set(1, 1, 0.78);
+    add(tel, new THREE.Vector3(0, 0.25, 0), 0.38);
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.22, 0.1), fosco('#8a7f78')), new THREE.Vector3(0.22, 0.3, -0.05), 0.55);
+    add(new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.3, 0.02), madeira), new THREE.Vector3(0, -0.29, 0.33), 0.62, 0.6);
+    const janelas = [-0.28, 0.28].map((x, i) => {
+      const j = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.14, 0.02), new THREE.MeshStandardMaterial({
+        color: '#3b4f6e', roughness: 0.2, metalness: 0.3, emissive: '#ffcf70', emissiveIntensity: 0 }));
+      add(j, new THREE.Vector3(x, -0.12, 0.33), 0.7 + i * 0.08, 0.6); return j; });
+    const h = halo(ACC, 2.0); h.position.z = -0.3; obj.add(h);
+    obj.rotation.set(0.22, -0.55, 0);
+    return (k, t) => {
+      for (const c of pecas) {
+        const q = motion.spring(k, c.atraso, { dur: 0.5, bounce: 0.28 });
+        c.m.position.set(c.pos.x, c.pos.y + (1 - q) * c.de, c.pos.z);
+        c.m.visible = k > c.atraso;
+      }
+      const luz = clamp((k - 1.1) / 0.4);
+      janelas.forEach((j) => { j.material.emissiveIntensity = 2.4 * luz; });
+      h.material.opacity = 0.35 * BRILHO * luz;
+      obj.rotation.y = -0.55 + Math.sin(t * 0.6) * 0.18;
+    };
+  },
+
+  funil() {
+    const pts = [];
+    for (let i = 0; i <= 24; i++) {
+      const u = i / 24, y = 0.5 - u;
+      const r = u < 0.62 ? lerp(0.5, 0.09, ease.inOutQuad(u / 0.62)) : 0.09;
+      pts.push(new THREE.Vector2(r, y));
+    }
+    const corpo = new THREE.Mesh(new THREE.LatheGeometry(pts, 64), vidro);
+    corpo.material.side = THREE.DoubleSide; obj.add(corpo);
+    const aro = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.018, 12, 80), fosco(ACC, 0.3, 0.6));
+    aro.rotation.x = Math.PI / 2; aro.position.y = 0.5; obj.add(aro);
+    const leads = Array.from({ length: 16 }, (_, i) => {
+      const m = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 12), fosco(ACC, 0.25, 0.2));
+      obj.add(m); return { m, a: rnd() * Math.PI * 2, r: 0.15 + rnd() * 0.3, atraso: i * 0.09 }; });
+    const moeda = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.025, 48), ouro);
+    moeda.rotation.x = Math.PI / 2; obj.add(moeda);
+    const h = halo('#ffd76a', 0.8); obj.add(h);
+    obj.rotation.x = 0.35;
+    return (k, t) => {
+      corpo.scale.setScalar(motion.spring(k, 0, { dur: 0.6, bounce: 0.3 }));
+      aro.scale.setScalar(corpo.scale.x);
+      for (const l of leads) {
+        const u = clamp((k - 0.4 - l.atraso) / 0.9);
+        const r = lerp(l.r, 0.02, ease.inQuad(u)), y = lerp(0.95, -0.2, ease.inQuad(u));
+        l.m.position.set(Math.cos(l.a + u * 5) * r, y, Math.sin(l.a + u * 5) * r);
+        l.m.visible = u > 0 && u < 1;
+      }
+      const qm = motion.spring(k, 1.5, { dur: 0.6, bounce: 0.35 });
+      moeda.position.set(0, lerp(-0.2, -0.72, qm), 0.05); moeda.scale.setScalar(qm * 1.3);
+      moeda.rotation.z = t * 2.2;
+      h.position.copy(moeda.position); h.material.opacity = 0.7 * BRILHO * qm;
+      obj.rotation.y = t * 0.25;
+    };
+  },
+
+  chip() {
+    const placa = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.04, 1.2), fosco('#0f2a22', 0.6, 0.2));
+    placa.position.y = -0.08; obj.add(placa);
+    const corpo = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.1, 0.56), fosco('#1b1d22', 0.35, 0.4));
+    obj.add(corpo);
+    const tampa = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.012, 0.4), new THREE.MeshStandardMaterial({
+      color: '#8f949c', metalness: 1, roughness: 0.45 }));
+    tampa.position.y = 0.056; obj.add(tampa);
+    const nucleo = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.014, 0.16), emissivo(ACC, 0));
+    nucleo.position.y = 0.064; obj.add(nucleo);
+    const pino = new THREE.BoxGeometry(0.03, 0.02, 0.09), pinoM = ouro;
+    for (let i = 0; i < 8; i++) for (let s = 0; s < 4; s++) {
+      const m = new THREE.Mesh(pino, pinoM), o = -0.21 + i * 0.06, rot = s * Math.PI / 2;
+      m.position.set(Math.cos(rot) * 0.32 + Math.sin(rot) * o, -0.03, Math.sin(rot) * 0.32 - Math.cos(rot) * o);
+      m.rotation.y = -rot; obj.add(m);
+    }
+    const trilhas = [];
+    for (let i = 0; i < 12; i++) {
+      const lado = i % 4, o = -0.25 + (i >> 2) * 0.25, len = 0.12 + rnd() * 0.14;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(len, 0.006, 0.014), emissivo(ACC, 0));
+      const rot = lado * Math.PI / 2, d = 0.42 + len / 2;
+      m.position.set(Math.cos(rot) * d - Math.sin(rot) * o, -0.055, Math.sin(rot) * d + Math.cos(rot) * o);
+      m.rotation.y = -rot; obj.add(m); trilhas.push({ m, atraso: rnd() * 0.6 });
+    }
+    const h = halo(ACC, 1.4); h.position.y = 0.1; obj.add(h);
+    obj.rotation.set(0.75, 0.6, 0);
+    return (k, t) => {
+      const q = motion.spring(k, 0, { dur: 0.7, bounce: 0.3 });
+      obj.scale.setScalar(q); obj.rotation.y = 0.6 + (1 - q) * 2.5 + Math.sin(t * 0.5) * 0.15;
+      for (const tr of trilhas) {
+        const pulso = 0.5 + 0.5 * Math.sin((t - tr.atraso) * 6);
+        tr.m.material.emissiveIntensity = clamp((k - 0.6 - tr.atraso) / 0.3) * (1.2 + 2 * pulso);
+      }
+      const acende = clamp((k - 1.0) / 0.35);
+      nucleo.material.emissiveIntensity = acende * (2.5 + Math.sin(t * 5));
+      h.material.opacity = 0.55 * BRILHO * acende;
+    };
+  },
+
+  lampada() {
+    const pts = [];
+    for (let i = 0; i <= 30; i++) {
+      const a = -Math.PI / 2 + (i / 30) * Math.PI * 1.25;
+      const r = i < 24 ? 0.32 * Math.cos(a) : lerp(0.32 * Math.cos(a), 0.14, (i - 24) / 6);
+      pts.push(new THREE.Vector2(Math.max(r, 0.001), 0.32 * Math.sin(a) + 0.12));
+    }
+    pts.reverse();
+    pts.push(new THREE.Vector2(0.14, -0.16));
+    const bulbo = new THREE.Mesh(new THREE.LatheGeometry(pts, 64), vidro.clone());
+    bulbo.material.side = THREE.DoubleSide; obj.add(bulbo);
+    const rosca = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.2, 32, 6), new THREE.MeshStandardMaterial({
+      color: '#b9bcc3', metalness: 1, roughness: 0.3 }));
+    rosca.position.y = -0.26; obj.add(rosca);
+    for (let i = 0; i < 4; i++) {
+      const r = new THREE.Mesh(new THREE.TorusGeometry(0.135, 0.008, 6, 32), rosca.material);
+      r.rotation.x = Math.PI / 2; r.position.y = -0.33 + i * 0.045; obj.add(r);
+    }
+    const espiral = [];
+    for (let i = 0; i <= 120; i++) {
+      const u = i / 120, a = u * Math.PI * 2 * 7;
+      espiral.push(new THREE.Vector3(lerp(-0.09, 0.09, u), 0.1 + Math.sin(a) * 0.018, Math.cos(a) * 0.018));
+    }
+    const fil = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(espiral), 240, 0.005, 6),
+                               emissivo('#ffb347', 0));
+    obj.add(fil);
+    const arame = new THREE.MeshStandardMaterial({ color: '#9aa0a8', metalness: 1, roughness: 0.4 });
+    for (const x of [-0.09, 0.09]) {
+      const h2 = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.27, 6), arame);
+      h2.position.set(x, -0.035, 0); obj.add(h2);
+    }
+    const luz = new THREE.PointLight('#ffd27a', 0, 6); luz.position.y = 0.1; obj.add(luz);
+    const h = halo(ACC, 2.6); h.position.y = 0.1; obj.add(h);
+    return (k, t) => {
+      const q = motion.spring(k, 0, { dur: 0.6, bounce: 0.35 });
+      obj.position.y = lerp(1.2, 0, q) + Math.sin(t * 1.8) * 0.02;
+      obj.rotation.z = (1 - q) * 0.4 + Math.sin(t * 1.1) * 0.04;
+      const ac = clamp((k - 0.7) / 0.25);
+      const fl = ac < 1 ? (Math.sin(k * 60) > 0 ? 1 : 0.3) * ac : 1;   // pisca antes de firmar
+      fil.material.emissiveIntensity = 6 * fl;
+      luz.intensity = 4 * fl;
+      bulbo.material.emissive = new THREE.Color('#ffcf66'); bulbo.material.emissiveIntensity = 0.45 * fl;
+      h.material.opacity = 0.9 * BRILHO * fl;
+    };
+  },
+
+  cerebro() {
+    const N = 4200, pos = new Float32Array(N * 3), alvo = [];
+    const ruido = (v) => Math.sin(v.x * 21 + Math.sin(v.z * 9) * 2) * Math.sin(v.z * 17 + v.y * 6) * Math.cos(v.y * 15);
+    for (let i = 0; i < N; i++) {
+      let v;
+      do { v = new THREE.Vector3(rnd() * 2 - 1, rnd() * 2 - 1, rnd() * 2 - 1); } while (v.length() > 1 || v.length() < 0.2);
+      v.normalize();
+      const parte = i % 10;
+      if (parte < 8) {                                   // hemisférios (direito/esquerdo) com giros e sulcos
+        const lado = parte % 2 ? 1 : -1;
+        v.multiplyScalar(1 + 0.07 * ruido(v));
+        v.set(v.x * 0.24 + lado * 0.255, v.y * 0.33 + 0.04, v.z * 0.5);
+        if (v.y < -0.12) v.y = -0.12 + (v.y + 0.12) * 0.35;   // base achatada
+      } else if (parte === 8) {                          // cerebelo atrás, embaixo
+        v.set(v.x * 0.26, v.y * 0.11 - 0.2, v.z * 0.15 - 0.33);
+      } else {                                           // tronco
+        v.set(v.x * 0.05, -0.2 - Math.abs(v.y) * 0.22, v.z * 0.05 - 0.2);
+      }
+      alvo.push(v);
+    }
+    const geo = new THREE.BufferGeometry(); geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    const pontos = new THREE.Points(geo, new THREE.PointsMaterial({ color: ACC, size: 0.03, map: HALO,
+      transparent: true, depthWrite: false, toneMapped: false }));
+    obj.add(pontos);
+    const anel = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.006, 6, 120), new THREE.MeshBasicMaterial({
+      color: ACC, transparent: true, opacity: 0, toneMapped: false }));
+    anel.rotation.x = Math.PI / 2; obj.add(anel);
+    const h = halo(ACC, 1.9); obj.add(h);
+    const ini = alvo.map(() => new THREE.Vector3((rnd() - 0.5) * 4, (rnd() - 0.5) * 4, (rnd() - 0.5) * 2));
+    return (k, t) => {
+      const q = ease.outCubic(clamp(k / 1.1));
+      for (let i = 0; i < N; i++) {
+        const a = ini[i], b = alvo[i], qi = clamp(q * 1.3 - (i % 13) * 0.02);
+        pos[i * 3] = lerp(a.x, b.x, qi); pos[i * 3 + 1] = lerp(a.y, b.y, qi); pos[i * 3 + 2] = lerp(a.z, b.z, qi);
+      }
+      geo.attributes.position.needsUpdate = true;
+      pontos.material.opacity = 0.45 + 0.55 * q;
+      const varre = ((t * 0.7) % 1);
+      anel.position.y = lerp(-0.32, 0.4, varre);
+      anel.material.opacity = 0.85 * clamp((k - 1.0) / 0.3) * Math.sin(varre * Math.PI);
+      anel.scale.setScalar(0.85 + 0.2 * Math.sin(varre * Math.PI));
+      h.material.opacity = 0.3 * BRILHO * q;
+      obj.rotation.y = -0.9 + Math.sin(t * 0.5) * 0.5; obj.rotation.x = 0.25;
+    };
+  },
+
+  grafico() {
+    const vals = (p.valores && p.valores.length ? p.valores : [0.25, 0.4, 0.55, 0.78, 1]).slice(0, 7);
+    const n = vals.length, larg = 1.2 / n;
+    const base = new THREE.Mesh(new THREE.BoxGeometry(1.35, 0.03, 0.4), fosco('#20232b', 0.5, 0.3));
+    base.position.y = -0.5; obj.add(base);
+    const barras = vals.map((v, i) => {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(larg * 0.7, 1, 0.26),
+        new THREE.MeshStandardMaterial({ color: i === n - 1 ? ACC : new THREE.Color('#e9eef5'), metalness: 0.3,
+                                          roughness: 0.3, emissive: i === n - 1 ? ACC : '#000',
+                                          emissiveIntensity: i === n - 1 ? 0.35 : 0 }));
+      m.position.x = -0.6 + larg * (i + 0.5); obj.add(m); return { m, v, atraso: 0.12 * i };
+    });
+    const seta = new THREE.Group();
+    const haste = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 1, 12), fosco(ACC, 0.3, 0.3));
+    const ponta = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.15, 20), fosco(ACC, 0.3, 0.3));
+    seta.add(haste, ponta); obj.add(seta);
+    const h = halo(ACC, 1.2); obj.add(h);
+    obj.rotation.set(0.25, -0.45, 0);
+    const a = new THREE.Vector3(-0.55, -0.35, 0.25), b = new THREE.Vector3(0.62, 0.62, 0.25);
+    return (k, t) => {
+      for (const c of barras) {
+        const q = motion.spring(k, c.atraso, { dur: 0.6, bounce: 0.25 });
+        const alt = Math.max(c.v * 0.95 * q, 0.001);
+        c.m.scale.y = alt; c.m.position.y = -0.485 + alt / 2;
+      }
+      const qs = ease.outCubic(clamp((k - 0.15 * n) / 0.6));
+      const fim = a.clone().lerp(b, qs), dir = b.clone().sub(a).normalize(), len = a.distanceTo(fim);
+      haste.scale.y = Math.max(len, 0.001); haste.position.copy(dir.clone().multiplyScalar(len / 2));
+      ponta.position.copy(dir.clone().multiplyScalar(len)); seta.position.copy(a);
+      seta.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+      haste.position.set(0, len / 2, 0); ponta.position.set(0, len, 0);
+      seta.visible = qs > 0;
+      h.position.copy(fim); h.material.opacity = 0.6 * BRILHO * qs;
+      obj.rotation.y = -0.45 + Math.sin(t * 0.5) * 0.12;
+    };
+  },
+};
+
+const anima = (OBJETOS[OBJ] || OBJETOS.moedas)();
+
+motion.onFrame((t) => {
+  const k = t - AT;
+  raiz.visible = k >= 0;
+  if (k >= 0) {
+    anima(k, t);
+    const sai = motion.exitK(t, D, 0.35);
+    raiz.scale.setScalar(ESC * (1 - 0.25 * sai));
+    renderer.domElement.style.opacity = String(1 - sai);
+    if (p.giro) raiz.rotation.y = t * 0.4;
+  }
+  renderer.render(scene, cam);
+});
+</script></body></html>
