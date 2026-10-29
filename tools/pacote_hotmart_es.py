@@ -29,6 +29,9 @@ PASTAS = {
 
 LEIA_ME = """EDITOR VIRAL EM ESPANHOL - O QUE SUBIR NA HOTMART ({data})
 
+NA HOTMART SUBA SÓ A PASTA 0-SUBIR-NA-HOTMART: em Arquivos, Editor-Viral-ES.zip e Modelo-de-voz-OPCIONAL.zip;
+em Manual de Instruções, Manual-Editor-Viral-ES.pdf. As outras pastas são para você.
+
 PASTA 1-SUBIR-EN-HOTMART (é o que o cliente baixa; tudo em espanhol)
   Edicion-de-Videos-ES.zip     Claude no computador (recomendado): pasta com 1-GRABACIONES, 2-REFERENCIAS,
                                3-LISTOS + instruções que o Claude lê sozinho. Sem limite de duração.
@@ -93,6 +96,52 @@ def pdf(md: Path, nome: str, tmp: Path) -> Path:
     return pev.guia_pdf(d, SK / "es" / "references" / "metodo.md", nome + ".pdf")
 
 
+CAPA = """# Editor Viral — Manual de instrucciones
+
+**Tu editor de video con IA, en Claude o en ChatGPT.** Elige uno:
+
+| Si usas… | Ve a | Qué necesitas |
+|---|---|---|
+| **ChatGPT** (lo más fácil, sin instalar nada) | Parte 1 | el enlace del Editor Viral que está en tu área de miembros |
+| **Claude** (mejor calidad) | Parte 2 | Claude Pro y los archivos del zip `Editor-Viral-ES.zip` |
+
+Al final: el **Método** (guion de 30 s, 30 ganchos, cómo grabar con el celular y checklist del anuncio que vende).
+"""
+
+LEEME_CLIENTE = """EDITOR VIRAL - EMPIEZA AQUÍ
+
+Lee el Manual-Editor-Viral-ES.pdf (está en este zip y en tu área de miembros).
+
+- ChatGPT: abre el enlace del Editor Viral que está en tu área de miembros. No instalas nada.
+- Claude en la computadora (recomendado): descomprime Edicion-de-Videos-ES.zip (Manual, Parte 2-A).
+- Claude en la app/web del celular: sube editor-viral-claude-es.zip en Configuración > Skills (Manual, Parte 2-B).
+"""
+
+
+def subir_hotmart(cli: Path, destino: Path, tmp: Path) -> None:
+    """O que a Hotmart aceita: zip(s) + 1 manual em PDF (máx. 250 MB no total)."""
+    destino.mkdir(parents=True, exist_ok=True)
+    quebra = "\n\n<div style='page-break-before:always'></div>\n\n"
+    md = (CAPA + quebra
+          + (ES / "Guia-ChatGPT-ES.md").read_text(encoding="utf-8").replace("# Editor Viral en ChatGPT", "# Parte 1 — Editor Viral en ChatGPT", 1)
+          + quebra
+          + (ES / "Guia-Claude-ES.md").read_text(encoding="utf-8").replace("# Editor Viral en Claude", "# Parte 2 — Editor Viral en Claude", 1))
+    d = tmp / "manual"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "guia-inicio.md").write_text(md, encoding="utf-8")
+    manual = pev.guia_pdf(d, SK / "es" / "references" / "metodo.md", "Manual-Editor-Viral-ES.pdf")
+    shutil.copy2(manual, destino / manual.name)
+    with zipfile.ZipFile(destino / "Editor-Viral-ES.zip", "w", zipfile.ZIP_DEFLATED) as z:
+        z.writestr("Editor-Viral-ES/LEEME-PRIMERO.txt", LEEME_CLIENTE)
+        z.write(manual, f"Editor-Viral-ES/{manual.name}")
+        for n in ("Edicion-de-Videos-ES.zip", "editor-viral-claude-es.zip"):
+            z.write(cli / n, f"Editor-Viral-ES/{n}")
+    with zipfile.ZipFile(destino / "Modelo-de-voz-OPCIONAL.zip", "w", zipfile.ZIP_STORED) as z:
+        z.writestr("LEEME.txt", "Solo si Claude (app/web) dice que falta el modelo de voz: adjunta "
+                                "modelo-voz-editor-viral.zip en el chat y pide 'configura el editor'.\n")
+        z.write(cli / "modelo-voz-editor-viral.zip", "modelo-voz-editor-viral.zip")
+
+
 def main() -> None:
     data = dt.date.today().isoformat()
     base = REPO / "dist" / f"Editor-Viral-Espanol-{data}"
@@ -115,6 +164,7 @@ def main() -> None:
     (gpt / "COMO-CRIAR-O-GPT.txt").write_text(COMO_CRIAR.format(n=len(list((gpt / "ARCHIVOS-PARA-SUBIR").iterdir()))),
                                               encoding="utf-8")
     (out / "LEIA-ME.txt").write_text(LEIA_ME.format(data=data), encoding="utf-8")
+    subir_hotmart(cli, out / "0-SUBIR-NA-HOTMART", tmp)
     shutil.rmtree(tmp)
     for p in sorted(out.rglob("*")):
         if p.is_file():

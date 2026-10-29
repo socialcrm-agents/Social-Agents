@@ -10,10 +10,8 @@ Sirve con cualquier cuenta de ChatGPT (con el plan pago editas más videos por d
 ## 2. Tu estilo (1 vez, 3 minutos)
 
 1. Guarda en tu celular 1 a 3 videos de creadores cuyo estilo te gusta (los enlaces no abren dentro del GPT).
-2. En el Editor Viral, toca **+**, adjunta esos videos y escribe:
-   > aprende mi estilo
-
-   ¿Editas de forma simple? Escribe solo: **"mi estilo es simple: solo cortes y subtítulo limpio"**.
+2. En el Editor Viral, toca **+**, adjunta esos videos y escribe **"aprende mi estilo"**.
+   ¿Editas de forma simple? Escribe solo **"mi estilo es simple: solo cortes y subtítulo limpio"**.
 3. Te entrega un archivo **GUIA-DE-ESTILO.txt**. **Guárdalo**: en los próximos chats lo adjuntas junto con el
    video y la edición sale siempre a tu manera.
 
