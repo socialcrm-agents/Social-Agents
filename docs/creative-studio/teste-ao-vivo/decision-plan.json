@@ -1,0 +1,115 @@
+{
+ "versao": 1,
+ "tipo": "produto",
+ "estilo": "pro_clean",
+ "gancho": "MENTOS UP2U POR R$ 15",
+ "cta": "TOQUE NO CARRINHO",
+ "mapa": [
+  {
+   "cena": "c1",
+   "t0": 0.0,
+   "t1": 2.6,
+   "fala": "Gente, eu tô aqui com esse chiclete da Mentos",
+   "funcao": "gancho",
+   "elemento": {
+    "tipo": "motion",
+    "template": "manchete",
+    "id": "m1"
+   },
+   "responsavel": "conversion-strategist"
+  },
+  {
+   "cena": "c2",
+   "t0": 4.63,
+   "t1": 6.03,
+   "fala": "dá uma olhadinha aqui como ele é",
+   "funcao": "produto",
+   "elemento": {
+    "tipo": "motion",
+    "template": "anotacao",
+    "id": "m2"
+   },
+   "responsavel": "art-director"
+  },
+  {
+   "cena": "c3",
+   "t0": 8.86,
+   "t1": 12.0,
+   "fala": "está à venda por apenas 15 reais. Na promoção",
+   "funcao": "oferta",
+   "elemento": {
+    "tipo": "motion",
+    "template": "infografico",
+    "id": "m3"
+   },
+   "responsavel": "diretor"
+  },
+  {
+   "cena": "c4",
+   "t0": 13.26,
+   "t1": 17.37,
+   "fala": "um chiclete muito gostoso. Ele tem dois sabores, menta e tutti-frutti",
+   "funcao": "cta",
+   "elemento": {
+    "tipo": "motion",
+    "template": "botao_cta",
+    "id": "m7"
+   },
+   "responsavel": "diretor"
+  }
+ ],
+ "convocados": [
+  {
+   "agente": "conversion-strategist",
+   "motivo": "gancho fraco para TikTok Shop",
+   "cenas": [
+    "c1"
+   ]
+  },
+  {
+   "agente": "art-director",
+   "motivo": "bloco 'mãos' vazio na maior parte da cena",
+   "cenas": [
+    "c2"
+   ]
+  },
+  {
+   "agente": "senior-editor",
+   "motivo": "aplicar o plano aprovado com dry-run",
+   "cenas": [
+    "c1",
+    "c2"
+   ]
+  },
+  {
+   "agente": "quality-director",
+   "motivo": "QA da prévia",
+   "cenas": [
+    "c1",
+    "c2"
+   ]
+  }
+ ],
+ "conflitos": [
+  {
+   "descricao": "preço aparece no gancho (m1) e de novo no infográfico (m3, 8,9 s)",
+   "opcoes": [
+    "tirar do gancho",
+    "tirar do m3",
+    "manter os dois"
+   ],
+   "decisao": "manter os dois",
+   "motivo": "funções diferentes: antecipação no gancho e confirmação com contagem; preço é o principal motivo de compra do público do brief"
+  }
+ ],
+ "decisoes_respeitadas": [
+  "D01",
+  "D02",
+  "D05",
+  "D06",
+  "D07",
+  "D08"
+ ],
+ "gaps": [],
+ "aprovado": true
+}

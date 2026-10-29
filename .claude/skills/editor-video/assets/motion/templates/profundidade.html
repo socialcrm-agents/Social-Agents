@@ -1,0 +1,141 @@
+<!doctype html>
+<!-- PROFUNDIDADE 2.5D (layer: full, needs_video): o cenário ganha profundidade de verdade — a câmera "anda" e o
+     fundo se mexe em paralaxe (o que está longe mexe mais), com desfoque de lente no que está longe; a pessoa
+     (quadros reais) fica nítida na frente. Opcional: uma palavra gigante ENTRE o cenário e a pessoa.
+     Mapa de profundidade e placa limpa vêm de motion_dados_profundidade.py (Depth Anything local, ou heurístico).
+     params: movimento "orbita" | "dolly" | "lateral" (default dolly), intensidade 0..1 (default 0.6),
+             desfoque px (default 6 com modelo, 3 heurístico), texto, cor (default #B794FF), y do texto 0..1
+             (default 0.26), texto_at (s), fundo "real" (default: o quadro de cada instante) | "limpo" (placa sem
+             a pessoa: câmera parada e nada na mão) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #gl { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; }
+  #txt { position: absolute; z-index: 3; left: 0; right: 0; text-align: center; font-family: 'Anton', 'Poppins', sans-serif;
+         font-size: 300px; line-height: .9; letter-spacing: 2px; text-transform: uppercase; white-space: nowrap;
+         text-shadow: 0 18px 60px rgba(0,0,0,.45); will-change: transform; }
+  #person { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 5;
+            transform-origin: 50% 100%; }
+</style></head>
+<body><canvas id="gl"></canvas><div id="txt"></div><img id="person">
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const amp = Math.max(0, Math.min(p.intensidade ?? 0.6, 1));
+const modo = p.movimento || 'dolly';
+const cv = document.getElementById('gl');
+cv.width = W; cv.height = H;
+const gl = cv.getContext('webgl', { preserveDrawingBuffer: true, premultipliedAlpha: false });
+
+const VS = `attribute vec2 a; varying vec2 v; void main(){ v = a * .5 + .5; v.y = 1. - v.y; gl_Position = vec4(a, 0., 1.); }`;
+const FS = `precision highp float;
+varying vec2 v;
+uniform sampler2D placa, prof;
+uniform vec2 off, px;
+uniform float zoom, foco, blur, margem;
+float dep(vec2 u){ return texture2D(prof, u).r; }
+vec2 olha(vec2 u){
+  // dolly: o que está perto cresce mais que o fundo; paralaxe: o que está longe do foco anda mais
+  vec2 c = vec2(.5, .55);
+  vec2 q = u;
+  for (int i = 0; i < 3; i++) {                       // 3 passos de relevo: amostra a profundidade onde vai cair
+    float d = dep(q);
+    q = c + (u - c) / (1. + zoom * (.35 + .65 * d)) + off * (foco - d);
+  }
+  return q;
+}
+void main(){
+  vec2 u = (v - .5) / margem + .5;                    // margem para a borda nunca aparecer
+  vec2 q = olha(u);
+  float r = blur * (1. - dep(q));                     // desfoque de lente: só o que está longe
+  vec4 s = texture2D(placa, q);
+  if (r > .5) {
+    vec4 a = vec4(0.); float n = 0.;
+    for (int i = 0; i < 12; i++) {
+      float ang = float(i) * 2.3998;                  // ângulo de ouro: amostras bem espalhadas
+      float rr = r * sqrt((float(i) + .5) / 12.);
+      a += texture2D(placa, q + vec2(cos(ang), sin(ang)) * rr * px); n += 1.;
+    }
+    s = mix(s, a / n, .85);
+  }
+  gl_FragColor = vec4(s.rgb, 1.);
+}`;
+function sh(t, src) { const s = gl.createShader(t); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+const pr = gl.createProgram();
+gl.attachShader(pr, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, FS));
+gl.linkProgram(pr); gl.useProgram(pr);
+const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
+const loc = gl.getAttribLocation(pr, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+const U = (n) => gl.getUniformLocation(pr, n);
+
+const texs = [0, 1].map((unit) => {
+  const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+  for (const [k, val] of [[gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE],
+                          [gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR]]) gl.texParameteri(gl.TEXTURE_2D, k, val);
+  return t;
+});
+function sobe(unit, img) {
+  gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, texs[unit]);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+}
+const carrega = (src) => new Promise((ok, erro) => { const im = new Image(); im.onload = () => ok(im); im.onerror = erro; im.src = src; });
+gl.uniform1i(U('placa'), 0); gl.uniform1i(U('prof'), 1);
+gl.uniform2f(U('px'), 1 / W, 1 / H);
+const FOCO = 0.9;
+gl.uniform1f(U('foco'), FOCO);
+gl.uniform1f(U('blur'), (p.desfoque ?? (p.profundidade_modo === 'modelo' ? 6 : 3)) * (0.4 + amp));
+// fundo "real" (padrão): o próprio quadro de cada instante — sem fantasma do que a pessoa segura;
+// fundo "limpo": placa sem a pessoa (câmera em tripé, nada na mão)
+const placaFixa = p.placa ? motion.waitFor(carrega(p.placa)) : null;
+const quadro = (pad, t) => pad.replace('%05d', String(Math.min(Math.max(Math.round(t * motion.fps), 0), p.video.count - 1) + 1).padStart(5, '0'));
+let ultimo = {};
+async function texturas(t) {
+  const fundo = p.placa ? p.placa : quadro(p.video.plate, t), prof = quadro(p.prof_seq, t);
+  if (ultimo.fundo !== fundo) { sobe(0, p.placa ? await placaFixa : await carrega(fundo)); ultimo.fundo = fundo; }
+  if (ultimo.prof !== prof) { sobe(1, await carrega(prof)); ultimo.prof = prof; }
+}
+
+const txt = document.getElementById('txt');
+txt.textContent = p.texto || '';
+txt.style.color = p.cor || '#B794FF';
+txt.style.top = `${(p.y ?? 0.26) * H}px`;
+if (p.texto_tam) {   // lugar livre do cenário calculado pelo editor (motion_dados_profundidade.lugar_do_texto)
+  txt.style.fontSize = p.texto_tam + 'px'; txt.style.left = p.texto_x + 'px'; txt.style.right = 'auto';
+  txt.style.textAlign = 'left'; txt.style.top = p.texto_y + 'px'; txt.style.transformOrigin = '50% 50%';
+}
+const person = document.getElementById('person');
+
+// a câmera sai do quadro real e volta a ele: entra e sai sem emenda com o vídeo em volta
+const env = (t) => Math.min(motion.prog(t, 0, Math.min(0.6, D / 3), 'outCubic'), 1 - motion.prog(t, D - Math.min(0.5, D / 4), Math.min(0.5, D / 4), 'inQuad'));
+
+motion.onFrame(async (t) => {
+  const e = env(t), k = t / D;
+  let ox = 0, oy = 0, zoom = 0;
+  if (modo === 'orbita') { ox = Math.sin(k * Math.PI * 2) * 0.035; oy = (Math.cos(k * Math.PI * 2) - 1) * 0.012; zoom = 0.05; }
+  else if (modo === 'lateral') { ox = (k - 0.5) * 0.08; zoom = 0.04; }
+  else { zoom = 0.06 + 0.12 * k; ox = Math.sin(k * Math.PI) * 0.01; }
+  const z = zoom * amp * e, offx = ox * amp * e, offy = oy * amp * e;
+  await texturas(t);
+  gl.uniform2f(U('off'), offx, offy);
+  const M = 1 + 0.07 * e;                              // margem só durante o movimento: entra igual ao vídeo
+  gl.uniform1f(U('margem'), M);
+  gl.uniform1f(U('zoom'), z);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+  // a pessoa recortada por cima com a MESMA transformação que o shader aplica a profundidade 1 (perto): margem
+  // M em volta do centro, dolly (1+z) em volta de (0,5; 0,55) e paralaxe off*(1-foco). Assim ela cobre
+  // exatamente a pessoa do quadro de baixo e fica nítida.
+  const S = M * (1 + z);
+  const dx = S * offx * (1 - FOCO), dy = 0.5 + M * 0.05 - 0.55 + S * offy * (1 - FOCO);
+  person.style.transformOrigin = '50% 55%';
+  person.style.transform = `translate(${dx * W}px, ${dy * H}px) scale(${S})`;
+  if (p.texto) {
+    const at = p.texto_at ?? 0.25;
+    const s = motion.prog(t, at, 0.45, 'outBack');
+    txt.style.opacity = Math.min(motion.prog(t, at, 0.2), 1 - motion.prog(t, D - 0.35, 0.3));
+    // cresce a partir do centro e nunca passa de 100% (o empurrão da câmera não leva a palavra para fora da tela)
+    txt.style.transform = `translate(${ox * amp * e * W * 0.5}px, ${(1 - s) * 80}px) scale(${Math.min(1, 0.7 + 0.3 * s)})`;
+  }
+  await motion.setFrame(person, 'cut', t);
+});
+</script></body></html>

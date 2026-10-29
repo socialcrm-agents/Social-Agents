@@ -1,0 +1,136 @@
+{
+ "style": "pro_clean",
+ "format": "9:16",
+ "brand": null,
+ "clips": [
+  {
+   "id": "c1",
+   "path": "CLIP_PLACEHOLDER/mentos_bruto.MOV",
+   "duration": 17.37,
+   "has_audio": true,
+   "width": 360,
+   "height": 480,
+   "fps": 29.991
+  }
+ ],
+ "broll": [],
+ "version": 0,
+ "overrides": {
+  "word_fixes": {
+   "toutifrut": "tutti-frutti"
+  },
+  "cuts": [
+   "e é isso aí."
+  ],
+  "restores": [],
+  "behind_add": [],
+  "behind_remove": [],
+  "emphasis_add": [
+   "muito gostoso"
+  ],
+  "broll_at": [],
+  "broll_remove": [],
+  "caption": {},
+  "zoom": {},
+  "hook": null,
+  "cta": "TOQUE NO CARRINHO",
+  "behind_enabled": null,
+  "notes": [
+   {
+    "when": "2026-10-22T21:10:02",
+    "note": "anúncio TikTok Shop do chiclete com quadrinho dos sabores",
+    "ops": [
+     "cortar: e é isso aí.",
+     "corrigir 'toutifrut,' -> 'tutti-frutti,'",
+     "estilo: anuncio_conversao",
+     "hook: CHICLETE POR R$ 15",
+     "cta: TOQUE NO CARRINHO",
+     "motion carimbo em 'promoção'",
+     "motion quadrinho em 'Ele tem dois sabores'"
+    ],
+    "for_version": 1
+   },
+   {
+    "when": "2026-10-22T21:11:58",
+    "note": "quadrinho começa no 'muito gostoso'",
+    "ops": [
+     "motion quadrinho em 'um chiclete muito gostoso'",
+     "remover motion nº: 2"
+    ],
+    "for_version": 2
+   },
+   {
+    "when": "2026-10-22T21:28:15",
+    "note": "estilo pro (referência ME.IA)",
+    "ops": [
+     "estilo: pro_clean",
+     "motion pergunta em 'Gente, eu tô aqui'",
+     "motion palavra em 'por apenas 15 reais'",
+     "motion player em 'Ele tem dois sabores'"
+    ],
+    "for_version": 1
+   },
+   {
+    "when": "2026-10-22T22:02:46",
+    "note": "vitrine: regras novas de cabeça",
+    "ops": [],
+    "for_version": 4
+   }
+  ],
+  "motion": [
+   {
+    "template": "visor",
+    "at": "Gente, eu tô aqui",
+    "dur": 2.6,
+    "params": {
+     "pb": true,
+     "cor_at": "chiclete",
+     "etiqueta": "APRESENTADOR",
+     "rotulo": "BRUTO · SEM EDIÇÃO"
+    }
+   },
+   {
+    "template": "palavra",
+    "at": "Esse chiclete está",
+    "dur": 2.6,
+    "params": {
+     "rotulo": "POR APENAS",
+     "text": "R$ 15 REAIS",
+     "correr": true
+    }
+   },
+   {
+    "template": "etiqueta",
+    "at": "Na promoção",
+    "dur": 1.8,
+    "params": {
+     "text": "PROMOÇÃO",
+     "icone": "tag",
+     "titulo": "SÓ R$ 15"
+    }
+   },
+   {
+    "template": "empilha",
+    "at": "Ele tem dois sabores",
+    "until": "tutti-frutti",
+    "params": {
+     "itens": [
+      {
+       "text": "DOIS SABORES",
+       "at": "dois"
+      },
+      {
+       "text": "MENTA",
+       "at": "menta"
+      },
+      {
+       "text": "TUTTI-FRUTTI",
+       "at": "tutti-frutti"
+      }
+     ]
+    }
+   }
+  ],
+  "motion_remove": []
+ }
+}

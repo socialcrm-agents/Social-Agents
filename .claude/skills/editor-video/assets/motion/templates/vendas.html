@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- NOTIFICAÇÕES DE VENDA EMPILHANDO (layer: front): pilha de notificações de "venda aprovada" caindo uma a uma,
+     com som de venda em cada (o plano põe o SFX). USE SÓ NÚMEROS REAIS fornecidos pelo usuário (prints/relatório).
+     params: items: [{title: "Venda aprovada", text: "A IA dos Infoprodutores · R$ 67,00", time: "agora"}],
+             app ("Pagamentos"), every (s entre notificações, default .45), y (px do topo), accent -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  .n { position: absolute; left: 50%; width: 900px; border-radius: 40px; padding: 26px 30px; display: flex; gap: 24px; align-items: center;
+       background: rgba(250,248,244,.95); color: #151515; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+  .ic { flex: 0 0 auto; width: 90px; height: 90px; border-radius: 22px; display: grid; place-items: center; color: #fff; }
+  .ic svg { width: 52px; height: 52px; stroke: #fff; }
+  .app { font-size: 26px; font-weight: 700; color: #7a746b; text-transform: uppercase; display: flex; justify-content: space-between; }
+  .tt { font-size: 38px; font-weight: 800; } .tx { font-size: 34px; font-weight: 700; color: #3a3631; }
+</style></head>
+<body>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const items = p.items && p.items.length ? p.items : [{ title: 'Venda aprovada', text: 'Exemplo · R$ 67,00' }];
+const every = p.every ?? 0.45, y0 = p.y ?? 260, gap = 150;
+let svg = '';
+motion.waitFor(motion.icon('badge-dollar-sign').then((s) => (svg = s)));
+const els = items.map((it, i) => { const el = document.createElement('div'); el.className = 'n'; document.body.appendChild(el); return { el, it, at: 0.15 + i * every }; });
+motion.onFrame((t) => {
+  const out = motion.prog(t, D - 0.35, 0.35, 'inQuad');
+  const shown = els.filter((e) => t >= e.at).length;
+  els.forEach((e, i) => {
+    if (!e.el.innerHTML) e.el.innerHTML = `<div class="ic" style="background:${p.accent || '#1faa59'}">${svg}</div><div style="flex:1">
+      <div class="app"><span>${p.app || 'Pagamentos'}</span><span>${e.it.time || 'agora'}</span></div><div class="tt">${e.it.title || 'Venda aprovada'}</div><div class="tx">${e.it.text || ''}</div></div>`;
+    const k = motion.prog(t, e.at, 0.35, 'outBack');
+    const slot = shown - 1 - i;                            // a mais nova fica em cima, as antigas descem
+    const scale = 1 - Math.min(slot, 4) * 0.04;
+    e.el.style.top = y0 + Math.min(slot, 4) * gap * 0.32 + 'px';
+    e.el.style.transform = `translate(-50%, ${(1 - k) * -200}px) scale(${scale})`;
+    e.el.style.opacity = (t >= e.at ? Math.min(1, k * 2) * (slot > 4 ? 0 : 1) : 0) * (1 - out);
+    e.el.style.zIndex = 100 - slot;
+  });
+});
+</script></body></html>

@@ -1,0 +1,595 @@
+<!doctype html>
+<!-- PRODUTO 3D (layer: front; a entrada "atras" pede "layer": "behind"; webgl): a foto RECORTADA do produto
+     (PNG com transparência, scripts/recorte.py) vira um objeto 3D de verdade. O contorno do alfa é traçado
+     (marching squares com subpixel), vira THREE.Shape (com furos) e é extrudado com chanfro arredondado: frente
+     com a foto, laterais e chanfro na cor da borda do próprio produto, luz de estúdio (key quente, dois rims,
+     ambiente com reflexo e verniz), sombra suave projetada na cena e um brilho que atravessa a frente.
+     O mesmo motor faz ÍCONES 3D: params.icone = emoji ("🔥"), texto curto ("15%") ou nome Lucide ("star").
+     params: image (PNG recortado) | icone, entrada ("voa" | "gira" | "mao" | "atras"; padrão: "mao" se
+             follow = "hand", senão "gira"), x, y (0..1, centro; sem eles o objeto se afasta do rosto), size (altura
+             em fração da tela), espessura (fração do lado menor), cor (ícone/texto), preencher (ícone Lucide
+             cheio), voltas (giros da entrada), periodo (s por volta em "atras"), offset ([dx, dy] da mão),
+             lado ("esquerda" | "direita"), brilho (0..1, reflexo que passa), sombra (0..1), at (s),
+             rosto ([x0, y0, x1, y1]) e legenda ([y0, y1]): postos pelo motor para o objeto não cobrir rosto/legenda -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<script type="importmap">{"imports": {"three": "/vendor/three/three.module.min.js"}}</script>
+<style>canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }</style></head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from '/vendor/three/addons/RoomEnvironment.js';
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const { clamp, lerp, ease } = motion;
+const entrada = p.entrada || (p.follow === 'hand' ? 'mao' : 'gira');
+const AT = p.at ?? 0;
+const ehIcone = !p.image;
+
+// ---------------------------------------------------------------------------------------------------------------
+// render: câmera em perspectiva calibrada para que o plano z = 0 seja exatamente a tela em pixels
+// ---------------------------------------------------------------------------------------------------------------
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(p.qualidade ?? 1);
+renderer.setSize(W, H);
+renderer.setClearColor(0x000000, 0);
+renderer.toneMapping = THREE.NeutralToneMapping;   // mantém as cores da foto do produto (ACES lava o rosa/azul)
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+scene.environmentIntensity = 0.45;
+const FOV = 24;
+const DIST = (H / 2) / Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+const cam = new THREE.PerspectiveCamera(FOV, W / H, 50, DIST * 4);
+cam.position.set(0, 0, DIST);
+
+// luz de estúdio: key quente do alto à esquerda, dois rims frios atrás (contorno brilhante no chanfro), ambiente
+scene.add(new THREE.HemisphereLight('#ffffff', '#40384a', 0.55));
+const key = new THREE.DirectionalLight('#fff3e6', 1.55); key.position.set(-0.55, 0.75, 1); scene.add(key);
+const rim = new THREE.DirectionalLight(p.rim || '#cfe8ff', 3.2); rim.position.set(1, 0.35, -0.75); scene.add(rim);
+const rim2 = new THREE.DirectionalLight('#ffe1f2', 1.8); rim2.position.set(-1, -0.25, -0.6); scene.add(rim2);
+
+// ---------------------------------------------------------------------------------------------------------------
+// fonte da forma: a foto recortada ou um ícone desenhado num canvas (o resto do motor é o mesmo)
+// ---------------------------------------------------------------------------------------------------------------
+function tela(w, h) { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; }
+
+async function desenhaIcone(s) {
+  const N = 1024, c = tela(N, N), g = c.getContext('2d');
+  const cor = p.cor || p.color || '#FFC83D';
+  if (/^[a-z0-9]+(-[a-z0-9]+)*$/.test(s) && s.length > 2) {          // nome de ícone Lucide
+    const r = await fetch('/vendor/lucide/icons/' + s + '.svg');
+    if (r.ok) {
+      let svg = await r.text();
+      svg = svg.replace(/stroke-width="[^"]*"/, 'stroke-width="2.6"').replace(/stroke="currentColor"/, `stroke="${cor}"`)
+        .replace(/fill="none"/, p.preencher ? `fill="${cor}"` : 'fill="none"')
+        .replace(/width="24"/, `width="${N}"`).replace(/height="24"/, `height="${N}"`);
+      const img = new Image();
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+      await img.decode();
+      g.drawImage(img, N * 0.05, N * 0.05, N * 0.9, N * 0.9);
+      return c;
+    }
+  }
+  const emoji = /\p{Extended_Pictographic}/u.test(s);
+  const fam = emoji ? '"Noto Color Emoji","Apple Color Emoji","Segoe UI Emoji",sans-serif' : 'Poppins, "Arial Black", sans-serif';
+  if (!emoji) await document.fonts.load('900 200px Poppins').catch(() => {});
+  let fs = N * 0.78;
+  const fonte = () => `${emoji ? '' : '900 '}${fs}px ${fam}`;
+  g.font = fonte();
+  const larg = g.measureText(s).width;
+  if (larg > N * 0.94) { fs *= N * 0.94 / larg; g.font = fonte(); }
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  if (!emoji) {                                                       // degradê: topo mais claro, base na cor
+    const gr = g.createLinearGradient(0, N / 2 - fs / 2, 0, N / 2 + fs / 2);
+    const c0 = new THREE.Color(cor);
+    gr.addColorStop(0, '#' + c0.clone().lerp(new THREE.Color('#ffffff'), 0.45).getHexString());
+    gr.addColorStop(1, cor);
+    g.fillStyle = gr;
+  }
+  g.fillText(s, N / 2, N / 2 + fs * 0.04);
+  return c;
+}
+
+/** recorta o canvas justo no que não é transparente (com uma margem para a borda suave) */
+function apara(c, limite = 8) {
+  const g = c.getContext('2d', { willReadFrequently: true }), d = g.getImageData(0, 0, c.width, c.height).data;
+  let x0 = c.width, y0 = c.height, x1 = -1, y1 = -1;
+  for (let y = 0; y < c.height; y++) for (let x = 0; x < c.width; x++) {
+    if (d[(y * c.width + x) * 4 + 3] > limite) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+  }
+  if (x1 < 0) throw new Error('imagem/ícone sem nada visível');
+  const m = Math.round(Math.max(x1 - x0, y1 - y0) * 0.02) + 2;
+  x0 = Math.max(0, x0 - m); y0 = Math.max(0, y0 - m); x1 = Math.min(c.width - 1, x1 + m); y1 = Math.min(c.height - 1, y1 + m);
+  const out = tela(x1 - x0 + 1, y1 - y0 + 1);
+  out.getContext('2d').drawImage(c, x0, y0, out.width, out.height, 0, 0, out.width, out.height);
+  return out;
+}
+
+/** textura opaca: o RGB dos pixels transparentes vira a média dos vizinhos visíveis (sem franja escura na borda,
+ *  e as laterais/chanfro, que amostram o contorno, pegam a cor de dentro do produto) */
+function sangra(c) {
+  const w = c.width, h = c.height, g = c.getContext('2d', { willReadFrequently: true });
+  const im = g.getImageData(0, 0, w, h), d = im.data;
+  let ok = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) ok[i] = d[i * 4 + 3] > 150 ? 1 : 0;
+  for (let passo = 0; passo < 24; passo++) {
+    const novo = ok.slice();
+    let mudou = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (ok[i]) continue;
+      let r = 0, gg = 0, b = 0, n = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const j = yy * w + xx;
+        if (!ok[j]) continue;
+        r += d[j * 4]; gg += d[j * 4 + 1]; b += d[j * 4 + 2]; n++;
+      }
+      if (n) { d[i * 4] = r / n; d[i * 4 + 1] = gg / n; d[i * 4 + 2] = b / n; novo[i] = 1; mudou++; }
+    }
+    ok = novo;
+    if (!mudou) break;
+  }
+  for (let i = 0; i < w * h; i++) d[i * 4 + 3] = 255;
+  const out = tela(w, h);
+  out.getContext('2d').putImageData(im, 0, 0);
+  return out;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// contorno do alfa: marching squares com interpolação (subpixel), laços orientados, simplificação Douglas-Peucker
+// ---------------------------------------------------------------------------------------------------------------
+function grade(c, raio = 1, lado = 220) {
+  // alfa numa grade pequena, com margem vazia e desfocada ~ raio do chanfro: some o que é mais fino que o chanfro
+  // (pontinha de dedo, fiapo) e os cantos côncavos ficam com raio mínimo -> a extrusão nunca se cruza
+  const k = lado / Math.max(c.width, c.height);
+  const gw = Math.max(8, Math.round(c.width * k)), gh = Math.max(8, Math.round(c.height * k));
+  const t = tela(gw, gh), g = t.getContext('2d', { willReadFrequently: true });
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(c, 0, 0, gw, gh);
+  const d = g.getImageData(0, 0, gw, gh).data;
+  const r = Math.max(1, Math.round(raio * 0.6)), P = 3 * r + 2;
+  const W2 = gw + 2 * P, H2 = gh + 2 * P;
+  let a = new Float32Array(W2 * H2), b = new Float32Array(W2 * H2);
+  for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) a[(y + P) * W2 + x + P] = d[(y * gw + x) * 4 + 3] / 255;
+  for (let passo = 0; passo < 3; passo++) {        // 3 caixas separáveis ~ gaussiana
+    for (let y = 0; y < H2; y++) { let s = 0; const o = y * W2;
+      for (let x = -r; x <= r; x++) s += a[o + clamp(x, 0, W2 - 1)];
+      for (let x = 0; x < W2; x++) { b[o + x] = s / (2 * r + 1); s += a[o + Math.min(x + r + 1, W2 - 1)] - a[o + Math.max(x - r, 0)]; } }
+    for (let x = 0; x < W2; x++) { let s = 0;
+      for (let y = -r; y <= r; y++) s += b[clamp(y, 0, H2 - 1) * W2 + x];
+      for (let y = 0; y < H2; y++) { a[y * W2 + x] = s / (2 * r + 1); s += b[Math.min(y + r + 1, H2 - 1) * W2 + x] - b[Math.max(y - r, 0) * W2 + x]; } }
+  }
+  for (let x = 0; x < W2; x++) { a[x] = 0; a[(H2 - 1) * W2 + x] = 0; }
+  for (let y = 0; y < H2; y++) { a[y * W2] = 0; a[y * W2 + W2 - 1] = 0; }
+  return { v: a, gw: W2, gh: H2, iw: gw, ih: gh, P, lado };
+}
+
+function contornos({ v, gw, gh }, iso = 0.5) {
+  const ini = new Map(), pontos = new Map();
+  const val = (x, y) => v[y * gw + x];
+  const ponto = (chave, xa, ya, xb, yb) => {
+    if (pontos.has(chave)) return pontos.get(chave);
+    const va = val(xa, ya), vb = val(xb, yb), t = (iso - va) / (vb - va);
+    const pt = [xa + (xb - xa) * t, ya + (yb - ya) * t];
+    pontos.set(chave, pt);
+    return pt;
+  };
+  for (let y = 0; y < gh - 1; y++) for (let x = 0; x < gw - 1; x++) {
+    const tl = val(x, y), tr = val(x + 1, y), br = val(x + 1, y + 1), bl = val(x, y + 1);
+    const caso = (tl > iso ? 8 : 0) | (tr > iso ? 4 : 0) | (br > iso ? 2 : 0) | (bl > iso ? 1 : 0);
+    if (caso === 0 || caso === 15) continue;
+    const A = { t: [`${x},${y}h`, x, y, x + 1, y], r: [`${x + 1},${y}v`, x + 1, y, x + 1, y + 1],
+                b: [`${x},${y + 1}h`, x, y + 1, x + 1, y + 1], l: [`${x},${y}v`, x, y, x, y + 1] };
+    const centro = (tl + tr + br + bl) / 4 > iso;
+    const pares = { 1: [['l', 'b']], 2: [['b', 'r']], 3: [['l', 'r']], 4: [['t', 'r']], 6: [['t', 'b']], 7: [['l', 't']],
+                    8: [['l', 't']], 9: [['t', 'b']], 11: [['t', 'r']], 12: [['l', 'r']], 13: [['b', 'r']], 14: [['l', 'b']],
+                    5: centro ? [['l', 't'], ['b', 'r']] : [['t', 'r'], ['l', 'b']],
+                    10: centro ? [['t', 'r'], ['l', 'b']] : [['l', 't'], ['b', 'r']] }[caso];
+    // canto de referência de cada par: o canto comum às duas arestas (ou tl quando são opostas)
+    const comum = { lt: [x, y], tl: [x, y], tr: [x + 1, y], rt: [x + 1, y], br: [x + 1, y + 1], rb: [x + 1, y + 1], bl: [x, y + 1], lb: [x, y + 1] };
+    for (const [e1, e2] of pares) {
+      let k1 = A[e1], k2 = A[e2];
+      let p1 = ponto(...k1), p2 = ponto(...k2);
+      const c = comum[e1 + e2] || [x, y];
+      const dentro = val(c[0], c[1]) > iso;
+      const cruz = (p2[0] - p1[0]) * (c[1] - p1[1]) - (p2[1] - p1[1]) * (c[0] - p1[0]);
+      if ((cruz > 0) !== dentro) { [k1, k2] = [k2, k1]; }          // o "dentro" fica sempre do mesmo lado
+      ini.set(k1[0], k2[0]);
+    }
+  }
+  const lacos = [], usados = new Set();
+  for (const comeco of ini.keys()) {
+    if (usados.has(comeco)) continue;
+    const laco = [];
+    let k = comeco, guarda = 0;
+    while (!usados.has(k) && guarda++ < 1e6) {
+      usados.add(k);
+      laco.push(pontos.get(k));
+      k = ini.get(k);
+      if (k === undefined) break;
+    }
+    if (laco.length >= 6) lacos.push(laco);
+  }
+  return lacos;
+}
+
+function area(l) { let s = 0; for (let i = 0; i < l.length; i++) { const a = l[i], b = l[(i + 1) % l.length]; s += a[0] * b[1] - b[0] * a[1]; } return s / 2; }
+
+function simplifica(l, eps) {
+  // Douglas-Peucker num laço fechado: quebra no ponto mais distante do primeiro e simplifica as duas metades
+  const dist = (p, a, b) => {
+    const dx = b[0] - a[0], dy = b[1] - a[1], n = Math.hypot(dx, dy) || 1e-9;
+    return Math.abs(dy * p[0] - dx * p[1] + b[0] * a[1] - b[1] * a[0]) / n;
+  };
+  const dp = (pts) => {
+    if (pts.length < 3) return pts;
+    let m = 0, im = 0;
+    for (let i = 1; i < pts.length - 1; i++) { const d = dist(pts[i], pts[0], pts[pts.length - 1]); if (d > m) { m = d; im = i; } }
+    if (m <= eps) return [pts[0], pts[pts.length - 1]];
+    const a = dp(pts.slice(0, im + 1)), b = dp(pts.slice(im));
+    return a.slice(0, -1).concat(b);
+  };
+  let far = 0, fd = 0;
+  for (let i = 1; i < l.length; i++) { const d = Math.hypot(l[i][0] - l[0][0], l[i][1] - l[0][1]); if (d > fd) { fd = d; far = i; } }
+  const a = dp(l.slice(0, far + 1)), b = dp(l.slice(far).concat([l[0]]));
+  return a.slice(0, -1).concat(b.slice(0, -1));
+}
+
+function dentroDe(pt, l) {
+  let c = false;
+  for (let i = 0, j = l.length - 1; i < l.length; j = i++) {
+    if ((l[i][1] > pt[1]) !== (l[j][1] > pt[1]) && pt[0] < (l[j][0] - l[i][0]) * (pt[1] - l[i][1]) / (l[j][1] - l[i][1]) + l[i][0]) c = !c;
+  }
+  return c;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// objeto
+// ---------------------------------------------------------------------------------------------------------------
+const tamanho = p.size ?? ({ atras: 0.5, mao: 0.24 }[entrada] || (ehIcone ? 0.17 : 0.32));
+const altura = tamanho * H;                     // altura do objeto em pixels
+let largura = altura, meia = [0, 0];            // meia largura/altura em fração da tela (posicionamento)
+const raiz = new THREE.Group(); scene.add(raiz);        // posição na tela
+const corpo = new THREE.Group(); raiz.add(corpo);       // giro/escala/squash
+let sombraPro = null, sombraMao = null, brilhoAtras = null;
+const varre = { value: -2 }, varreI = { value: 0 };
+let ESP = 1;                                    // espessura (px), definida ao montar
+const esp0 = () => ESP;
+
+function comVarredura(mat) {
+  // brilho especular que atravessa o objeto (faixa diagonal estreita + halo largo), em função de t
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uVarre = varre; sh.uniforms.uVarreI = varreI;
+    sh.fragmentShader = 'uniform float uVarre;\nuniform float uVarreI;\n' + sh.fragmentShader.replace('#include <emissivemap_fragment>',
+      `#include <emissivemap_fragment>
+       float fx = (vMapUv.x * 0.7 + (1.0 - vMapUv.y) * 0.55) - uVarre;
+       totalEmissiveRadiance += vec3(1.0, 0.985, 0.96) * uVarreI * (exp(-fx * fx * 1400.0) * 0.85 + exp(-fx * fx * 120.0) * 0.22);`);
+  };
+  return mat;
+}
+
+/** normais suaves nas laterais e no chanfro (a ExtrudeGeometry vem facetada): média das normais das faces que
+ *  dividem o mesmo ponto, só entre faces com menos de ~50° entre si (quinas de verdade continuam vivas) */
+function suaviza(geo) {
+  geo.computeVertexNormals();
+  const pos = geo.attributes.position, nor = geo.attributes.normal;
+  const lat = geo.groups.find((g) => g.materialIndex === 1);
+  if (!lat) return;
+  const chave = (i) => `${Math.round(pos.getX(i) * 20)},${Math.round(pos.getY(i) * 20)},${Math.round(pos.getZ(i) * 20)}`;
+  const soma = new Map();
+  for (let i = lat.start; i < lat.start + lat.count; i++) {
+    const k = chave(i), s = soma.get(k) || [];
+    s.push(i); soma.set(k, s);
+  }
+  const out = new Float32Array(nor.array);
+  const n = new THREE.Vector3(), m = new THREE.Vector3(), a = new THREE.Vector3();
+  for (const ids of soma.values()) {
+    for (const i of ids) {
+      n.fromBufferAttribute(nor, i); a.set(0, 0, 0);
+      for (const j of ids) { m.fromBufferAttribute(nor, j); if (n.dot(m) > 0.64) a.add(m); }
+      a.normalize();
+      out[i * 3] = a.x; out[i * 3 + 1] = a.y; out[i * 3 + 2] = a.z;
+    }
+  }
+  nor.array.set(out); nor.needsUpdate = true;
+}
+
+function texturaSombra(c, blurFrac) {
+  const pad = 0.25, w = 256, h = Math.round(256 * c.height / c.width);
+  const S = tela(Math.round(w * (1 + 2 * pad)), Math.round(h * (1 + 2 * pad))), g = S.getContext('2d');
+  const sil = tela(w, h), gs = sil.getContext('2d');
+  gs.drawImage(c, 0, 0, w, h);
+  gs.globalCompositeOperation = 'source-in'; gs.fillStyle = '#000'; gs.fillRect(0, 0, w, h);
+  g.filter = `blur(${Math.round(w * blurFrac)}px)`;
+  g.drawImage(sil, w * pad, h * pad);
+  const t = new THREE.CanvasTexture(S); t.colorSpace = THREE.SRGBColorSpace;
+  return { t, escala: 1 + 2 * pad };
+}
+
+function elipse(cor = '0,0,0') {
+  const c = tela(256, 256), g = c.getContext('2d');
+  const gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gr.addColorStop(0, `rgba(${cor},1)`); gr.addColorStop(0.45, `rgba(${cor},.55)`); gr.addColorStop(1, `rgba(${cor},0)`);
+  g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+async function monta() {
+  // tudo o que é pesado roda depois do "load" da página (com várias abas em SwiftShader, o load não pode demorar)
+  await new Promise((ok) => { const c = new MessageChannel(); c.port1.onmessage = () => ok(); c.port2.postMessage(0); });
+  // reflexos de estúdio (ambiente procedural do three.js, sem imagem externa); 128 px bastam com o desfoque
+  scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04, 0.1, 100, { size: 128 }).texture;
+  let fonte;
+  if (p.image) {
+    const img = await motion.loadImage(p.image);
+    const k = Math.min(1, 1400 / Math.max(img.naturalWidth, img.naturalHeight));
+    fonte = tela(Math.round(img.naturalWidth * k), Math.round(img.naturalHeight * k));
+    const g = fonte.getContext('2d'); g.imageSmoothingQuality = 'high';
+    g.drawImage(img, 0, 0, fonte.width, fonte.height);
+  } else {
+    fonte = await desenhaIcone(String(p.icone ?? p.text ?? 'star'));
+  }
+  fonte = apara(fonte);
+  const cw = fonte.width, ch = fonte.height;
+  largura = altura * cw / ch;
+
+  const menor = Math.min(largura, altura);
+  const esp = menor * (p.espessura ?? (ehIcone ? 0.2 : 0.12));
+  const chanfro = Math.min(menor * (ehIcone ? 0.022 : 0.03), esp * 0.6);
+  // contorno -> formas (com furos)
+  const gr = grade(fonte, chanfro / (Math.max(largura, altura) / 220));
+  const lacos = contornos(gr).map((l) => simplifica(l, 0.28)).filter((l) => l.length >= 4);
+  if (!lacos.length) throw new Error('não achei o contorno do produto (a imagem tem transparência?)');
+  const maior = lacos.reduce((a, b) => (Math.abs(area(a)) > Math.abs(area(b)) ? a : b));
+  const sinal = Math.sign(area(maior)), minimo = Math.abs(area(maior)) * 0.004;
+  const fora = lacos.filter((l) => Math.sign(area(l)) === sinal && Math.abs(area(l)) > minimo);
+  const furos = lacos.filter((l) => Math.sign(area(l)) !== sinal && Math.abs(area(l)) > minimo * 0.5);
+  const mundo = ([gx, gy]) => new THREE.Vector2(((gx - gr.P + 0.5) / gr.iw - 0.5) * largura, (0.5 - (gy - gr.P + 0.5) / gr.ih) * altura);
+  const formas = fora.map((l) => {
+    const s = new THREE.Shape(l.map(mundo));
+    for (const f of furos) if (dentroDe(f[0], l)) s.holes.push(new THREE.Path(f.map(mundo)));
+    return s;
+  });
+
+  // extrusão com chanfro arredondado; o chanfro cresce para dentro (a silhueta continua a do produto)
+  const uv = (x, y) => new THREE.Vector2(x / largura + 0.5, y / altura + 0.5);
+  const UV = {
+    generateTopUV(g, v, a, b, c) { return [uv(v[a * 3], v[a * 3 + 1]), uv(v[b * 3], v[b * 3 + 1]), uv(v[c * 3], v[c * 3 + 1])]; },
+    // laterais: cada ponto do contorno pega a cor da foto naquele ponto da borda (a cor "escorre" pela espessura)
+    generateSideWallUV(g, v, a, b, c, d) { return [a, b, c, d].map((i) => uv(v[i * 3], v[i * 3 + 1])); },
+  };
+  const geo = new THREE.ExtrudeGeometry(formas, { depth: esp, steps: 1, curveSegments: 4, bevelEnabled: true,
+    bevelThickness: esp * 0.55, bevelSize: chanfro, bevelOffset: -chanfro, bevelSegments: 6, UVGenerator: UV });
+  geo.translate(0, 0, -esp / 2);
+  ESP = esp + esp * 1.1;
+  // tampa de trás: a foto espelhada em u, para o rótulo ler certo quando o objeto mostra as costas no giro
+  const tampa = geo.groups.find((g) => g.materialIndex === 0), uvs = geo.attributes.uv, ps = geo.attributes.position;
+  for (let i = tampa.start; i < tampa.start + tampa.count; i++) if (ps.getZ(i) < 0) uvs.setX(i, 1 - uvs.getX(i));
+  suaviza(geo);
+
+  const sangrada = sangra(fonte);
+  const tex = new THREE.CanvasTexture(sangrada);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const frente = comVarredura(new THREE.MeshPhysicalMaterial({ map: tex, emissiveMap: tex, emissive: '#ffffff',
+    emissiveIntensity: 0.5, roughness: 0.42, metalness: 0, clearcoat: ehIcone ? 1 : 0.65, clearcoatRoughness: 0.16 }));
+  // laterais: a mesma foto bem desfocada (a cor da borda corre lisa pela espessura, sem listras dos detalhes)
+  const liso = tela(256, Math.max(8, Math.round(256 * ch / cw))), gl = liso.getContext('2d');
+  gl.filter = `blur(${Math.round(256 * 0.035)}px)`;
+  gl.drawImage(sangrada, -12, -12, liso.width + 24, liso.height + 24);
+  const texLado = new THREE.CanvasTexture(liso);
+  texLado.colorSpace = THREE.SRGBColorSpace;
+  const lado = comVarredura(new THREE.MeshPhysicalMaterial({ map: texLado, emissiveMap: texLado, emissive: '#ffffff',
+    emissiveIntensity: 0.16, color: '#d4d4d4', roughness: 0.34, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.12 }));
+  corpo.add(new THREE.Mesh(geo, [frente, lado]));
+
+  // sombra projetada na cena (silhueta desfocada) e sombra de contato na mão
+  const ss = texturaSombra(fonte, 0.045);
+  sombraPro = new THREE.Mesh(new THREE.PlaneGeometry(largura * ss.escala, altura * ss.escala),
+    new THREE.MeshBasicMaterial({ map: ss.t, transparent: true, depthWrite: false, opacity: 0, toneMapped: false }));
+  sombraPro.renderOrder = -2; scene.add(sombraPro);
+  sombraMao = new THREE.Mesh(new THREE.PlaneGeometry(1, 1),
+    new THREE.MeshBasicMaterial({ map: elipse(), transparent: true, depthWrite: false, opacity: 0, toneMapped: false }));
+  sombraMao.renderOrder = -1; scene.add(sombraMao);
+  if (entrada === 'atras') {      // halo de luz atrás do objeto (fica atrás da pessoa: recorta o contorno dela)
+    const c = new THREE.Color(p.cor || p.color || '#ffffff');
+    brilhoAtras = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: elipse(
+      `${Math.round(c.r * 255)},${Math.round(c.g * 255)},${Math.round(c.b * 255)}`), transparent: true, depthWrite: false,
+      opacity: 0, toneMapped: false, blending: THREE.AdditiveBlending }));
+    brilhoAtras.renderOrder = -3; scene.add(brilhoAtras);
+  }
+  meia = [largura / 2 / W, altura / 2 / H];
+}
+motion.waitFor(monta());
+
+// ---------------------------------------------------------------------------------------------------------------
+// posição: onde o usuário pediu, na mão, ou ao lado/abaixo do rosto (nunca em cima dele)
+// ---------------------------------------------------------------------------------------------------------------
+const TOPO = 0.12, BASE = 0.77, M = 0.025;     // zona segura vertical (interface do Reels/TikTok)
+function rosto() {
+  const r = p.rosto;
+  return Array.isArray(r) && r.length === 4 ? r : null;
+}
+function rostoEm(t) {
+  // caixa do rosto NESTE quadro (params.rostos, por quadro, posta pelo motor); sem ela, a caixa típica do trecho
+  const rs = p.rostos;
+  if (!Array.isArray(rs) || !rs.length) return rosto();
+  const i = clamp(Math.round(t * motion.fps), 0, rs.length - 1);
+  for (let d = 0; d < 20; d++) { if (rs[i - d]) return rs[i - d]; if (rs[i + d]) return rs[i + d]; }
+  return rosto();
+}
+function foge(x, y, s, r = rosto()) {
+  // empurra o centro (x, y) para fora da caixa do rosto pelo menor caminho (lado ou para baixo)
+  if (!r) return [x, y];
+  const mx = meia[0] * s + M, my = meia[1] * s + M;
+  if (x + mx <= r[0] || x - mx >= r[2] || y + my <= r[1] || y - my >= r[3]) return [x, y];
+  const op = [[r[0] - mx, y], [r[2] + mx, y], [x, r[3] + my]]
+    .filter(([a, b]) => a - meia[0] * s > 0.01 && a + meia[0] * s < 0.99 && b + meia[1] * s < 0.97);
+  if (!op.length) return [x, Math.max(y, r[3] + my)];
+  return op.reduce((a, b) => (Math.hypot(a[0] - x, a[1] - y) <= Math.hypot(b[0] - x, b[1] - y) ? a : b));
+}
+function fogeSuave(x, y, s, t) {
+  // o rosto se mexe: média do desvio em ±0,25 s -> o objeto escorrega para fora do caminho, sem tremer
+  if (!Array.isArray(p.rostos) || !p.rostos.length) return foge(x, y, s);
+  let sx = 0, sy = 0;
+  for (let k = -7; k <= 7; k++) { const [a, b] = foge(x, y, s, rostoEm(t + k / motion.fps)); sx += a; sy += b; }
+  return [sx / 15, sy / 15];
+}
+let _fixo = null;
+function sobrepoe(cx, cy, mx, my, c) {          // fração da caixa do objeto que cai dentro da caixa c
+  const w = Math.max(0, Math.min(cx + mx, c[2]) - Math.max(cx - mx, c[0]));
+  const h = Math.max(0, Math.min(cy + my, c[3]) - Math.max(cy - my, c[1]));
+  return (w * h) / (4 * mx * my);
+}
+function fixo() {
+  // lugar do objeto parado: procura numa grade o ponto mais perto do preferido que não cubra o rosto nem a
+  // legenda (params.legenda = faixa [y0, y1] posta pelo motor) e fique na zona segura
+  if (_fixo) return _fixo;
+  const r = rosto();
+  if (entrada === 'atras') return (_fixo = [p.x ?? (r ? (r[0] + r[2]) / 2 : 0.5),
+    p.y ?? clamp(r ? r[1] + meia[1] * 0.35 : 0.3, TOPO + meia[1] * 0.6, 0.5), 1]);
+  const leg = Array.isArray(p.legenda) ? [0.16, p.legenda[0], 0.84, p.legenda[1]] : null;
+  const dir = p.lado === 'esquerda' ? -1 : p.lado === 'direita' ? 1 : (r ? (1 - r[2] >= r[0] ? 1 : -1) : 1);
+  const pref = [p.x ?? (dir > 0 ? 0.72 : 0.28), p.y ?? (r ? Math.max(0.5, (r[1] + r[3]) / 2 + 0.1) : 0.56)];
+  // sem lugar livre no tamanho pedido, encolhe até 72%; se nem assim couber (close-up: o rosto ocupa a tela),
+  // fica no tamanho cheio no ponto que menos cobre o rosto (a legenda pesa menos que um objeto minúsculo)
+  const busca = (esc, pesoLeg) => {
+    const mx = meia[0] * esc + M, my = meia[1] * esc + M;
+    const xs = p.x != null ? [p.x] : [], ys = p.y != null ? [p.y] : [];
+    if (!xs.length) for (let x = mx - M + 0.02; x <= 1 - mx + M - 0.02 + 1e-9; x += 0.01) xs.push(x);
+    if (!ys.length) for (let y = TOPO + my - M; y <= Math.max(TOPO + my - M, BASE - my * 0.35) + 1e-9; y += 0.01) ys.push(y);
+    if (!xs.length) xs.push(0.5);
+    let melhor = null, custo = Infinity, livre = false;
+    for (const x of xs) for (const y of ys) {
+      const fr = r ? sobrepoe(x, y, mx, my, r) : 0, fl = leg ? sobrepoe(x, y, mx, my, leg) : 0;
+      const c = 1000 * fr + pesoLeg * fl + Math.hypot((x - pref[0]) * 1.4, y - pref[1]);
+      if (c < custo) { custo = c; melhor = [x, y, esc]; livre = fr <= 0.04 && fl <= 0.12; }
+    }
+    return { melhor, livre };
+  };
+  let melhor = null;
+  for (const esc of p.encolher === false ? [1] : [1, 0.86, 0.72]) {
+    const b = busca(esc, 220);
+    if (b.livre) { melhor = b.melhor; break; }
+  }
+  if (!melhor) melhor = busca(1, 60).melhor;
+  return (_fixo = melhor || [...pref, 1]);
+}
+function mao(t) {
+  // centro da palma com média de ±3 quadros (tira o tremor da detecção) + deslocamento para cima da mão
+  const hd = p.hand || [];
+  const i = Math.round(t * motion.fps);
+  let sx = 0, sy = 0, n = 0;
+  for (let k = -3; k <= 3; k++) { const q = hd[clamp(i + k, 0, hd.length - 1)]; if (q) { sx += q[0]; sy += q[1]; n++; } }
+  if (!n) {   // mão sumiu: fica no último lugar em que ela estava (ou na posição fixa)
+    for (let j = Math.min(i, hd.length - 1); j >= 0; j--) if (hd[j]) return mao(j / motion.fps);
+    return null;
+  }
+  const off = p.offset || [0, -(meia[1] + 0.035)];
+  return [sx / n + off[0], sy / n + off[1], sx / n, sy / n];
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// animação (tudo função de t)
+// ---------------------------------------------------------------------------------------------------------------
+const YAW = p.yaw ?? -0.22;                     // de leve em 3/4: mostra a espessura e o chanfro
+function quadro(t) {
+  const tau = t - AT;
+  const fim = motion.exitK(t, D, 0.42);
+  let x, y, z = 0, s = 1, rx = 0, ry = YAW, rz = 0, sqx = 1, sqy = 1, contato = 0, assentou = 0;
+  const flut = (amp, per = 3.4) => Math.sin((t / per) * Math.PI * 2) * amp;
+  const balanco = (k) => k * (Math.sin(t * 1.15) * 0.22 + Math.sin(t * 0.53 + 1) * 0.08);
+
+  if (entrada === 'voa') {
+    const F = p.voo ?? 1.05, k = clamp(tau / F), e = ease.outCubic(k);
+    const [tx, ty] = fogeSuave(fixo()[0], fixo()[1], fixo()[2], t);
+    // sobe de baixo da tela pelo lado de fora (não cruza o rosto), passa do ponto num arco e pousa
+    const dir = tx > 0.5 ? -1 : 1;
+    const P0 = [tx - dir * 0.32, 1.25 + meia[1]], C = [tx - dir * 0.06, ty - 0.3];
+    const u = 1 - e;
+    x = u * u * P0[0] + 2 * u * e * C[0] + e * e * tx;
+    y = u * u * P0[1] + 2 * u * e * C[1] + e * e * ty;
+    z = -H * 0.9 * u * u;                        // vem de longe: a perspectiva faz o resto
+    ry = YAW + Math.PI * 2 * (p.voltas ?? 1.5) * Math.pow(u, 1.6) * -dir;
+    rx = 0.9 * u * u; rz = -dir * 0.5 * u;
+    const pouso = tau - F;                       // impacto: achata e volta com mola
+    if (pouso > 0) {
+      const imp = Math.exp(-pouso * 7) * Math.sin(pouso * 22);
+      sqy = 1 - 0.09 * imp; sqx = 1 + 0.06 * imp;
+      assentou = clamp(pouso / 0.6);
+    }
+    contato = e * e;
+    ry += balanco(clamp((tau - F - 0.3) / 0.8)); y += flut(0.006) * clamp((tau - F) / 0.8);
+    s = tau < 0 ? 0 : 1;
+  } else if (entrada === 'mao') {
+    const m = mao(t);
+    const k = motion.spring(t, AT, { dur: 0.7, bounce: 0.32 });
+    let [tx, ty] = m ? [m[0], m[1]] : fixo();
+    const ant = mao(t - 1 / motion.fps);
+    const vx = m && ant ? (m[0] - ant[0]) * motion.fps : 0;        // inclina para o lado em que a mão anda
+    [tx, ty] = fogeSuave(tx, ty, Math.max(k, 0.3), t);
+    x = tx; y = ty + (1 - k) * meia[1] * 1.2 + flut(0.006);
+    s = k;
+    ry = YAW + Math.PI * 2 * (p.voltas ?? 1) * (1 - ease.outCubic(clamp(tau / 1.15))) + balanco(clamp((tau - 1) / 0.8));
+    rz = clamp(-vx * 0.35, -0.3, 0.3); rx = 0.12 * Math.sin(t * 0.9);
+    contato = m ? k : 0;
+    assentou = clamp((tau - 1.0) / 0.5);
+    if (m) {                                     // sombra suave na palma, embaixo do objeto
+      sombraMao.position.set((m[2] - 0.5) * W, (0.5 - (m[1] + meia[1] * k * 1.02)) * H, -esp0() * 2);
+      sombraMao.scale.set(largura * 0.8 * k, largura * 0.2 * k, 1);
+    }
+  } else if (entrada === 'atras') {
+    const k = motion.spring(t, AT, { dur: 0.9, bounce: 0.18 });
+    const [tx, ty] = fixo();
+    x = tx; y = ty + (1 - k) * 0.12 + flut(0.008, 4.2);
+    s = k;
+    ry = YAW + (Math.PI * 2 * Math.max(0, tau)) / (p.periodo ?? 4.5);   // gira devagar, sem parar
+    rx = 0.1 + Math.sin(t * 0.8) * 0.05;
+    assentou = clamp((tau - 0.6) / 0.5);
+  } else {                                       // "gira": surge com mola, dá a volta e para de frente
+    const k = motion.spring(t, AT, { dur: 0.65, bounce: 0.3 });
+    const [tx, ty] = fogeSuave(fixo()[0], fixo()[1], fixo()[2], t);
+    x = tx; y = ty + flut(0.006) * clamp((tau - 1.2) / 0.8);
+    s = k;
+    const g = ease.outCubic(clamp(tau / 1.35));
+    ry = YAW + Math.PI * 2 * (p.voltas ?? 1) * (1 - g) + balanco(clamp((tau - 1.3) / 0.9));
+    rx = 0.35 * (1 - g); contato = k;
+    assentou = clamp((tau - 1.2) / 0.5);
+  }
+  if (entrada !== 'mao') s *= fixo()[2];        // encolhido para caber sem cobrir rosto/legenda
+  if (tau < 0) s = 0;
+  s *= 1 - ease.inQuad(fim) * 0.85;              // saída: encolhe e gira
+  ry -= fim * fim * Math.PI * 1.2;
+  const vis = s > 0.002 ? 1 - fim : 0;
+  return { x, y, z, s, rx, ry, rz, sqx, sqy, contato, assentou, vis };
+}
+
+motion.onFrame((t) => {
+  const q = quadro(t);
+  raiz.position.set((q.x - 0.5) * W, (0.5 - q.y) * H, q.z);
+  corpo.rotation.set(q.rx, q.ry, q.rz);
+  corpo.scale.set(Math.max(q.s * q.sqx, 1e-4), Math.max(q.s * q.sqy, 1e-4), Math.max(q.s, 1e-4));
+  // sombra projetada: deslocada para baixo/direita (luz do alto à esquerda), afina quando o objeto está de perfil
+  const forca = (p.sombra ?? 1) * q.vis;
+  const perfil = 0.3 + 0.7 * Math.abs(Math.cos(q.ry));
+  const afasta = 1 + Math.max(0, -q.z) / H;      // longe da câmera: sombra mais difusa e fraca
+  sombraPro.position.set(raiz.position.x + altura * 0.05 * q.s, raiz.position.y - altura * 0.065 * q.s, q.z - esp0() * 3);
+  sombraPro.scale.set(Math.max(q.s * perfil, 1e-4), Math.max(q.s, 1e-4), 1);
+  sombraPro.material.opacity = (entrada === 'atras' ? 0.22 : 0.34) * forca / afasta;
+  sombraMao.material.opacity = entrada === 'mao' ? 0.5 * q.contato * forca : 0;
+  if (brilhoAtras) {
+    brilhoAtras.position.set(raiz.position.x, raiz.position.y, -esp0() * 4);
+    brilhoAtras.scale.set(largura * 1.9 * q.s, altura * 1.5 * q.s, 1);
+    brilhoAtras.material.opacity = 0.32 * q.vis * (p.brilho ?? 1);
+  }
+  // brilho que atravessa: logo depois de assentar e de novo a cada 2,6 s
+  const ciclo = 2.6, tb = t - AT - (entrada === 'voa' ? (p.voo ?? 1.05) + 0.1 : entrada === 'atras' ? 0.5 : 0.95);
+  const fase = tb >= 0 ? (tb % ciclo) / 0.75 : -1;
+  varre.value = fase >= 0 && fase <= 1 ? lerp(-0.35, 1.6, ease.inOutQuad(fase)) : -2;
+  varreI.value = (p.brilho ?? 1) * 0.9 * q.assentou;
+  renderer.render(scene, cam);
+});
+</script></body></html>

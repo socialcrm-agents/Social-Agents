@@ -1,0 +1,19 @@
+<!doctype html>
+<!-- VAZAMENTO DE LUZ / CLARÃO (layer: front): luz quente atravessando a tela (transição ou ênfase).
+     params: color ("#ffb347"), at (s), dur (s), kind ("vazamento"|"clarao") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>#l { position: absolute; inset: -30%; mix-blend-mode: screen; }</style></head>
+<body><div id="l"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration, W = motion.w;
+const l = document.getElementById('l'), color = p.color || '#ffb347', at = p.at ?? 0, dur = p.dur ?? Math.min(D, 1.2);
+motion.onFrame((t) => {
+  const k = motion.prog(t, at, dur, 'linear');
+  const a = Math.sin(Math.PI * k);
+  if (p.kind === 'clarao') { l.style.background = `rgba(255,255,255,${0.9 * a})`; return; }
+  l.style.background = `radial-gradient(40% 55% at ${20 + 70 * k}% ${35 + 20 * Math.sin(k * 3)}%, ${color}cc, ${color}55 40%, rgba(255,120,40,0) 70%),
+    radial-gradient(30% 40% at ${80 - 50 * k}% 70%, #ff5e6288, rgba(255,94,98,0) 70%)`;
+  l.style.opacity = a;
+});
+</script></body></html>

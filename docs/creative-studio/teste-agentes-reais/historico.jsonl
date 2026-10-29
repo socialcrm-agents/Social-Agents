@@ -1,0 +1,8 @@
+{"n": 1, "data": "2026-10-23T15:13:09", "evento": "inicio", "pedido": "melhora o visual de 12 a 16s, tá fraco perto dos concorrentes", "brief": "brief.json"}
+{"n": 2, "data": "2026-10-23T15:13:09", "evento": "rascunho", "versao_plano": 1, "convocados": ["art-director", "senior-editor"]}
+{"n": 3, "data": "2026-10-23T15:14:40", "evento": "aprovacao", "versao_plano": 1, "operacoes": 2, "convocados": ["art-director", "senior-editor"], "conflitos": [], "gaps": [], "decisoes": ["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10"]}
+{"n": 4, "data": "2026-10-23T15:14:50", "evento": "previa", "revision_plan": "revision-plan-1.json", "operacoes": 2, "miss": 25, "hit": 0, "fora_do_plano": ["motion:m1:manchete", "trecho:000.0-004.0"]}
+{"n": 5, "data": "2026-10-23T15:17:17", "evento": "aprovacao", "versao_plano": 1, "operacoes": 2, "convocados": ["art-director", "senior-editor"], "conflitos": [], "gaps": [], "decisoes": ["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10"]}
+{"n": 6, "data": "2026-10-23T15:17:28", "evento": "previa", "revision_plan": "revision-plan-2.json", "operacoes": 2, "miss": 24, "hit": 0, "fora_do_plano": []}
+{"n": 7, "data": "2026-10-23T15:19:30", "evento": "previa", "revision_plan": "revision-plan-3.json", "operacoes": 2, "miss": 25, "hit": 0, "fora_do_plano": []}
+{"n": 8, "data": "2026-10-23T15:19:35", "evento": "aplicacao", "revision_plan": "revision-plan-4.json", "operacoes": 2, "miss": 25, "hit": 0, "fora_do_plano": []}

@@ -1,0 +1,514 @@
+<!doctype html>
+<!-- ANÚNCIO DE PRODUTO (9:16, quadro inteiro): todas as cenas + legenda num só documento.
+     params (montados por scripts/cenas.py):
+       cores {fundo1, fundo2, destaque, destaque2, texto, escuro}, estilo {...estilos/<nome>.json},
+       produto {nome, preco, preco_antigo, desconto, parcelas, recorte, fotos{nome: url}},
+       cenas [{tipo, t0, t1, ...}], palavras [{w, t0, t1}], plataforma ("tiktok_shop" | "reels" | "shorts"), total -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  body { background: #111; }
+  .scene { position: absolute; inset: 0; overflow: hidden; will-change: transform; }
+  .bg { position: absolute; inset: -40px; }
+  .rays { position: absolute; left: 50%; top: 45%; width: 2600px; height: 2600px; margin: -1300px 0 0 -1300px;
+          border-radius: 50%; opacity: .35; }
+  .floor { position: absolute; left: 50%; width: 620px; height: 90px; margin-left: -310px; border-radius: 50%;
+           background: radial-gradient(closest-side, rgba(0,0,0,.45), rgba(0,0,0,0)); }
+  .prod { position: absolute; left: 50%; transform-origin: 50% 100%; }
+  .prod img { display: block; width: 100%; height: 100%; object-fit: contain; }
+  .shine { position: absolute; inset: 0; -webkit-mask-size: 100% 100%; mask-size: 100% 100%;
+           -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; mix-blend-mode: screen; }
+  .photo { position: absolute; inset: 0; overflow: hidden; }
+  .photo img { position: absolute; left: 0; top: 0; width: 100%; height: 100%; object-fit: cover; transform-origin: 50% 50%; }
+  .title { position: absolute; left: 60px; right: 150px; text-align: center; line-height: .98; text-transform: uppercase; text-wrap: balance; }
+  .title .wd { display: inline-block; margin: 0 .12em; }
+  .pill { position: absolute; padding: 18px 34px; border-radius: 999px; font-weight: 800; font-size: 44px; white-space: nowrap; }
+  .card { position: absolute; display: flex; align-items: center; gap: 26px; padding: 22px 34px 22px 22px;
+          border-radius: 30px; font-weight: 800; font-size: 58px; line-height: 1.05; }
+  .ic { width: 108px; height: 108px; border-radius: 26px; display: grid; place-items: center; flex: 0 0 auto; }
+  .ic svg { width: 66px; height: 66px; }
+  .cart .ic svg { width: 92px; height: 92px; stroke-width: 2.4; }
+  .price-old { position: absolute; font-weight: 700; font-size: 66px; white-space: nowrap; }
+  .price-old .strike { position: absolute; left: -6px; top: 52%; height: 8px; border-radius: 4px; }
+  .price-new { position: absolute; font-family: 'Anton'; font-size: 200px; line-height: 1; white-space: nowrap; }
+  .price-new small { font-size: .45em; vertical-align: .9em; margin-right: .08em; }
+  .badge { position: absolute; width: 270px; height: 270px; display: grid; place-items: center; }
+  .badge svg { position: absolute; inset: 0; }
+  .badge span { position: relative; font-family: 'Anton'; font-size: 92px; color: #fff; }
+  .caps { position: absolute; left: 70px; right: 150px; text-align: center; z-index: 50; }
+  .caps .g { display: inline; }
+  .caps .w { display: inline-block; margin: 0 .1em; padding: 0 .12em; border-radius: .18em; }
+  .hand { font-family: 'Caveat'; font-weight: 700; }
+  .cart { position: absolute; }
+  .spark { position: absolute; width: 18px; height: 18px; border-radius: 50%; }
+  .vign { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 45%, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%); }
+  .grain { position: absolute; inset: 0; opacity: .06; mix-blend-mode: overlay;
+           background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>"); }
+</style></head>
+<body>
+<div id="stage"></div><div id="caps" class="caps"></div><div class="grain"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const P = motion.params, W = motion.w, H = motion.h;
+const C = P.cores, S = P.estilo, PR = P.produto || {};
+const { clamp, lerp, ease } = motion;
+const prog = (t, a, d, e = 'outCubic') => motion.prog(t, a, d, e);
+const stage = document.getElementById('stage');
+const TRANS = S.transicao_dur || 0.28;
+
+function el(tag, cls, parent, css) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (css) Object.assign(e.style, css);
+  (parent || stage).appendChild(e);
+  return e;
+}
+function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+  t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function img(src, parent, css) {
+  const i = el('img', '', parent, css);
+  motion.waitFor(new Promise((r) => { i.onload = r; i.onerror = r; i.src = src; }));
+  return i;
+}
+function fitText(e, maxW, maxSize, minSize = 40) {
+  let s = maxSize; e.style.fontSize = s + 'px';
+  while (s > minSize && (e.scrollWidth > maxW || e.scrollHeight > s * 2.25)) { s -= 4; e.style.fontSize = s + 'px'; }
+  return s;
+}
+async function icon(name, holder) { holder.innerHTML = await motion.icon(name || 'check'); }
+
+// ---------- fundos ----------
+function background(sc, kind) {
+  const bg = el('div', 'bg', sc.el);
+  const k = kind || S.fundo || 'gradiente';
+  if (k === 'claro') bg.style.background = `radial-gradient(ellipse at 50% 38%, #ffffff 0%, ${C.claro} 55%, ${C.claro2} 100%)`;
+  else if (k === 'escuro') bg.style.background = `radial-gradient(ellipse at 50% 40%, ${C.escuro2} 0%, ${C.escuro} 70%)`;
+  else bg.style.background = `radial-gradient(ellipse at 50% 40%, ${C.fundo2} 0%, ${C.fundo1} 72%)`;
+  sc.bg = bg;
+  if (S.raios && k !== 'claro') {
+    const r = el('div', 'rays', sc.el);
+    r.style.background = `repeating-conic-gradient(from 0deg, rgba(255,255,255,.16) 0deg 7deg, rgba(255,255,255,0) 7deg 20deg)`;
+    sc.rays = r;
+  }
+  if (S.brilhos) {
+    const rnd = rng(sc.i * 97 + 13);
+    sc.sparks = Array.from({ length: 16 }, () => {
+      const d = el('div', 'spark', sc.el);
+      d.style.background = rnd() > .5 ? C.destaque2 : '#ffffff';
+      return { d, x: rnd() * W, y: 200 + rnd() * 1100, s: .4 + rnd() * .9, ph: rnd() * 6.28, sp: .6 + rnd() };
+    });
+  }
+}
+function animBg(sc, lt) {
+  if (sc.rays) sc.rays.style.transform = `rotate(${lt * 14}deg)`;
+  if (sc.sparks) for (const p of sc.sparks) {
+    const tw = .5 + .5 * Math.sin(lt * 4 * p.sp + p.ph);
+    p.d.style.transform = `translate(${p.x}px, ${p.y - lt * 40 * p.sp}px) scale(${p.s * tw})`;
+    p.d.style.opacity = tw;
+  }
+  if (sc.bg) sc.bg.style.transform = `scale(${1.04 + .02 * Math.sin(lt * .8)})`;
+}
+
+// ---------- produto ----------
+function product(sc, { h = 900, y = 1060, src, below } = {}) {
+  if (below) h = Math.min(h, y - (below.el.offsetTop + below.el.offsetHeight) - 40);  // nunca encosta no título
+  const floor = el('div', 'floor', sc.el, { top: (y - 40) + 'px' });
+  if (!src && !PR.recorte) {
+    // sem recorte bom (produto na mão, foto de ambiente): a foto vira um cartão enquadrado no produto
+    const [fx, fy] = PR.foco || [.5, .5];
+    const wpx = Math.min(Math.round(h * .82), 860);
+    const box = el('div', 'prod', sc.el, { width: wpx + 'px', height: h + 'px', top: (y - h) + 'px', marginLeft: (-wpx / 2) + 'px',
+      borderRadius: '44px', overflow: 'hidden', border: '10px solid #fff', boxShadow: `0 40px 80px rgba(0,0,0,${(S.sombra ?? .35) + .1})` });
+    const i = img(PR.foto_principal, box, { objectFit: 'cover', objectPosition: `${fx * 100}% ${fy * 100}%` });
+    i.style.transform = `scale(${PR.zoom_cartao || 1.5})`; i.style.transformOrigin = `${fx * 100}% ${fy * 100}%`;
+    const sh = el('div', '', box, { position: 'absolute', inset: 0, mixBlendMode: 'screen' });
+    return { box, floor, sh, h, w: wpx, y };
+  }
+  const url = src || PR.recorte;
+  const ratio = PR.proporcao || .6;
+  const wpx = Math.round(h * ratio);
+  const box = el('div', 'prod', sc.el, { width: wpx + 'px', height: h + 'px', top: (y - h) + 'px', marginLeft: (-wpx / 2) + 'px',
+    filter: `drop-shadow(0 28px 40px rgba(0,0,0,${S.sombra ?? .35}))` });
+  img(url, box);
+  const sh = el('div', 'shine', box);
+  sh.style.webkitMaskImage = sh.style.maskImage = `url("${url}")`;
+  return { box, floor, sh, h, w: wpx, y };
+}
+function animProduct(pd, lt, { float = 1, swing = 1, shineAt = .35 } = {}) {
+  const fy = Math.sin(lt * 2.2) * 14 * float, rot = Math.sin(lt * 1.3) * 7 * swing;
+  pd.base = `translateY(${fy}px) perspective(1600px) rotateY(${rot}deg)`;
+  pd.floor.style.transform = `scale(${1 - fy / 300})`;
+  const k = prog(lt, shineAt, .9, 'inOutCubic');
+  pd.sh.style.background = `linear-gradient(105deg, rgba(255,255,255,0) ${k * 140 - 40}%, rgba(255,255,255,.75) ${k * 140 - 25}%, rgba(255,255,255,0) ${k * 140 - 10}%)`;
+}
+
+// ---------- título com palavras entrando ----------
+function title(sc, text, { y = 230, size = 150, color, font, stroke = true } = {}) {
+  const t = el('div', 'title', sc.el, { top: y + 'px', fontFamily: font || S.fonte_titulo || 'Anton', color: color || C.titulo });
+  t.innerHTML = String(text).split(/\s+/).map((w) => `<span class="wd">${w}</span>`).join(' ');
+  if (stroke && (S.contorno || sc.ph || sc.vid)) t.style.textShadow = `0 6px 0 ${C.escuro}, 0 12px 30px rgba(0,0,0,.35)`;
+  fitText(t, W - 210, size);
+  return { el: t, words: [...t.querySelectorAll('.wd')] };
+}
+function animTitle(tt, lt, start = .12, step = .09) {
+  tt.words.forEach((w, i) => {
+    const k = prog(lt, start + i * step, .32, 'outBack');
+    w.style.transform = `translateY(${(1 - k) * 60}px) scale(${.6 + .4 * k})`;
+    w.style.opacity = clamp(k * 1.6);
+  });
+}
+
+// ---------- cenas ----------
+const builders = {
+  gancho(sc, s) {
+    background(sc, s.fundo);
+    if (!(PR.recorte && !s.foto)) {
+      const ph = el('div', 'photo', sc.el); sc.ph = img(s.foto || PR.foto_principal, ph); el('div', 'vign', sc.el);
+    }
+    sc.tt = title(sc, s.titulo || '', { y: 220, size: 160 });
+    if (PR.recorte && !s.foto) sc.pd = product(sc, { h: s.altura || 980, y: 1250, below: sc.tt });
+    if (s.selo) sc.selo = el('div', 'pill', sc.el, { right: '170px', top: '560px', background: C.destaque2, color: C.escuro,
+      transform: 'rotate(8deg)' }); if (sc.selo) sc.selo.textContent = s.selo;
+  },
+  heroi(sc, s) {
+    background(sc, s.fundo);
+    if (s.titulo) sc.tt = title(sc, s.titulo, { y: 210, size: 130 });
+    sc.pd = product(sc, { h: s.altura || 1000, y: s.subtitulo ? 1160 : 1250, below: sc.tt });
+    if (s.subtitulo) { sc.sub = el('div', 'pill', sc.el, { left: '50%', top: '1175px', background: C.destaque, color: C.sobre_destaque });
+      sc.sub.textContent = s.subtitulo; }
+  },
+  foto(sc, s) {
+    const ph = el('div', 'photo', sc.el); sc.ph = img(s.foto, ph); el('div', 'vign', sc.el);
+    if (s.titulo) sc.tt = title(sc, s.titulo, { y: 220, size: 130 });
+    if (s.rotulo) { sc.lab = el('div', 'pill', sc.el, { left: '50%', top: '1140px', background: C.destaque, color: C.sobre_destaque });
+      sc.lab.textContent = s.rotulo; }
+  },
+  detalhe(sc, s) {
+    const ph = el('div', 'photo', sc.el); sc.ph = img(s.foto, ph);
+    sc.focus = s.foco || [.5, .5];
+    const svg = el('div', '', sc.el, { position: 'absolute', inset: 0 }); sc.marks = svg;
+    svg.innerHTML = `<svg width="${W}" height="${H}"><circle cx="${W / 2}" cy="${H * .42}" r="190" fill="none" stroke="${C.destaque2}" stroke-width="12"
+      stroke-linecap="round" stroke-dasharray="1200" stroke-dashoffset="1200"/><path d="M ${W / 2 + 330} ${H * .42 + 330} Q ${W / 2 + 300} ${H * .42 + 200} ${W / 2 + 200} ${H * .42 + 150}"
+      fill="none" stroke="${C.destaque2}" stroke-width="11" stroke-linecap="round" stroke-dasharray="400" stroke-dashoffset="400"/></svg>`;
+    sc.circle = svg.querySelector('circle'); sc.arrow = svg.querySelector('path');
+    if (s.rotulo) { sc.lab = el('div', 'hand', sc.el, { position: 'absolute', left: '360px', right: '150px', top: (H * .42 + 330) + 'px',
+      fontSize: '96px', color: '#fff', textAlign: 'center', textShadow: '0 4px 18px rgba(0,0,0,.6)' }); sc.lab.textContent = s.rotulo; }
+  },
+  beneficios(sc, s) {
+    background(sc, s.fundo || (S.fundo === 'gradiente' ? 'escuro' : S.fundo));
+    if (s.titulo) sc.tt = title(sc, s.titulo, { y: 210, size: 110 });
+    if (PR.recorte) { sc.pd = product(sc, { h: 820, y: 1250, below: sc.tt }); sc.pd.box.style.left = '78%'; sc.pd.floor.style.left = '78%'; }
+    const items = s.itens || [];
+    const top = s.titulo ? 470 : 330;
+    sc.cards = items.map((it, i) => {
+      const c = el('div', 'card', sc.el, { left: '60px', top: (top + i * 190) + 'px', maxWidth: PR.recorte ? '720px' : '860px',
+        background: C.cartao, color: C.texto_cartao, boxShadow: '0 20px 50px rgba(0,0,0,.25)' });
+      const ic = el('div', 'ic', c, { background: C.destaque, color: C.sobre_destaque }); icon(it.icone, ic);
+      el('div', '', c).textContent = it.texto;
+      return { c, at: it.at ?? (.25 + i * Math.max(.45, (s.t1 - s.t0 - .6) / Math.max(items.length, 1))) };
+    });
+  },
+  comparacao(sc, s) {
+    background(sc, s.fundo);
+    const light = (s.fundo || S.fundo) === 'claro';
+    const col = (x, head, color) => { const h = el('div', 'pill', sc.el, { left: x + 'px', top: '300px', background: color, color: '#fff',
+      fontSize: '52px', transform: 'translateX(-50%)' }); h.textContent = head; return h; };
+    sc.h1 = col(285, s.esquerda || 'Comum', '#6b6b76');
+    sc.h2 = col(760, s.direita || PR.nome_curto || 'Este', C.destaque);
+    const n = (s.linhas || []).length, y0 = 430 + Math.max(0, (800 - n * 200) / 2);
+    sc.h1.style.top = sc.h2.style.top = (y0 - 140) + 'px';
+    sc.rows = (s.linhas || []).map((r, i) => {
+      const y = y0 + i * 200;
+      const a = el('div', 'card', sc.el, { left: '60px', top: y + 'px', width: '450px', minHeight: '160px', fontSize: '46px',
+        background: light ? '#e7e3dd' : 'rgba(255,255,255,.1)', color: light ? '#77706a' : '#cfcfd6' });
+      a.innerHTML = `<span style="color:#e5484d;font-size:64px">✕</span><span>${r.l}</span>`;
+      const b = el('div', 'card', sc.el, { left: '530px', top: y + 'px', width: '450px', minHeight: '160px', fontSize: '46px',
+        background: C.cartao, color: C.texto_cartao, boxShadow: '0 20px 50px rgba(0,0,0,.2)' });
+      b.innerHTML = `<span style="color:${C.ok};font-size:64px">✓</span><span>${r.r}</span>`;
+      return { a, b, at: r.at ?? (.3 + i * .55) };
+    });
+  },
+  prova(sc, s) {
+    background(sc, s.fundo);
+    sc.pd = product(sc, { h: 640, y: 900 });
+    sc.num = el('div', '', sc.el, { position: 'absolute', left: 0, right: 0, top: '940px', textAlign: 'center',
+      fontFamily: 'Anton', fontSize: '170px', color: C.titulo });
+    sc.stars = el('div', '', sc.el, { position: 'absolute', left: 0, right: 0, top: '1130px', textAlign: 'center', fontSize: '84px',
+      letterSpacing: '10px' });
+    sc.txt = el('div', 'pill', sc.el, { left: '50%', top: '1235px', background: C.cartao, color: C.texto_cartao });
+    sc.txt.textContent = s.texto || '';
+    sc.nota = parseFloat(String(s.nota || '0').replace(',', '.'));
+  },
+  oferta(sc, s) {
+    background(sc, s.fundo);
+    sc.pd = product(sc, { h: PR.recorte ? 760 : 560, y: 1000 }); sc.pd.box.style.left = '30%'; sc.pd.floor.style.left = '30%';
+    const x = 560;
+    if (PR.preco_antigo) {
+      sc.old = el('div', 'price-old', sc.el, { left: x + 'px', top: '420px', color: C.texto_suave });
+      sc.old.innerHTML = `${PR.preco_antigo}<div class="strike" style="background:${C.alerta}"></div>`;
+      sc.oldW = 0;
+    }
+    sc.pre = el('div', '', sc.el, { position: 'absolute', left: x + 'px', top: '520px', fontWeight: 800, fontSize: '48px', color: C.titulo });
+    sc.pre.textContent = s.chamada || 'por apenas';
+    const [rs, cents] = String(PR.preco || '').replace('R$', '').trim().split(',');
+    sc.nw = el('div', 'price-new', sc.el, { left: (x - 10) + 'px', top: '580px', color: C.preco });
+    sc.nw.innerHTML = `<small>R$</small>${rs}${cents ? `<small>,${cents}</small>` : ''}`;
+    fitText(sc.nw, W - x - 140, 200, 90);
+    if (PR.parcelas) { sc.par = el('div', '', sc.el, { position: 'absolute', left: x + 'px', top: '820px', fontWeight: 700, fontSize: '44px', color: C.titulo });
+      sc.par.textContent = PR.parcelas; }
+    if (PR.desconto) {
+      sc.badge = el('div', 'badge', sc.el, { left: '90px', top: '230px' });
+      const pts = Array.from({ length: 32 }, (_, i) => { const r = i % 2 ? 112 : 135, a = i / 32 * Math.PI * 2; return `${135 + r * Math.cos(a)},${135 + r * Math.sin(a)}`; }).join(' ');
+      sc.badge.innerHTML = `<svg viewBox="0 0 270 270"><polygon points="${pts}" fill="${C.alerta}"/></svg><span>${PR.desconto}</span>`;
+    }
+    if (s.extra) { sc.chip = el('div', 'pill', sc.el, { left: x + 'px', top: '910px', background: C.destaque2, color: C.escuro, fontSize: '40px' });
+      sc.chip.textContent = s.extra; }
+    sc.slam = s.preco_at ?? .55;
+  },
+  cta(sc, s) {
+    background(sc, s.fundo);
+    sc.tt = title(sc, s.texto || (P.plataforma === 'tiktok_shop' ? 'TOQUE NO CARRINHO' : 'COMPRE AGORA'), { y: 220, size: 140 });
+    sc.pd = product(sc, { h: 820, y: 1200, below: sc.tt });
+    if (P.plataforma === 'tiktok_shop') {
+      sc.cart = el('div', 'cart', sc.el, { left: '120px', top: '1290px', width: '150px', height: '150px', borderRadius: '40px',
+        background: C.carrinho, color: '#fff', display: 'grid', placeItems: 'center', boxShadow: '0 16px 40px rgba(0,0,0,.35)' });
+      const ic = el('div', 'ic', sc.cart, { width: '96px', height: '96px' }); icon('shopping-cart', ic);
+      sc.arrow = el('div', '', sc.el, { position: 'absolute', left: '300px', top: '1240px', width: '230px', height: '160px' });
+      sc.arrow.innerHTML = `<svg viewBox="0 0 230 160" width="230" height="160"><path d="M220 20 Q 120 10 40 120" fill="none" stroke="${C.destaque2}" stroke-width="14"
+        stroke-linecap="round"/><path d="M20 90 L40 128 L78 112" fill="none" stroke="${C.destaque2}" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    } else {
+      sc.btn = el('div', 'pill', sc.el, { left: '50%', top: '1290px', background: C.destaque, color: C.sobre_destaque, fontSize: '58px', padding: '26px 60px' });
+      sc.btn.textContent = s.botao || 'SAIBA MAIS';
+    }
+    sc.ripple = el('div', '', sc.el, { position: 'absolute', width: '60px', height: '60px', borderRadius: '50%', border: `8px solid ${C.destaque2}`, opacity: 0 });
+  },
+  video(sc, s) {
+    const ph = el('div', 'photo', sc.el);
+    sc.vid = el('img', '', ph); sc.v = s; el('div', 'vign', sc.el);
+    if (s.titulo) sc.tt = title(sc, s.titulo, { y: 220, size: 120 });
+    if (s.rotulo) { sc.lab = el('div', 'pill', sc.el, { left: '50%', top: '1140px', background: C.destaque, color: C.sobre_destaque });
+      sc.lab.textContent = s.rotulo; }
+  },
+  galeria(sc, s) {
+    background(sc, s.fundo);
+    const fotos = s.fotos || Object.values(PR.fotos || {});
+    sc.cards = fotos.map((f) => {
+      const c = el('div', '', sc.el, { position: 'absolute', left: '170px', top: '330px', width: '740px', height: '925px', borderRadius: '40px',
+        overflow: 'hidden', border: '10px solid #fff', boxShadow: '0 40px 80px rgba(0,0,0,.35)', backfaceVisibility: 'hidden' });
+      img(f, c, { width: '100%', height: '100%', objectFit: 'cover' });
+      return c;
+    });
+    sc.every = s.cada || Math.max(.55, (s.t1 - s.t0) / Math.max(sc.cards.length, 1));
+    if (s.titulo) sc.tt = title(sc, s.titulo, { y: 160, size: 110 });
+  },
+};
+
+const updates = {
+  gancho(sc, lt) {
+    animBg(sc, lt);
+    // o 1º quadro vira a capa no TikTok: título e produto já aparecem nele (a animação começa "no meio")
+    if (sc.pd) {
+      const k = prog(lt + .22, 0, .5, 'outBack');
+      animProduct(sc.pd, lt, { shineAt: .55 });
+      const shake = lt > .25 && lt < .5 ? Math.sin(lt * 90) * 16 * (1 - (lt - .25) / .25) : 0;
+      sc.pd.box.style.transform = `translate(${shake}px, ${(1 - k) * -700}px) rotate(${(1 - k) * -8}deg) ${sc.pd.base}`;
+      sc.pd.floor.style.opacity = k;
+    } else if (sc.ph) sc.ph.style.transform = `scale(${1.25 - .12 * prog(lt, 0, 2.5, 'outCubic')})`;
+    animTitle(sc.tt, lt + .3, .05, .06);
+    if (sc.selo) { const k = prog(lt, .6, .35, 'outBack'); sc.selo.style.transform = `rotate(8deg) scale(${k})`; }
+  },
+  heroi(sc, lt, s) {
+    animBg(sc, lt);
+    const k = prog(lt, 0, .45, 'outBack');
+    animProduct(sc.pd, lt, { shineAt: .4 });
+    sc.pd.box.style.transform = `scale(${.75 + .25 * k}) ${sc.pd.base}`;
+    if (sc.tt) animTitle(sc.tt, lt);
+    if (sc.sub) { const q = prog(lt, .45, .35, 'outBack'); sc.sub.style.transform = `translateX(-50%) scale(${q})`; }
+  },
+  foto(sc, lt, s) {
+    const d = s.t1 - s.t0, f = s.foco || [.5, .5];
+    sc.ph.style.transformOrigin = `${f[0] * 100}% ${f[1] * 100}%`;
+    sc.ph.style.transform = `scale(${1.04 + (s.zoom || .14) * prog(lt, 0, d + .4, 'linear')})`;
+    if (sc.tt) animTitle(sc.tt, lt);
+    if (sc.lab) { const q = prog(lt, .35, .35, 'outBack'); sc.lab.style.transform = `translateX(-50%) scale(${q})`; }
+  },
+  detalhe(sc, lt, s) {
+    const k = prog(lt, 0, 1.1, 'inOutCubic'), z = 1 + (s.zoom || 1.1) * k;
+    // foco vem em coordenadas da foto (0..1); a foto cobre o quadro (object-fit: cover), então converte
+    const nw = sc.ph.naturalWidth || W, nh = sc.ph.naturalHeight || H, cov = Math.max(W / nw, H / nh);
+    const px = (sc.focus[0] * nw * cov) - (nw * cov - W) / 2, py = (sc.focus[1] * nh * cov) - (nh * cov - H) / 2;
+    // leva o ponto de foco até (50%, 42%), sem deixar aparecer borda vazia; o círculo segue o ponto
+    const lim = (v, m) => Math.max(-m, Math.min(m, v));
+    const tx = lim(k * (-(px - W / 2) * z), (z - 1) * W / 2), ty = lim(k * (H * .42 - H / 2 - (py - H / 2) * z), (z - 1) * H / 2);
+    sc.ph.style.transformOrigin = '50% 50%';
+    sc.ph.style.transform = `translate(${tx}px, ${ty}px) scale(${z})`;
+    const qx = W / 2 + (px - W / 2) * z + tx, qy = H / 2 + (py - H / 2) * z + ty;
+    // ponto do lado direito: seta e texto vão para a esquerda (nada sai da tela)
+    const flip = px > W * .55;
+    sc.marks.style.transformOrigin = `${W / 2}px ${H * .42}px`;
+    sc.marks.style.transform = `translate(${qx - W / 2}px, ${qy - H * .42}px)${flip ? ' scaleX(-1)' : ''}`;
+    if (sc.lab) {
+      Object.assign(sc.lab.style, flip ? { left: '60px', right: '440px' } : { left: '360px', right: '150px' });
+      sc.lab.style.translate = `${Math.max(Math.min(qx - W / 2, 120), -120)}px ${qy - H * .42}px`;
+    }
+    sc.circle.setAttribute('stroke-dashoffset', 1200 * (1 - prog(lt, .9, .5, 'outCubic')));
+    sc.arrow.setAttribute('stroke-dashoffset', 400 * (1 - prog(lt, 1.2, .35, 'outCubic')));
+    if (sc.lab) { const q = prog(lt, 1.35, .3, 'outBack'); sc.lab.style.transform = `scale(${q}) rotate(-3deg)`; sc.lab.style.opacity = clamp(q * 2); }
+  },
+  beneficios(sc, lt, s) {
+    animBg(sc, lt);
+    if (sc.pd) { animProduct(sc.pd, lt, { swing: .6 }); sc.pd.box.style.transform = sc.pd.base; }
+    if (sc.tt) animTitle(sc.tt, lt);
+    for (const c of sc.cards) {
+      const k = prog(lt, c.at, .38, 'outBack');
+      c.c.style.transform = `translateX(${(1 - k) * -820}px) rotate(${(1 - k) * -6}deg)`;
+    }
+  },
+  comparacao(sc, lt) {
+    animBg(sc, lt);
+    for (const h of [sc.h1, sc.h2]) h.style.transform = `translateX(-50%) scale(${prog(lt, .05, .35, 'outBack')})`;
+    for (const r of sc.rows) {
+      const k = prog(lt, r.at, .35, 'outBack'), k2 = prog(lt, r.at + .15, .35, 'outBack');
+      r.a.style.transform = `translateX(${(1 - k) * -600}px)`; r.b.style.transform = `translateX(${(1 - k2) * 600}px)`;
+    }
+  },
+  prova(sc, lt) {
+    animBg(sc, lt);
+    if (sc.pd) { animProduct(sc.pd, lt); sc.pd.box.style.transform = sc.pd.base; }
+    const k = prog(lt, .1, .9, 'outCubic');
+    sc.num.textContent = (sc.nota * k).toFixed(1).replace('.', ',');
+    const full = sc.nota * prog(lt, .2, .9, 'linear');
+    sc.stars.innerHTML = [0, 1, 2, 3, 4].map((i) => `<span style="color:${full >= i + .5 ? '#FFC531' : 'rgba(255,255,255,.25)'}">★</span>`).join('');
+    sc.txt.style.transform = `translateX(-50%) scale(${prog(lt, .6, .35, 'outBack')})`;
+  },
+  oferta(sc, lt) {
+    animBg(sc, lt);
+    if (sc.pd) { animProduct(sc.pd, lt, { swing: .5 }); sc.pd.box.style.transform = sc.pd.base; }
+    if (sc.old) {
+      const k = prog(lt, .05, .3); sc.old.style.opacity = k;
+      const st = sc.old.querySelector('.strike'); st.style.width = (sc.old.offsetWidth + 12) * prog(lt, .3, .25, 'outCubic') + 'px';
+    }
+    sc.pre.style.opacity = prog(lt, sc.slam - .25, .2);
+    const k = prog(lt, sc.slam, .32, 'outBack');
+    const shake = lt > sc.slam + .25 && lt < sc.slam + .5 ? Math.sin(lt * 100) * 10 : 0;
+    sc.nw.style.transform = `translateX(${shake}px) scale(${lt < sc.slam ? 0 : 2.2 - 1.2 * k})`;
+    sc.nw.style.opacity = lt < sc.slam ? 0 : 1;
+    if (sc.par) sc.par.style.opacity = prog(lt, sc.slam + .45, .3);
+    if (sc.chip) sc.chip.style.transform = `scale(${prog(lt, sc.slam + .7, .35, 'outBack')})`;
+    if (sc.badge) { sc.badge.style.transform = `rotate(${-8 + Math.sin(lt * 5) * 5}deg) scale(${prog(lt, sc.slam + .2, .4, 'outBack')})`;
+      sc.badge.firstChild.style.transform = `rotate(${lt * 30}deg)`; }
+  },
+  cta(sc, lt) {
+    animBg(sc, lt);
+    if (sc.pd) { animProduct(sc.pd, lt); sc.pd.box.style.transform = `scale(${1 + .03 * Math.sin(lt * 6)}) ${sc.pd.base}`; }
+    animTitle(sc.tt, lt);
+    const tap = .9, period = 1.2;
+    const ph = lt > tap ? ((lt - tap) % period) / period : -1;
+    if (sc.cart) {
+      sc.cart.style.transform = `scale(${prog(lt, .3, .35, 'outBack') * (ph >= 0 && ph < .15 ? .9 : 1)}) rotate(${Math.sin(lt * 8) * 4}deg)`;
+      const a = prog(lt, .45, .35); sc.arrow.style.opacity = a;
+      sc.arrow.style.transform = `translate(${Math.sin(lt * 7) * 14}px, ${-Math.sin(lt * 7) * 10}px)`;
+      Object.assign(sc.ripple.style, { left: '165px', top: '1335px' });
+    } else {
+      sc.btn.style.transform = `translateX(-50%) scale(${prog(lt, .3, .35, 'outBack') * (1 + .04 * Math.sin(lt * 7))})`;
+      Object.assign(sc.ripple.style, { left: '510px', top: '1330px' });
+    }
+    if (ph >= 0) { sc.ripple.style.opacity = 1 - ph; sc.ripple.style.transform = `scale(${1 + ph * 3.5})`; }
+  },
+  async video(sc, lt, s) {
+    const i = clamp(Math.floor(lt * (s.fps || 30)), 0, (s.count || 1) - 1) + 1;
+    const src = s.frames.replace('%05d', String(i).padStart(5, '0'));
+    if (sc.vid.dataset.src !== src) { sc.vid.dataset.src = src; sc.vid.src = src; await sc.vid.decode().catch(() => {}); }
+    sc.vid.style.transform = `scale(${1.03 + .08 * prog(lt, 0, s.t1 - s.t0, 'linear')})`;
+    if (sc.tt) animTitle(sc.tt, lt);
+    if (sc.lab) { const q = prog(lt, .35, .35, 'outBack'); sc.lab.style.transform = `translateX(-50%) scale(${q})`; }
+  },
+  galeria(sc, lt) {
+    animBg(sc, lt);
+    const n = sc.cards.length;
+    sc.cards.forEach((c, i) => {
+      const a = (lt / sc.every - i);
+      const rot = clamp(a, -1, 1);
+      const k = 1 - Math.abs(rot);
+      c.style.transform = `perspective(2000px) translateX(${rot * -260}px) rotateY(${rot * -70}deg) scale(${.8 + .2 * k})`;
+      c.style.opacity = i === n - 1 && a > 0 ? 1 : clamp(1 - Math.abs(a));
+      c.style.zIndex = Math.round(k * 10);
+    });
+    if (sc.tt) animTitle(sc.tt, lt);
+  },
+};
+
+// ---------- monta as cenas ----------
+const scenes = (P.cenas || []).map((s, i) => {
+  const sc = { i, s, el: el('div', 'scene', stage, { zIndex: i + 1 }) };
+  (builders[s.tipo] || builders.foto)(sc, s);
+  return sc;
+});
+
+// ---------- legenda ----------
+const capEl = document.getElementById('caps');
+const LG = S.legenda || {};
+Object.assign(capEl.style, { fontFamily: LG.fonte || 'Poppins', fontWeight: LG.peso || 900, fontSize: (LG.tamanho || 82) + 'px',
+  color: LG.cor || '#fff', lineHeight: 1.08, textTransform: LG.maiusculas ? 'uppercase' : 'none' });
+const groups = [];
+{
+  let cur = [];
+  const words = P.palavras || [];
+  words.forEach((w, i) => {
+    cur.push(w);
+    const len = cur.map((x) => x.w).join(' ').length, end = /[.!?,;:]$/.test(w.w);
+    const next = words[i + 1];
+    if (cur.length >= (LG.palavras || 3) || len >= (LG.letras || 16) || end || !next || next.t0 - w.t1 > .35) { groups.push(cur); cur = []; }
+  });
+}
+groups.forEach((g, i) => {
+  const box = el('div', 'g', capEl);
+  box.innerHTML = g.map((w) => `<span class="w">${w.w.replace(/[,;:]$/, '')}</span>`).join(' ');
+  g.box = box; g.spans = [...box.querySelectorAll('.w')];
+  g.t0 = g[0].t0; g.t1 = Math.min(g[g.length - 1].t1 + .25, groups[i + 1] ? groups[i + 1][0].t0 : 1e9);
+});
+const shadow = LG.caixa ? 'none' : '0 6px 0 rgba(0,0,0,.55), 0 0 26px rgba(0,0,0,.55)';
+
+function capScene(t) { return scenes.find((x) => t >= x.s.t0 && t < x.s.t1); }
+function capY(t) {
+  const sc = capScene(t);
+  return sc && sc.s.legenda_y ? sc.s.legenda_y : (LG.y || 1330);
+}
+
+// ---------- quadro ----------
+motion.onFrame(async (t) => {
+  for (const sc of scenes) {
+    const { t0, t1 } = sc.s;
+    const next = scenes[sc.i + 1];
+    const visible = t >= t0 && (t < t1 || (next && t < next.s.t0 + TRANS)) || (!next && t >= t0);
+    sc.el.style.display = visible ? 'block' : 'none';
+    if (!visible) continue;
+    const lt = t - t0;
+    await (updates[sc.s.tipo] || updates.foto)(sc, lt, sc.s);
+    // entrada da cena (a anterior continua por baixo até a nova cobrir)
+    const k = sc.i === 0 ? 1 : prog(lt, 0, TRANS, 'outCubic');
+    const tr = sc.s.transicao || S.transicao || 'whip';
+    if (tr === 'whip') { sc.el.style.transform = `translateX(${(1 - k) * W}px)`; sc.el.style.filter = k < 1 ? `blur(${(1 - k) * 26}px)` : 'none'; }
+    else if (tr === 'zoom') { sc.el.style.transform = `scale(${1 + (1 - k) * .35})`; sc.el.style.opacity = k; }
+    else if (tr === 'sobe') { sc.el.style.transform = `translateY(${(1 - k) * H}px)`; }
+    else sc.el.style.opacity = 1;
+  }
+  capEl.style.top = capY(t) + 'px';
+  const cs = capScene(t);
+  capEl.style.display = cs && cs.s.legenda === false ? 'none' : 'block';
+  for (const g of groups) {
+    const on = t >= g.t0 && t < g.t1;
+    g.box.style.display = on ? 'inline' : 'none';
+    if (!on) continue;
+    const k = prog(t, g.t0, .16, 'outBack');
+    g.box.style.display = 'inline-block';
+    g.box.style.transform = `scale(${.8 + .2 * k})`;
+    if (LG.caixa) Object.assign(g.box.style, { background: 'rgba(12,12,14,.78)', padding: '.12em .38em', borderRadius: '.32em' });
+    g.spans.forEach((sp, i) => {
+      const w = g[i], active = t >= w.t0 - .03 && t < (g[i + 1] ? g[i + 1].t0 : g.t1);
+      sp.style.textShadow = shadow;
+      if (LG.caixa) { sp.style.textShadow = 'none'; sp.style.color = active ? (LG.destaque || C.destaque2) : '#fff'; }
+      else { sp.style.color = active ? (LG.destaque || C.destaque2) : (LG.cor || '#fff'); sp.style.transform = active ? 'scale(1.08)' : 'none'; }
+    });
+  }
+});
+</script></body></html>

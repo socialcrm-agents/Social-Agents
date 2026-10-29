@@ -1,0 +1,84 @@
+<!doctype html>
+<!-- CARD PRESO NA MÃO QUE PEGA FOGO (layer: front, bloco prioridade 5): card branco com o título acompanha a mão
+     (hand: true / follow "hand") e, no tempo marcado, queima de baixo para cima com borda incandescente e brasas.
+     params: title, sub, follow ("hand"), offset [dx, dy], x, y (0..1 sem mão), burn_at (s), burn_dur (s), width (px) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"></head>
+<body><canvas id="cv" style="position:absolute;inset:0"></canvas>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const cv = document.getElementById('cv'); cv.width = W; cv.height = H; const g = cv.getContext('2d');
+const cw = p.width || Math.round(W * 0.62), chh = Math.round(cw * 0.56);
+// card desenhado uma vez num canvas próprio
+const card = document.createElement('canvas'); card.width = cw; card.height = chh; const cg = card.getContext('2d');
+function drawCard() {
+  cg.fillStyle = '#fffdf9'; cg.beginPath(); cg.roundRect(0, 0, cw, chh, 34); cg.fill();
+  cg.fillStyle = '#141414'; cg.textAlign = 'center'; cg.textBaseline = 'middle';
+  const words = String(p.title || 'EDITOR DEMITIDO').toUpperCase().split(' ');
+  const lines = []; let cur = '';
+  cg.font = `${Math.round(cw * 0.13)}px Anton`;
+  for (const w of words) { const tr = (cur + ' ' + w).trim(); if (cg.measureText(tr).width > cw * 0.86 && cur) { lines.push(cur); cur = w; } else cur = tr; }
+  lines.push(cur);
+  const lh = cw * 0.145, y0 = chh / 2 - ((lines.length - 1) * lh) / 2 - (p.sub ? cw * 0.04 : 0);
+  lines.forEach((l, i) => cg.fillText(l, cw / 2, y0 + i * lh));
+  if (p.sub) { cg.font = `italic ${Math.round(cw * 0.06)}px "DM Serif Display"`; cg.fillStyle = '#6b6255'; cg.fillText(p.sub, cw / 2, y0 + lines.length * lh); }
+}
+motion.waitFor(document.fonts.load(`${Math.round(cw * 0.13)}px Anton`).then(() => document.fonts.load('italic 40px "DM Serif Display"')).then(drawCard));
+// ruído determinístico para a frente de queima
+const GW = 64, GH = 40, noise = new Float32Array(GW * GH); let s = 1234567;
+for (let i = 0; i < noise.length; i++) { s = (s * 16807) % 2147483647; noise[i] = s / 2147483647; }
+const smooth = (x, y) => { // ruído suave interpolado (x,y em 0..1)
+  const fx = x * (GW - 1), fy = y * (GH - 1), x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
+  const a = noise[y0 * GW + x0], b = noise[y0 * GW + Math.min(x0 + 1, GW - 1)], c = noise[Math.min(y0 + 1, GH - 1) * GW + x0], d = noise[Math.min(y0 + 1, GH - 1) * GW + Math.min(x0 + 1, GW - 1)];
+  return (a * (1 - tx) + b * tx) * (1 - ty) + (c * (1 - tx) + d * tx) * ty;
+};
+const burned = document.createElement('canvas'); burned.width = cw; burned.height = chh; const bg = burned.getContext('2d');
+const hand = p.hand || [];
+let last = null;
+function pos(t) {
+  const i = Math.min(hand.length - 1, Math.max(0, Math.round(t * motion.fps)));
+  const hp = p.follow === 'hand' && hand.length ? hand[i] : null;
+  const off = p.offset || [0, -0.16];
+  let q = hp ? [hp[0] + off[0], hp[1] + off[1]] : [p.x ?? 0.5, p.y ?? 0.3];
+  if (!hp && last) q = last; if (hp) last = q;
+  return [q[0] * W, q[1] * H];
+}
+const burnAt = p.burn_at ?? Math.max(D - 1.6, 0.5), burnDur = p.burn_dur ?? 1.2;
+motion.onFrame((t) => {
+  g.clearRect(0, 0, W, H);
+  const kin = motion.prog(t, 0, 0.4, 'outBack');
+  const prog = motion.prog(t, burnAt, burnDur, 'inQuad');          // 0 = inteiro, 1 = queimou
+  bg.clearRect(0, 0, cw, chh); bg.drawImage(card, 0, 0);
+  if (prog > 0) {
+    const img = bg.getImageData(0, 0, cw, chh), d = img.data;
+    for (let y = 0; y < chh; y += 1) for (let x = 0; x < cw; x += 1) {
+      const f = (1 - y / chh) * 0.55 + smooth(x / cw, y / chh) * 0.45;   // queima de baixo para cima, borda irregular
+      const edge = f - prog * 1.12;          // queima primeiro onde f é menor (embaixo), avança para cima
+      const o = (y * cw + x) * 4;
+      if (edge < 0) { d[o + 3] = 0; continue; }
+      if (edge < 0.05) { const k = edge / 0.05; d[o] = 255; d[o + 1] = 120 + 120 * k; d[o + 2] = 20 * k; }
+      else if (edge < 0.09) { const k = (edge - 0.05) / 0.04; d[o] = d[o] * k + 60 * (1 - k); d[o + 1] = d[o + 1] * k + 40 * (1 - k); d[o + 2] = d[o + 2] * k + 30 * (1 - k); }
+    }
+    bg.putImageData(img, 0, 0);
+  }
+  const [x, y] = pos(t);
+  const wob = Math.sin(t * 3) * 2;
+  g.save(); g.translate(x, y); g.rotate((-4 + wob) * Math.PI / 180); g.scale(kin, kin);
+  g.shadowColor = 'rgba(0,0,0,.35)'; g.shadowBlur = 40; g.shadowOffsetY = 18;
+  g.drawImage(burned, -cw / 2, -chh / 2); g.restore();
+  // brasas e brilho na frente de queima
+  if (prog > 0 && prog < 0.97) {
+    for (let i = 0; i < 70; i++) {
+      const sx = ((i * 97) % 100) / 100, life = ((t * 1.6 + i * 0.137) % 1);
+      const fy = chh * (1 - prog) - life * 260;
+      const ex = x - cw / 2 + sx * cw + Math.sin(i + t * 4) * 18, ey = y - chh / 2 + fy;
+      g.fillStyle = `rgba(255,${140 + (i % 5) * 20},40,${(1 - life) * 0.9})`;
+      g.beginPath(); g.arc(ex, ey, 3 + (i % 3) * 2, 0, Math.PI * 2); g.fill();
+    }
+    const gy = y - chh / 2 + chh * (1 - prog);
+    const grd = g.createLinearGradient(0, gy - 90, 0, gy + 30);
+    grd.addColorStop(0, 'rgba(255,140,30,0)'); grd.addColorStop(0.7, 'rgba(255,120,20,.35)'); grd.addColorStop(1, 'rgba(255,90,0,0)');
+    g.fillStyle = grd; g.fillRect(x - cw / 2 - 20, gy - 90, cw + 40, 120);
+  }
+});
+</script></body></html>

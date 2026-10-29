@@ -1,0 +1,48 @@
+{
+  "_doc": "Vozes prontas (offline, uso comercial permitido). 'motor': kokoro (Kokoro-82M, Apache-2.0) ou piper (vozes pt_BR do OHF-Voice, dataset CC0). Velocidade 1.0 = natural; anúncio costuma ficar melhor entre 1.05 e 1.15. Voz do próprio cliente: use {\"arquivo\": \"caminho/da/gravacao\"} no roteiro. Ouça as amostras em vozes/amostras/ antes de escolher.",
+  "padrao": "dora",
+  "vozes": {
+    "dora": {
+      "motor": "kokoro",
+      "id": 42,
+      "genero": "feminina",
+      "descricao": "feminina (Kokoro)",
+      "velocidade": 1.08
+    },
+    "alex": {
+      "motor": "kokoro",
+      "id": 43,
+      "genero": "masculina",
+      "descricao": "masculina (Kokoro)",
+      "velocidade": 1.08
+    },
+    "santa": {
+      "motor": "kokoro",
+      "id": 44,
+      "genero": "masculina",
+      "descricao": "masculina, outro timbre (Kokoro)",
+      "velocidade": 1.05
+    },
+    "faber": {
+      "motor": "piper",
+      "modelo": "vits-piper-pt_BR-faber-medium",
+      "genero": "masculina",
+      "descricao": "masculina (Piper, gera ~15x mais rápido)",
+      "velocidade": 1.0
+    },
+    "cadu": {
+      "motor": "piper",
+      "modelo": "vits-piper-pt_BR-cadu-medium",
+      "genero": "masculina",
+      "descricao": "masculina, outro timbre (Piper)",
+      "velocidade": 1.0
+    },
+    "jeff": {
+      "motor": "piper",
+      "modelo": "vits-piper-pt_BR-jeff-medium",
+      "genero": "masculina",
+      "descricao": "masculina, outro timbre (Piper)",
+      "velocidade": 1.0
+    }
+  }
+}

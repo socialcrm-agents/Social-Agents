@@ -1,0 +1,27 @@
+<!doctype html>
+<!-- LOTTIE (layer: front): toca uma animação Lottie (JSON exportado do After Effects ou baixado do LottieFiles)
+     no tempo exato do vídeo — ícones animados, setas, confete, checks, likes, "toque aqui", selos.
+     params: src (caminho do .json), x, y (0..1 do centro, default 0.5 / 0.42), tamanho (px de largura,
+             default 520), loop (true/false, default true), velocidade (default 1), sombra (true/false) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #anim { position: absolute; will-change: transform, opacity; }
+  #anim.sombra { filter: drop-shadow(0 16px 26px rgba(0,0,0,.45)); }
+</style></head>
+<body><div id="anim"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const el = document.getElementById('anim');
+const lado = p.tamanho || 520;
+el.style.width = el.style.height = lado + 'px';
+el.style.left = `${(p.x ?? 0.5) * W - lado / 2}px`;
+el.style.top = `${(p.y ?? 0.42) * H - lado / 2}px`;
+if (p.sombra !== false) el.classList.add('sombra');
+if (p.src) motion.lottie(el, p.src, { loop: p.loop !== false, speed: p.velocidade || 1 });
+motion.onFrame((t) => {
+  const k = motion.pop(t, 0, 0.45, 0.35), x = motion.exitK(t, D, 0.25);
+  el.style.opacity = Math.min(1, k * 2) * (1 - x);
+  el.style.transform = `scale(${(0.6 + 0.4 * k) * (1 - 0.15 * x)})`;
+});
+</script></body></html>

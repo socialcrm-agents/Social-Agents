@@ -1,0 +1,155 @@
+<!doctype html>
+<!-- CENA 3D (layer: front ou full, webgl): carrega um MODELO 3D completo (.glb/.gltf — Sketchfab, Poly Pizza,
+     Blender, o produto do cliente) e faz um plano de cinema com ele: as animações do próprio modelo tocando,
+     câmera que passeia, luz de estúdio com sombra no chão e, se pedido, a "vista explodida" — o modelo se
+     SEPARA EM BLOCOS (cada peça sai do centro e volta montando), como nos vídeos de produto da Apple.
+     params: modelo (caminho do .glb; padrão: /modelos/LittlestTokyo.glb, CC-BY 4.0 Glen Fox),
+             camera "orbita" (gira em volta, padrão) | "dolly" (empurra para perto) | "voo" (desce girando) |
+             "frente" (parada, leve respiração),
+             explodir (true/false), explodir_at (s, padrão 0.6), explodir_dist (0..2, padrão 0.55),
+             animacao (true/false: toca os clipes do modelo), velocidade (das animações, padrão 1),
+             fundo "transparente" (padrão em front) | "#hex" | "estudio" (degradê escuro),
+             y (0..1 do centro, padrão 0.45), tamanho (fração da altura, padrão 0.75), rotacao (graus iniciais),
+             sombra (true/false, padrão true), exposicao (padrão 1.0) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<script type="importmap">{"imports": {"three": "/vendor/three/three.module.min.js"}}</script>
+<style>canvas { position: absolute; inset: 0; width: 100% !important; height: 100% !important; }</style></head>
+<body>
+<script type="module">
+import * as THREE from 'three';
+import motion from '/lib/runtime.js';
+import { GLTFLoader } from '/vendor/three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from '/vendor/three/addons/loaders/DRACOLoader.js';
+import { RoomEnvironment } from '/vendor/three/addons/RoomEnvironment.js';
+
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = p.exposicao ?? 1.0;
+renderer.shadowMap.enabled = p.sombra !== false;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+document.body.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const fundo = p.fundo || 'transparente';
+if (fundo === 'estudio') {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, '#2b2f3a'); gr.addColorStop(1, '#0b0c10'); g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  scene.background = new THREE.CanvasTexture(c); scene.background.colorSpace = THREE.SRGBColorSpace;
+} else if (fundo !== 'transparente') {
+  scene.background = new THREE.Color(fundo);
+} else {
+  renderer.setClearColor(0x000000, 0);
+}
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const cam = new THREE.PerspectiveCamera(32, W / H, 0.01, 1000);
+
+// luz de estúdio: principal com sombra macia + contra-luz de recorte
+const key = new THREE.DirectionalLight(0xffffff, 2.4);
+key.position.set(3, 6, 4);
+key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048);
+key.shadow.bias = -0.0004;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xbfd4ff, 1.4);
+rim.position.set(-4, 3, -5);
+scene.add(rim);
+
+let modelo = null, mixer = null, pecas = [], explosao = 0;
+const chao = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShadowMaterial({ opacity: 0.32 }));
+chao.rotation.x = -Math.PI / 2;
+chao.receiveShadow = true;
+
+const draco = new DRACOLoader();
+draco.setDecoderPath('/vendor/three/addons/libs/draco/gltf/');
+const loader = new GLTFLoader();
+loader.setDRACOLoader(draco);
+const url = p.modelo || '/modelos/LittlestTokyo.glb';
+
+motion.waitFor(new Promise((ok, erro) => loader.load(url, (gltf) => {
+  modelo = gltf.scene;
+  modelo.updateMatrixWorld(true);   // as matrizes dos filhos precisam existir antes de medir a caixa
+  // centraliza e normaliza o tamanho (raio da esfera envolvente = 1)
+  const caixa = new THREE.Box3().setFromObject(modelo);
+  const esfera = caixa.getBoundingSphere(new THREE.Sphere());
+  const s = 1 / Math.max(esfera.radius, 1e-6);
+  modelo.scale.setScalar(s);
+  modelo.position.sub(esfera.center.multiplyScalar(s));
+  const pivo = new THREE.Group();
+  pivo.add(modelo);
+  pivo.rotation.y = THREE.MathUtils.degToRad(p.rotacao ?? 25);
+  scene.add(pivo);
+  modelo.updateMatrixWorld(true);
+  const caixa2 = new THREE.Box3().setFromObject(modelo);
+  chao.scale.set(8, 8, 1);
+  chao.position.y = caixa2.min.y - 0.001;
+  if (p.sombra !== false) scene.add(chao);
+  modelo.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  key.shadow.camera.left = key.shadow.camera.bottom = -1.6;
+  key.shadow.camera.right = key.shadow.camera.top = 1.6;
+  key.target = pivo;
+  // animações do próprio modelo
+  if (gltf.animations.length && p.animacao !== false) {
+    mixer = new THREE.AnimationMixer(modelo);
+    gltf.animations.forEach((a) => mixer.clipAction(a).play());
+  }
+  // blocos para a vista explodida: os filhos com malha, cada um com sua direção a partir do centro
+  if (p.explodir) {
+    const candidatos = [];
+    modelo.traverse((o) => { if (o.isMesh) candidatos.push(o); });
+    const c0 = caixa2.getCenter(new THREE.Vector3());
+    pecas = candidatos.map((o, i) => {
+      const cw = new THREE.Box3().setFromObject(o).getCenter(new THREE.Vector3());
+      const dir = cw.sub(c0);
+      if (dir.length() < 1e-4) dir.set(Math.sin(i * 2.4), 0.6, Math.cos(i * 2.4));
+      dir.normalize();
+      const inv = new THREE.Matrix4().copy(o.parent.matrixWorld).invert();
+      const local = dir.clone().transformDirection(inv).multiplyScalar(1 / o.parent.getWorldScale(new THREE.Vector3()).x);
+      return { o, base: o.position.clone(), dir: local, atraso: (i % 12) * 0.035 };
+    });
+  }
+  ok();
+}, undefined, (e) => erro(new Error('modelo 3D não carregou: ' + (e?.message || e))))));
+
+function poseCamera(t) {
+  const modo = p.camera || 'orbita', k = t / Math.max(D, 0.1);
+  const fit = 1 / Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) / (p.tamanho ?? 0.75) * 0.95
+    * (1 + 0.45 * explosao);   // na vista explodida a câmera recua para os blocos caberem
+  let dist = fit, ang = 0, alt = 0.35;
+  if (modo === 'orbita') { ang = -0.6 + 1.2 * k; alt = 0.32; }
+  else if (modo === 'dolly') { dist = fit * (1.25 - 0.35 * motion.ease.inOutCubic(k)); ang = 0.15 * k; }
+  else if (modo === 'voo') { ang = -1.4 + 1.6 * motion.ease.outCubic(k); alt = 1.1 - 0.75 * motion.ease.outCubic(k); dist = fit * (1.3 - 0.3 * k); }
+  else { alt = 0.25 + 0.02 * Math.sin(t * 1.3); ang = 0.04 * Math.sin(t * 0.8); }
+  cam.position.set(Math.sin(ang) * dist, alt * dist, Math.cos(ang) * dist);
+  // y na tela: desloca o alvo para o modelo ficar na altura pedida
+  const y = p.y ?? 0.45, desloc = (y - 0.5) * 2 * Math.tan(THREE.MathUtils.degToRad(cam.fov / 2)) * dist;
+  cam.lookAt(0, desloc, 0);
+}
+
+motion.onFrame((t) => {
+  if (!modelo) return;
+  if (mixer) mixer.setTime(t * (p.velocidade ?? 1));
+  explosao = 0;
+  if (pecas.length) {
+    const t0 = p.explodir_at ?? 0.6, dist = p.explodir_dist ?? 0.55;
+    const meio = Math.max(D - t0 - 0.9, 0.6) / 2;
+    for (const pc of pecas) {
+      const ida = motion.spring(t, t0 + pc.atraso, { dur: 0.9, bounce: 0.15 });
+      const volta = motion.spring(t, t0 + meio + 0.6 + pc.atraso, { dur: 0.8, bounce: 0.2 });
+      const k = Math.max(0, ida - volta);
+      pc.o.position.copy(pc.base).addScaledVector(pc.dir, k * dist);
+      explosao = Math.max(explosao, k);
+    }
+  }
+  poseCamera(t);
+  const entra = motion.spring(t, 0, { dur: 0.8, bounce: 0.18 }), sai = motion.exitK(t, D, 0.3);
+  // fundo próprio (layer full): sem transparência no canvas (revelaria a página); só a escala de entrada
+  renderer.domElement.style.opacity = fundo === 'transparente' ? Math.min(1, entra * 1.5) * (1 - sai) : 1;
+  renderer.domElement.style.transform = fundo === 'transparente' ? `scale(${0.92 + 0.08 * entra})` : 'none';
+  renderer.render(scene, cam);
+});
+</script></body></html>

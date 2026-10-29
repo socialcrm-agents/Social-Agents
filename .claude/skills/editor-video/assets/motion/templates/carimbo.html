@@ -1,0 +1,45 @@
+<!doctype html>
+<!-- CARIMBO (layer: front): bate na tela vindo de cima (escala grande, desfoque de movimento), crava com tremida,
+     onda de impacto e textura de tinta; respira de leve e sai desfocando (ex.: "EDITOR DEMITIDO", "PROMOÇÃO").
+     params: text, color (#E63B2E), x, y (0..1), size (px), rot (graus), at (s) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #s { position: absolute; font-family: 'Anton'; letter-spacing: 4px; text-transform: uppercase; white-space: nowrap;
+       border: 10px solid currentColor; border-radius: 22px; padding: 8px 40px 12px; line-height: 1.05;
+       background: color-mix(in srgb, currentColor 10%, rgba(255,255,255,.14));
+       box-shadow: 0 20px 50px rgba(0,0,0,.30), inset 0 0 0 4px rgba(255,255,255,.35);
+       -webkit-mask-image: radial-gradient(circle at 30% 40%, #000 60%, rgba(0,0,0,.82) 61%, #000 62%),
+                           repeating-linear-gradient(80deg, #000 0 7px, rgba(0,0,0,.86) 7px 9px);
+       -webkit-mask-composite: source-in; mask-composite: intersect; }
+  #w { position: absolute; border-radius: 30px; border: 6px solid currentColor; }
+</style></head>
+<body><div id="w"></div><div id="s"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const s = document.getElementById('s'), wave = document.getElementById('w');
+const color = p.color || '#E63B2E';
+s.style.color = color; wave.style.color = color;
+s.textContent = p.text || 'FEITO';
+s.style.fontSize = (p.size || 120) + 'px';
+const at = p.at ?? 0.05, rot = p.rot ?? -8;
+motion.onFrame((t) => {
+  const x = (p.x ?? 0.5) * W, y = (p.y ?? 0.32) * H;
+  const fall = motion.ease.inQuad(motion.clamp((t - at) / 0.2));                  // cai acelerando
+  const settle = motion.spring(t, at + 0.2, { dur: 0.35, bounce: 0.5 });           // e crava com mola
+  const sc = t < at + 0.2 ? motion.lerp(2.8, 0.94, fall) : 0.94 + 0.06 * settle;
+  const sh = motion.shake(t, at + 0.2, 12, 0.28);
+  const out = motion.exitK(t, D, 0.3);
+  const blur = (t < at + 0.2 ? (1 - fall) * 10 : 0) + out * 12;
+  s.style.opacity = t >= at ? Math.min(1, fall * 2) * (1 - out) : 0;
+  s.style.left = x + 'px'; s.style.top = y + 'px';
+  s.style.transform = `translate(-50%, -50%) translate(${sh}px, ${sh * 0.4}px) rotate(${rot + motion.float(t, 0.6, 3)}deg) scale(${sc * (1 + 0.05 * out)})`;
+  s.style.filter = blur > 0.3 ? `blur(${blur}px)` : 'none';
+  // onda de impacto ao cravar
+  const r = s.getBoundingClientRect(), wk = motion.prog(t, at + 0.2, 0.5, 'outCubic');
+  wave.style.left = (x - r.width / 2) + 'px'; wave.style.top = (y - r.height / 2) + 'px';
+  wave.style.width = r.width + 'px'; wave.style.height = r.height + 'px';
+  wave.style.opacity = t >= at + 0.2 ? (1 - wk) * 0.6 : 0;
+  wave.style.transform = `rotate(${rot}deg) scale(${1 + wk * 0.35})`;
+});
+</script></body></html>

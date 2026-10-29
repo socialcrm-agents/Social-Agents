@@ -1,0 +1,22 @@
+{
+ "agente": "art-director",
+ "cenas": [
+  {
+   "cena": "c4",
+   "t0": 13.2,
+   "t1": 14.9,
+   "acoes": [
+    {
+     "tipo": "patch",
+     "comando": [
+      "--patch",
+      "m5.params.text=VICIANTE."
+     ],
+     "alvo_id": "m5",
+     "justificativa": "palavra mais forte que 'gostoso' e cabe na tela",
+     "suportado": true
+    }
+   ]
+  }
+ ]
+}

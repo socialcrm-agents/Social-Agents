@@ -1,0 +1,115 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "creative/brief.schema.json",
+ "title": "Brief do criativo",
+ "type": "object",
+ "required": [
+  "projeto",
+  "objetivo",
+  "plataforma",
+  "formato",
+  "ja_editado",
+  "nivel"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "projeto": {
+   "type": "string",
+   "description": "pasta do projeto do editor-video"
+  },
+  "clipes": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "objetivo": {
+   "enum": [
+    "venda",
+    "lead",
+    "comentario",
+    "seguidor",
+    "clique",
+    "vsl",
+    "autoridade"
+   ]
+  },
+  "plataforma": {
+   "type": "array",
+   "items": {
+    "enum": [
+     "reels",
+     "tiktok",
+     "shorts",
+     "youtube",
+     "feed",
+     "vsl_pagina"
+    ]
+   },
+   "minItems": 1
+  },
+  "formato": {
+   "enum": [
+    "9:16",
+    "16:9",
+    "1:1",
+    "4:5"
+   ]
+  },
+  "tipo": {
+   "enum": [
+    "anuncio",
+    "vs",
+    "conversa",
+    "pergunta_na_tela",
+    "identificacao",
+    "produto",
+    "vsl",
+    "aula",
+    "depoimento",
+    "outro"
+   ]
+  },
+  "publico": {
+   "type": "string"
+  },
+  "oferta": {
+   "type": "string"
+  },
+  "cta": {
+   "type": "string"
+  },
+  "ja_editado": {
+   "type": "boolean",
+   "description": "cortado no CapCut: usar --sem-cortes"
+  },
+  "pode_trocar_fundo": {
+   "type": "boolean"
+  },
+  "nivel": {
+   "enum": [
+    "rapido",
+    "padrao",
+    "maximo"
+   ]
+  },
+  "marca": {
+   "type": [
+    "string",
+    "null"
+   ]
+  },
+  "restricoes": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  },
+  "referencias": {
+   "type": "array",
+   "items": {
+    "type": "string"
+   }
+  }
+ }
+}

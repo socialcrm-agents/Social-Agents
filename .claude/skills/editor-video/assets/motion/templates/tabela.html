@@ -1,0 +1,54 @@
+<!doctype html>
+<!-- TABELA DE 2 COLUNAS (layer: front ou full): comparação lado a lado (ex.: "o que todo mundo faz" x "o que eu faço"),
+     linhas entrando no tempo da fala (cascata com mola), lado esquerdo esmaece e é riscado, lado direito ganha check
+     e brilho; a coluna vencedora tem destaque em degradê. params: left, right (títulos), rows: [{l, r, at}], accent,
+     mode ("card"|"full"), y -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #c { position: absolute; left: 50%; width: 940px; margin-left: -470px; border-radius: 40px; overflow: hidden; padding: 0; }
+  .row { position: relative; display: grid; grid-template-columns: 1fr 1fr; }
+  .row > div { position: relative; padding: 24px 30px; font-size: 38px; font-weight: 800; line-height: 1.15; display: flex; align-items: center; gap: 14px; }
+  .row + .row > div { border-top: 1.5px solid #ECE8F5; }
+  .head > div { font-weight: 900; font-size: 40px; letter-spacing: .06em; text-transform: uppercase; padding: 26px 30px; }
+  .head .hl { color: #8D88A3; background: #F4F2FA; }
+  .l { color: #9A95AD; }
+  .l .x { position: absolute; left: 24px; right: 24px; top: 52%; height: 5px; border-radius: 3px; background: #F43F5E; transform-origin: left; }
+  .r { color: var(--ink); }
+  .r .ck { flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; }
+  .r .ck svg { width: 28px; height: 28px; stroke: #fff; stroke-width: 3.4; }
+</style></head>
+<body><div id="bgw"></div><div id="c" class="ds-card"><div class="row head"><div id="hl" class="hl"></div><div id="hr"></div></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, H = motion.h, D = motion.duration;
+const accent = p.accent || '#7C5CFF';
+if (p.mode === 'full') document.getElementById('bgw').outerHTML = '<div class="warm-bg"></div><div class="blinds"></div>';
+document.getElementById('hl').textContent = p.left || 'Todo mundo';
+const hr = document.getElementById('hr');
+hr.textContent = p.right || 'Eu';
+hr.style.background = `linear-gradient(135deg, ${accent}, color-mix(in srgb, ${accent} 55%, #EC4899))`; hr.style.color = '#fff';
+const c = document.getElementById('c');
+let check = '';
+motion.waitFor(motion.icon('check').then((s) => (check = s)));
+const rows = (p.rows || [{ l: 'Curso de 12 módulos', r: 'Produto pronto em 24h' }]).map((r, i) => {
+  const el = document.createElement('div'); el.className = 'row';
+  el.innerHTML = `<div class="l"><span></span><i class="x"></i></div><div class="r" style="background:color-mix(in srgb, ${accent} 7%, #fff)"><b class="ck" style="background:${accent}"></b><span></span></div>`;
+  el.querySelector('.l span').textContent = r.l; el.querySelector('.r span').textContent = r.r;
+  c.appendChild(el);
+  return { el, l: el.querySelector('.l'), x: el.querySelector('.x'), r: el.querySelector('.r'), ck: el.querySelector('.ck'),
+           at: typeof r.at === 'number' ? r.at : 0.5 + i * 0.8 };
+});
+motion.onFrame((t) => {
+  c.style.top = (p.y ?? H * 0.2) + 'px';
+  motion.appear(c, t, 0, { from: 'down', dist: 70, scale0: 0.9, dur: 0.6, bounce: 0.24, t1: D, float: 3 });
+  for (const r of rows) {
+    if (!r.ck.innerHTML && check) r.ck.innerHTML = check;
+    motion.appear(r.l, t, r.at, { from: 'left', dist: 40, dur: 0.45, bounce: 0.2, out: 0, blur: 8 });
+    motion.appear(r.r, t, r.at + 0.12, { from: 'right', dist: 50, dur: 0.5, bounce: 0.3, out: 0, blur: 10 });
+    const sx = motion.prog(t, r.at + 0.3, 0.3, 'outCubic');
+    r.x.style.transform = `scaleX(${sx})`;
+    r.l.querySelector('span').style.opacity = 1 - 0.35 * sx;
+    r.ck.style.transform = `scale(${motion.pop(t, r.at + 0.3, 0.4, 0.55)})`;
+  }
+});
+</script></body></html>

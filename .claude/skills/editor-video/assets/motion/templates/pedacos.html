@@ -1,0 +1,53 @@
+<!doctype html>
+<!-- PEDAÇOS DO VÍDEO SOBRE A CABEÇA (layer: front, bloco prioridade 4): recortes do próprio vídeo sobem da cabeça
+     e giram num arco 3D acima dela. O render preenche params.head (posição da cabeça) e params.items (quadros do
+     vídeo) automaticamente; dá para passar items próprios (image/video). params: count, speed, tilt -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #scene { position: absolute; inset: 0; perspective: 1900px; }
+  #ring { position: absolute; transform-style: preserve-3d; }
+  .card { position: absolute; border-radius: 22px; overflow: hidden; border: 6px solid #fff; background: #000;
+          box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+  .card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+</style></head>
+<body><div id="scene"><div id="ring"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const head = p.head || { x: 0.5, top: 0.3 };
+const items = p.items && p.items.length ? p.items : [];
+const n = Math.max(p.count || items.length || 6, 4);
+const cw = Math.round(W * 0.27), ch = Math.round(cw * 16 / 9 * 0.8);
+const ring = document.getElementById('ring');
+const cards = [];
+for (let i = 0; i < n; i++) {
+  const it = items[i % Math.max(items.length, 1)] || {};
+  const el = document.createElement('div'); el.className = 'card';
+  el.style.cssText += `width:${cw}px;height:${ch}px;left:${-cw / 2}px;top:${-ch / 2}px`;
+  const img = document.createElement('img'); el.appendChild(img); ring.appendChild(el);
+  if (it.image) motion.waitFor(new Promise((r) => { img.onload = r; img.onerror = r; img.src = it.image; }));
+  cards.push({ el, img, it, i });
+}
+motion.onFrame(async (t) => {
+  const hx = head.x * W, hy = head.top * H;
+  const r = W * 0.36;
+  ring.style.left = hx + 'px';
+  ring.style.top = Math.max(hy - ch * 0.55, ch * 0.7 + H * 0.05) + "px";
+  ring.style.transform = `rotateX(${p.tilt ?? 14}deg) rotateY(${-(p.speed ?? 40) * t}deg)`;
+  const jobs = [];
+  for (const c of cards) {
+    const delay = c.i * 0.12;
+    const k = motion.prog(t, delay, 0.7, 'outBack');               // sobe saindo da cabeça
+    const kout = motion.prog(t, D - 0.45, 0.45, 'inQuad');
+    const lift = (1 - k) * (ch * 0.9) + kout * -200;
+    c.el.style.transform = `rotateY(${(360 / n) * c.i}deg) translateZ(${r * k}px) translateY(${lift}px) scale(${0.3 + 0.7 * k})`;
+    c.el.style.opacity = Math.min(1, k * 2) * (1 - kout);
+    if (c.it.frames) {
+      const idx = Math.min(c.it.count - 1, Math.floor(t * motion.fps)) + 1;
+      const src = c.it.frames.replace('%05d', String(idx).padStart(5, '0'));
+      if (c.img.dataset.src !== src) { c.img.dataset.src = src; c.img.src = src; jobs.push(c.img.decode().catch(() => {})); }
+    }
+  }
+  await Promise.all(jobs);
+});
+</script></body></html>

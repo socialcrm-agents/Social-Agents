@@ -1,0 +1,55 @@
+{
+ "pedido": "plano aprovado do Creative Studio",
+ "operacoes": [
+  {
+   "comando": [
+    "--motion",
+    "{\"template\":\"objeto3d\",\"at\":\"dá uma olhadinha\",\"until\":\"um chiclete\",\"layer\":\"front\",\"id\":\"m8\",\"params\":{\"text\":\"MENTOS\",\"color\":\"#B794FF\",\"follow\":\"hand\",\"size\":0.8}}"
+   ],
+   "motivo": "art-director c3: Buraco de 11,98 a 13,26 s sem herói em 'dá uma olhadinha, um chiclete' = gatilho produto na mão (receita Produto: objeto3d seguindo a mão); troca a cada 2-3 s (D09)."
+  },
+  {
+   "comando": [
+    "--patch-remove",
+    "g_cta"
+   ],
+   "motivo": "art-director c4: card CTA em cima de GOSTOSO (m5): dois heróis; o botao_cta m7 já é o CTA forte dos últimos 3 s (D07)",
+   "alvo_id": "g_cta"
+  }
+ ],
+ "dry_run": {
+  "resumo": "Resumo: plano 0 HIT/6 MISS | mascara 0 HIT/6 MISS | motion 0 HIT/8 MISS | trecho 0 HIT/5 MISS | audio 0 HIT/1 MISS",
+  "miss": [
+   "plano:sc1_0",
+   "plano:sc1_2710",
+   "plano:sc1_5430",
+   "plano:sc1_8230",
+   "plano:sc1_11270",
+   "plano:sc1_14150",
+   "mascara:sc1_0",
+   "mascara:sc1_2710",
+   "mascara:sc1_5430",
+   "mascara:sc1_8230",
+   "mascara:sc1_11270",
+   "mascara:sc1_14150",
+   "motion:m1:manchete",
+   "motion:m2:maos",
+   "motion:m8:objeto3d",
+   "motion:m3:infografico",
+   "motion:m4:carimbo",
+   "motion:m5:palavra",
+   "motion:m6:checklist",
+   "motion:m7:botao_cta",
+   "trecho:000.0-004.0",
+   "trecho:004.0-008.0",
+   "trecho:008.0-012.0",
+   "trecho:012.0-016.0",
+   "trecho:016.0-017.4"
+  ],
+  "hit": 0
+ },
+ "preset": "draft",
+ "rollback_para": null,
+ "conflita_com_aprovadas": [],
+ "observacoes": "NAO APLICADO (parei na previa). 1) Ancora errada: 'dá uma olhadinha' é falado 2x (4,63 s e 12,08 s); plan.py pega a 1a ocorrencia e o dry-run poe m8 em 4,5-13,1 s (c1-c3, por cima de m2/m3/m4), fora da janela aprovada 11,98-13,26 s. Correcao testada em dry-run: at='dá uma olhadinha, um' (unica, 12,08 s) -> m8 em 12,0-13,1 s; mesma intencao do art-director, precisa reaprovar o aprovado.json. 2) MISS fora do plano (m1:manchete, trecho 000-004) e 0 HIT geral: projeto nunca renderizado (sem versions/ nem cache), todo componente e MISS; nao e efeito do plano. 3) g_cta: --patch-remove resolve (graphics so tem g_cta). plan.py e timeline nao rodados/conferidos porque nada foi aplicado; timeline.json atual sem m8 e com g_cta."
+}

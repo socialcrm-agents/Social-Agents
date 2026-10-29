@@ -1,0 +1,129 @@
+<!doctype html>
+<!-- HUD DE VISÃO COMPUTACIONAL (layer: front): colchetes de foco e caixa que SEGUEM O ROSTO quadro a quadro, com
+     etiquetas ("EDITOR  <NOME>", "ROSTO 0,94", "OLHOS", "BOCA"), linha de varredura e contadores no alto.
+     modo "zoom": caixa maior no rosto + chip "ZOOM · ÂNCORA: ROSTO" com o número subindo (1,00x -> 1,38x · AUTOMÁTICO).
+     params: rosto (o editor preenche por quadro), modo ("rosto" | "zoom"), nome ("ANDRÉ"), rotulo ("EDITOR"),
+             titulo ("VISÃO COMPUTACIONAL"), contador ("OBJETOS" + numero 05), zoom_de (1.0), zoom_para (1.38),
+             confianca (0.94), olhos/boca (true), topo (true: faixa de status no alto), accent -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  body { font-family: 'Poppins'; }
+  .mono { font-weight: 700; letter-spacing: 4px; text-transform: uppercase; }
+  .chip { position: absolute; padding: 8px 16px; border-radius: 8px; background: rgba(14,10,26,.82);
+          border: 2px solid rgba(201,178,255,.55); color: #fff; white-space: nowrap; }
+  .tag { position: absolute; padding: 5px 12px; border-radius: 6px; font-size: 22px; color: #1a1030;
+         background: #E9DDFF; white-space: nowrap; font-weight: 800; letter-spacing: 3px; }
+  .c { position: absolute; width: 56px; height: 56px; border-style: solid; border-width: 0; border-color: #fff; }
+  svg { position: absolute; inset: 0; }
+  #scan { position: absolute; height: 120px; pointer-events: none;
+          background: linear-gradient(180deg, rgba(183,148,255,0) 0%, rgba(183,148,255,.55) 92%, rgba(255,255,255,.95) 100%); }
+  #bar { position: absolute; left: 70px; right: 150px; top: 230px; height: 64px; display: flex; justify-content: space-between; }
+  #zoomnum { font-weight: 900; font-size: 64px; line-height: 1; letter-spacing: 0; }
+  #slider { position: relative; height: 8px; width: 210px; border-radius: 4px; background: rgba(255,255,255,.25); margin-top: 10px; }
+  #slider i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; }
+</style></head>
+<body>
+<svg id="lines" width="1080" height="1920"></svg>
+<div id="scan"></div>
+<div class="c" id="tl"></div><div class="c" id="tr"></div><div class="c" id="bl"></div><div class="c" id="br"></div>
+<div id="nome" class="chip"></div><div id="conf" class="tag"></div>
+<div id="olhos" class="tag">OLHOS</div><div id="boca" class="tag">BOCA</div>
+<div id="bar"><div id="esq" class="chip mono" style="position:relative;font-size:22px"></div>
+  <div id="dir" class="chip mono" style="position:relative;font-size:22px;text-align:right"></div></div>
+<div id="zoom" class="chip"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration, fps = motion.fps;
+const accent = p.accent || '#B794FF';
+const zoomMode = p.modo === 'zoom';
+const $ = (id) => document.getElementById(id);
+const C = { tl: $('tl'), tr: $('tr'), bl: $('bl'), br: $('br') };
+const bw = zoomMode ? 7 : 5;
+C.tl.style.borderWidth = `${bw}px 0 0 ${bw}px`; C.tr.style.borderWidth = `${bw}px ${bw}px 0 0`;
+C.bl.style.borderWidth = `0 0 ${bw}px ${bw}px`; C.br.style.borderWidth = `0 ${bw}px ${bw}px 0`;
+if (zoomMode) Object.values(C).forEach((c) => { c.style.borderColor = accent; c.style.width = c.style.height = '80px'; });
+$('nome').innerHTML = `<span class="mono" style="font-size:22px;opacity:.75">${p.rotulo || 'EDITOR'}</span>`
+  + `&nbsp;&nbsp;<b style="font-size:44px;letter-spacing:1px">${(p.nome || 'VOCÊ').toUpperCase()}</b>`;
+const conf = (p.confianca ?? 0.94).toFixed(2).replace('.', ',');
+$('conf').textContent = `ROSTO ${conf}`;
+if (zoomMode || p.olhos === false) $('olhos').style.display = 'none';
+if (zoomMode || p.boca === false) $('boca').style.display = 'none';
+if (zoomMode) $('nome').style.display = 'none';
+const showTop = p.topo !== false;
+$('bar').style.display = showTop ? 'flex' : 'none';
+const z0 = p.zoom_de ?? 1.0, z1 = p.zoom_para ?? 1.38;
+const zoom = $('zoom');
+zoom.style.display = zoomMode ? 'block' : 'none';
+zoom.style.left = '70px'; zoom.style.top = '440px';  // abaixo da faixa do alto e do CTA, quando ele sobe zoom.style.padding = '14px 22px';
+zoom.innerHTML = `<div class="mono" style="font-size:20px;opacity:.8">● ZOOM · ÂNCORA: ROSTO</div>
+  <div style="display:flex;align-items:flex-end;gap:18px;margin-top:8px"><div id="zoomnum"></div>
+  <div><div id="slider"><i id="sl"></i></div><div class="mono" style="font-size:16px;opacity:.7;margin-top:8px">AUTOMÁTICO</div></div></div>`;
+document.getElementById('sl').style.background = accent;
+const svg = $('lines');
+svg.innerHTML = `<path id="lo" fill="none" stroke="#E9DDFF" stroke-width="3"/><path id="lb" fill="none" stroke="#E9DDFF" stroke-width="3"/>
+  <circle id="po" r="7" fill="#E9DDFF"/><circle id="pb" r="7" fill="#E9DDFF"/>`;
+const rosto = p.rosto || [];
+// sem detecção num quadro, usa o último rosto visto; se nunca houver rosto, uma caixa central padrão
+const fallback = [0.3, 0.22, 0.7, 0.45, 0.42, 0.3, 0.58, 0.3, 0.5, 0.4];
+const faceAt = (i) => { for (let k = Math.min(i, rosto.length - 1); k >= 0; k--) if (rosto[k]) return rosto[k];
+  return rosto.find((r) => r) || fallback; };
+const fmt = (n) => String(n).padStart(4, '0');
+motion.onFrame((t) => {
+  const i = Math.round(t * fps);
+  const f = faceAt(i);
+  const k = motion.inOut(t, 0, D, 0.3, 0.25, 'outCubic');
+  // caixa do rosto (um pouco maior que a detecção, que corta testa e queixo)
+  let [x0, y0, x1, y1] = [f[0] * W, f[1] * H, f[2] * W, f[3] * H];
+  const fw = x1 - x0, fh = y1 - y0, big = fw > W * 0.45;  // close: rosto já ocupa o quadro, a caixa não cresce
+  const padX = fw * (big ? 0.04 : zoomMode ? 0.42 : 0.2), padY = fh * (big ? 0.08 : zoomMode ? 0.55 : 0.28);
+  x0 -= padX; x1 += padX; y0 -= padY * 1.2; y1 += padY * 0.9;
+  // a caixa nunca sai da zona segura (embaixo da faixa do alto, acima da interface do app)
+  x0 = Math.max(x0, 80); x1 = Math.min(x1, W - 160); y0 = Math.max(y0, 400); y1 = Math.min(y1, H - 470);
+  const grow = (1 - k) * 60;
+  const put = (el, x, y) => { el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.opacity = k; };
+  const cs = zoomMode ? 80 : 56;
+  put(C.tl, x0 - grow, y0 - grow); put(C.tr, x1 - cs + grow, y0 - grow);
+  put(C.bl, x0 - grow, y1 - cs + grow); put(C.br, x1 - cs + grow, y1 - cs + grow);
+  const nome = $('nome');
+  nome.style.left = Math.min(Math.max((x0 + x1) / 2 - nome.offsetWidth / 2, 80), W - 160 - nome.offsetWidth) + 'px';
+  nome.style.top = Math.max(y0 - 100, 320) + 'px';
+  nome.style.opacity = motion.inOut(t, 0.25, D, 0.3, 0.25);
+  const c = $('conf');
+  c.style.left = Math.min(x1 - 10, W - 160 - c.offsetWidth) + 'px'; c.style.top = (y0 + 20) + 'px';
+  c.style.opacity = motion.inOut(t, 0.35, D, 0.3, 0.25);
+  // olhos e boca: etiqueta ligada ao ponto por uma linha
+  const eye = [(f[4] + f[6]) / 2 * W, (f[5] + f[7]) / 2 * H], eyeL = [Math.min(f[4], f[6]) * W, (f[5] + f[7]) / 2 * H];
+  const mouth = [f[8] * W, f[9] * H];
+  const ol = $('olhos'), bo = $('boca');
+  const ox = Math.max(x0 - 150, 80), oy = eye[1] - 20, bx = Math.min(x1 + 30, W - 160 - bo.offsetWidth), by = mouth[1] + 10;
+  ol.style.left = ox + 'px'; ol.style.top = oy + 'px'; bo.style.left = bx + 'px'; bo.style.top = by + 'px';
+  const ko = motion.inOut(t, 0.5, D, 0.3, 0.25), kb = motion.inOut(t, 0.65, D, 0.3, 0.25);
+  ol.style.opacity = ko; bo.style.opacity = kb;
+  const show = !zoomMode;
+  $('lo').setAttribute('d', show ? `M ${ox + 115} ${oy + 18} L ${eyeL[0] - 6} ${eyeL[1]}` : '');
+  $('lb').setAttribute('d', show ? `M ${bx} ${by + 18} L ${mouth[0] + 30} ${mouth[1]}` : '');
+  $('lo').style.opacity = ko; $('lb').style.opacity = kb;
+  $('po').setAttribute('cx', eyeL[0] - 6); $('po').setAttribute('cy', eyeL[1]); $('po').style.opacity = show ? ko : 0;
+  $('pb').setAttribute('cx', mouth[0] + 30); $('pb').setAttribute('cy', mouth[1]); $('pb').style.opacity = show ? kb : 0;
+  // varredura: uma passada de cima para baixo no começo
+  const s = motion.prog(t, 0.15, 0.9, 'inOutCubic');
+  const scan = $('scan');
+  scan.style.left = (x0 - 40) + 'px'; scan.style.width = (x1 - x0 + 80) + 'px';
+  scan.style.top = (y0 - 120 + (y1 - y0 + 120) * s) + 'px';
+  scan.style.opacity = s > 0 && s < 1 ? 0.9 : 0;
+  // faixa do alto: título + quadro corrente / contador
+  $('esq').innerHTML = `<span style="color:#ff4d6d">●</span> ${p.titulo || (zoomMode ? 'EDITANDO AO VIVO' : 'VISÃO COMPUTACIONAL')}`
+    + `<br><span style="opacity:.6;font-size:16px">${zoomMode ? 'QUADRO ' + fmt(i + 120) : 'RECONHECENDO · QUADRO ' + fmt(i + 180)}</span>`;
+  $('dir').innerHTML = `<span style="opacity:.6;font-size:16px">${p.contador || (zoomMode ? 'ETAPA' : 'OBJETOS')}</span>`
+    + `<br><b style="font-size:30px">${String(p.numero ?? 5).padStart(2, '0')}${zoomMode ? ' ZOOM' : ''}</b>`;
+  $('bar').style.opacity = k;
+  if (zoomMode) {
+    const kz = motion.prog(t, 0.3, 1.2, 'inOutCubic');
+    const z = z0 + (z1 - z0) * kz;
+    $('zoomnum').innerHTML = `${z.toFixed(2).replace('.', ',')}<span style="font-size:40px;color:${accent}">×</span>`;
+    $('sl').style.width = (100 * (z - 1) / Math.max(z1 - 1, 0.01) * 0.85 + 10) + '%';
+    zoom.style.opacity = k;
+    zoom.style.transform = `translateY(${(1 - k) * -20}px)`;
+  }
+});
+</script></body></html>

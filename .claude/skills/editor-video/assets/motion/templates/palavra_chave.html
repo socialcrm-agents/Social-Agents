@@ -1,0 +1,112 @@
+<!doctype html>
+<!-- PALAVRA-CHAVE (layer: front): a palavra dita, gigante, no instante em que é falada — letras entram em cascata
+     com mola, preenchimento em degradê da cor da emoção, extrusão 3D, contorno escuro (lê em qualquer fundo),
+     emoji que quica com faíscas, brilho passando e saída limpa. É a "legenda com a cara dos concorrentes".
+     params: text, emoji, cor, cor2, y (0..1 do centro, default 0.56), tamanho (px máx., default 190),
+             fonte "Anton" | "Poppins" (default Anton), inclina (graus, default -3) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #grupo { position: absolute; left: 0; right: 0; display: flex; justify-content: center; align-items: center;
+           gap: 18px; will-change: transform; }
+  #palavra { position: relative; white-space: nowrap; line-height: .92; letter-spacing: 1px; text-transform: uppercase; }
+  .l { display: inline-block; position: relative; will-change: transform, opacity, filter; }
+  .l .f, .l .x { display: block; }
+  .l .x { position: absolute; left: 0; top: 0; z-index: 0; color: transparent; }   /* extrusão */
+  .l .f { position: relative; z-index: 1; -webkit-background-clip: text; background-clip: text; color: transparent;
+          -webkit-text-stroke: 7px rgba(10, 8, 25, .92); paint-order: stroke fill; }
+  .l .g { position: absolute; left: 0; top: 0; z-index: 2; color: transparent; -webkit-background-clip: text;
+          background-clip: text; pointer-events: none; }                                     /* brilho */
+  #emoji { font-size: 150px; line-height: 1; will-change: transform; filter: drop-shadow(0 14px 22px rgba(0,0,0,.45));
+           font-family: 'Noto Color Emoji', 'Segoe UI Emoji', 'Apple Color Emoji', sans-serif; }
+  .fa { position: absolute; width: 16px; height: 16px; border-radius: 50%; will-change: transform, opacity; }
+</style></head>
+<body><div id="grupo"><div id="palavra"></div><div id="emoji"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const texto = String(p.text || '').toUpperCase();
+const cor = p.cor || '#FACC15', cor2 = p.cor2 || '#FB923C';
+const fonte = p.fonte === 'Poppins' ? "900 1px 'Poppins'" : "1px 'Anton'";
+const familia = p.fonte === 'Poppins' ? "'Poppins'" : "'Anton'";
+const peso = p.fonte === 'Poppins' ? 900 : 400;
+const grupo = document.getElementById('grupo'), pal = document.getElementById('palavra'), emo = document.getElementById('emoji');
+const temEmoji = !!p.emoji;
+emo.textContent = p.emoji || '';
+emo.style.display = temEmoji ? '' : 'none';
+
+// tamanho: o maior que cabe em 86% da largura (com o emoji ao lado), limitado por `tamanho`
+let letras = [], fa = [], fs = 100, pronto = false;
+motion.waitFor(document.fonts.load(`${peso} 100px ${familia}`).catch(() => {}).then(() => { monta(); pronto = true; }));
+function monta() {
+const cv = document.createElement('canvas').getContext('2d');
+cv.font = `${peso} 100px ${familia}`;
+const larg100 = cv.measureText(texto).width || 1;
+const livre = W * 0.86 - (temEmoji ? 168 : 0);
+fs = Math.max(84, Math.min(p.tamanho ?? 190, Math.floor(100 * livre / larg100)));
+pal.style.fontFamily = familia; pal.style.fontWeight = peso; pal.style.fontSize = fs + 'px';
+emo.style.fontSize = Math.round(Math.min(150, fs * 0.82)) + 'px';
+grupo.style.top = `${(p.y ?? 0.56) * H - fs * 0.5}px`;
+
+// extrusão: camadas de sombra escura para baixo/direita (profundidade), mais uma sombra longa e suave
+const prof = Math.round(fs * 0.06);
+const ext = Array.from({ length: prof }, (_, i) => `${i + 1}px ${i + 1}px 0 rgba(15,10,40,${0.95 - i * 0.02})`).join(',');
+letras = [...texto].map((ch) => {
+  const s = document.createElement('span'); s.className = 'l';
+  const x = document.createElement('span'); x.className = 'x'; x.textContent = ch;
+  x.style.textShadow = `${ext}, 0 ${prof + 10}px ${fs * 0.22}px rgba(0,0,0,.45)`;
+  const f = document.createElement('span'); f.className = 'f'; f.textContent = ch;
+  f.style.backgroundImage = `linear-gradient(175deg, #fff 0%, ${cor} 38%, ${cor2} 100%)`;
+  const g = document.createElement('span'); g.className = 'g'; g.textContent = ch;
+  s.append(x, f, g); pal.appendChild(s);
+  if (ch === ' ') s.style.width = (fs * 0.25) + 'px';
+  return { s, g };
+});
+
+// faíscas do emoji (determinísticas)
+fa = Array.from({ length: temEmoji ? 9 : 0 }, (_, i) => {
+  const d = document.createElement('div'); d.className = 'fa';
+  d.style.background = i % 3 === 0 ? '#fff' : (i % 3 === 1 ? cor : cor2);
+  emo.appendChild(d);
+  const ang = (i / 9) * Math.PI * 2 + 0.3, r = 110 + (i % 4) * 26;
+  return { d, dx: Math.cos(ang) * r, dy: Math.sin(ang) * r };
+});
+}
+
+const incl = p.inclina ?? -3;
+motion.onFrame((t) => {
+  if (!pronto) return;
+  const n = letras.length;
+  const passo = Math.min(0.035, 0.22 / Math.max(n, 1));   // cascata: palavra longa não demora mais
+  const sai = motion.exitK(t, D, 0.2);
+  // grupo: respiração leve depois de entrar, inclinação que se assenta, saída que cresce e some
+  const assenta = motion.prog(t, 0, 0.5, 'outCubic');
+  grupo.style.transform = `rotate(${incl * (0.4 + 0.6 * (1 - assenta))}deg) scale(${(1 + 0.012 * Math.sin(t * 4.2) * assenta) * (1 + 0.08 * sai)})`;
+  grupo.style.opacity = String(1 - sai);
+  grupo.style.filter = sai > 0 ? `blur(${sai * 10}px)` : 'none';
+  letras.forEach(({ s, g }, i) => {
+    const k = motion.spring(t, i * passo, { dur: 0.5, bounce: 0.38 });
+    const y = (1 - k) * fs * 0.22;                       // percurso curto: a letra nasce no lugar (não varre o rosto)
+    s.style.transform = `translateY(${y}px) scale(${0.55 + 0.45 * k})`;
+    s.style.opacity = String(Math.min(1, motion.prog(t, i * passo, 0.08)));
+    s.style.filter = k < 0.85 ? `blur(${(1 - k) * 6}px)` : 'none';
+    // brilho passando da esquerda para a direita em 0,35 s depois que a palavra assentou
+    const b = motion.prog(t, 0.32 + i * 0.018, 0.3, 'linear');
+    const pos = -60 + b * 220;
+    g.style.backgroundImage = b > 0 && b < 1
+      ? `linear-gradient(105deg, transparent ${pos - 25}%, rgba(255,255,255,.95) ${pos}%, transparent ${pos + 25}%)` : 'none';
+  });
+  if (temEmoji) {
+    const t0 = n * passo + 0.06;
+    const k = motion.spring(t, t0, { dur: 0.55, bounce: 0.5 });
+    const wob = Math.sin((t - t0) * 9) * 8 * Math.exp(-Math.max(t - t0, 0) * 3);
+    emo.style.transform = `translateY(${(1 - k) * 120}px) rotate(${wob + (1 - k) * -30}deg) scale(${0.2 + 0.8 * k})`;
+    emo.style.opacity = String(Math.min(1, motion.prog(t, t0, 0.06)));
+    fa.forEach(({ d, dx, dy }, i) => {
+      const q = motion.prog(t, t0 + 0.05, 0.5, 'outCubic');
+      d.style.left = '50%'; d.style.top = '50%';
+      d.style.transform = `translate(${dx * q - 8}px, ${dy * q - 8}px) scale(${1 - q * 0.7})`;
+      d.style.opacity = String(q > 0 && q < 1 ? 1 - q : 0);
+    });
+  }
+});
+</script></body></html>

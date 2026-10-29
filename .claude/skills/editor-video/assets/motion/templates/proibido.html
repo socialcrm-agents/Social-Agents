@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- PROIBIDO (layer: front): fileira de ícones genéricos de programa/app que levam um X vermelho desenhado + tremida
+     ("não abri programa nenhum"). Só ícones genéricos (Lucide) — nunca logos de marcas reais.
+     params: icones: ["film", "clapperboard", "scissors", "layers", "video"] (3-5), x_at (s; padrão 45% da duração),
+             rotulo (texto pequeno acima, opcional), y (topo px, padrão 300), accent ("#7C5CFF"), cor_x ("#FF3B5C") -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #wrap { position: absolute; left: 60px; right: 150px; display: flex; flex-direction: column; align-items: center; gap: 22px; }
+  #rot { font-weight: 800; font-size: 36px; letter-spacing: 3px; color: #fff; text-transform: uppercase;
+         text-shadow: 0 4px 18px rgba(0,0,0,.6); }
+  #row { position: relative; display: flex; gap: 26px; padding: 30px 36px; border-radius: 34px;
+         background: rgba(18,12,34,.72); border: 2px solid rgba(190,170,255,.35); box-shadow: 0 24px 60px rgba(0,0,0,.45); }
+  .app { width: 132px; height: 132px; border-radius: 32px; display: grid; place-items: center;
+         box-shadow: inset 0 0 0 2px rgba(255,255,255,.18), 0 10px 26px rgba(0,0,0,.35); }
+  .app svg { width: 70px; height: 70px; stroke: #fff; stroke-width: 2.2; }
+  #x { position: absolute; inset: -30px; pointer-events: none; overflow: visible; }
+</style></head>
+<body><div id="wrap"><div id="rot"></div><div id="row"><svg id="x"></svg></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, D = motion.duration;
+const icons = (p.icones || ['film', 'clapperboard', 'scissors', 'layers', 'video']).slice(0, 5);
+const accent = p.accent || '#7C5CFF', cx = p.cor_x || '#FF3B5C';
+const tints = [accent, '#5B3FD9', '#9B5CFF', '#4C35B5', '#B07CFF'];
+const wrap = document.getElementById('wrap'), row = document.getElementById('row'), rot = document.getElementById('rot');
+wrap.style.top = (p.y || 300) + 'px';
+rot.textContent = p.rotulo || ''; if (!p.rotulo) rot.style.display = 'none';
+const apps = icons.map((name, i) => {
+  const a = document.createElement('div'); a.className = 'app';
+  a.style.background = `linear-gradient(145deg, ${tints[i % tints.length]}, #1a1033)`;
+  row.insertBefore(a, document.getElementById('x'));
+  motion.waitFor(motion.icon(name).then((svg) => { a.innerHTML = svg; }));
+  return a;
+});
+const xAt = typeof p.x_at === 'number' ? p.x_at : D * 0.45;
+let L = 0;
+const svg = document.getElementById('x');
+const draw = () => {
+  const r = row.getBoundingClientRect(), w = r.width + 60, h = r.height + 60;
+  svg.setAttribute('viewBox', `0 0 ${w} ${h}`); svg.setAttribute('width', w); svg.setAttribute('height', h);
+  svg.innerHTML = `<path id="a" d="M ${w * 0.18} ${h * 0.12} L ${w * 0.82} ${h * 0.88}" /><path id="b" d="M ${w * 0.82} ${h * 0.12} L ${w * 0.18} ${h * 0.88}" />`;
+  for (const pth of svg.querySelectorAll('path')) {
+    Object.assign(pth.style, { fill: 'none', stroke: cx, strokeWidth: 30, strokeLinecap: 'round', filter: `drop-shadow(0 0 16px ${cx})` });
+  }
+  L = svg.querySelector('#a').getTotalLength();
+};
+motion.waitFor(document.fonts.ready.then(draw));
+row.style.background = 'linear-gradient(165deg, rgba(44,32,78,.92), rgba(16,12,32,.92))';
+row.style.boxShadow = 'var(--sh-float), inset 0 1px 0 rgba(255,255,255,.18)';
+motion.onFrame((t) => {
+  if (!L) draw();
+  const out = motion.exitK(t, D, 0.3);
+  wrap.style.opacity = 1 - out;
+  wrap.style.filter = out > 0 ? `blur(${out * 10}px)` : 'none';
+  motion.appear(rot, t, 0.02, { from: 'down', dist: 30, dur: 0.5, bounce: 0.3, out: 0, blur: 10 });
+  const sh = motion.shake(t, xAt + 0.14, 16, 0.36);
+  motion.appear(row, t, 0, { from: 'up', dist: 60, scale0: 0.85, dur: 0.55, bounce: 0.3, out: 0, extra: `translateX(${sh}px)` });
+  apps.forEach((a, i) => {
+    const q = motion.spring(t, 0.1 + i * 0.07, { dur: 0.5, bounce: 0.45 });
+    a.style.transform = `translateY(${(1 - q) * 50}px) scale(${0.5 + 0.5 * q}) rotate(${(1 - q) * (i % 2 ? 14 : -14)}deg)`;
+    a.style.opacity = motion.clamp(q * 2);
+    a.style.filter = t > xAt + 0.2 ? `grayscale(${motion.prog(t, xAt + 0.2, 0.3)}) brightness(${1 - 0.35 * motion.prog(t, xAt + 0.2, 0.3)})` : 'none';
+  });
+  const a1 = motion.prog(t, xAt, 0.16, 'outCubic'), a2 = motion.prog(t, xAt + 0.12, 0.16, 'outCubic');
+  const [pa, pb] = svg.querySelectorAll('path');
+  if (pa) { pa.style.strokeDasharray = L; pa.style.strokeDashoffset = L * (1 - a1);
+            pb.style.strokeDasharray = L; pb.style.strokeDashoffset = L * (1 - a2);
+            svg.style.filter = `drop-shadow(0 0 ${10 + 8 * motion.prog(t, xAt + 0.12, 0.3)}px ${p.cor_x || '#FF3B5C'})`; }
+});
+</script></body></html>

@@ -1,0 +1,7 @@
+{
+  "_doc": "Premium / beleza / casa: fundo claro na cor do produto, sem raios, serifa nos títulos, transição suave, legenda em caixa escura, trilha suave.",
+  "fundo": "claro", "raios": false, "brilhos": false, "contorno": false, "sombra": 0.25,
+  "fonte_titulo": "DM Serif Display", "transicao": "zoom", "transicao_dur": 0.4,
+  "legenda": {"fonte": "Poppins", "peso": 800, "tamanho": 64, "cor": "#ffffff", "caixa": true, "palavras": 4, "letras": 22, "y": 1340},
+  "musica": "suave", "musica_volume": 0.13, "sfx": false, "sfx_leve": true, "lufs": -14
+}

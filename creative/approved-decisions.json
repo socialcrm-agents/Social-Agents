@@ -1,0 +1,82 @@
+{
+ "_leia": "Decisões aprovadas pelo usuário. Nenhum agente as contraria sem pedido explícito do usuário. Novas decisões entram aqui só quando o usuário aprova (o diretor registra com origem e data).",
+ "decisoes": [
+  {
+   "id": "D01",
+   "escopo": "global",
+   "decisao": "Nenhum texto, card ou efeito cobre olhos/boca. Elementos do alto fazem a pessoa recuar (recuo); palavra atrás da cabeça só com espaço, senão sai.",
+   "origem": "usuario",
+   "data": "2026-10-22"
+  },
+  {
+   "id": "D02",
+   "escopo": "global",
+   "decisao": "Vídeo já cortado (CapCut etc.): não cortar nem acelerar. Usar --sem-cortes.",
+   "origem": "usuario",
+   "data": "2026-10-23"
+  },
+  {
+   "id": "D03",
+   "escopo": "global",
+   "decisao": "Pedido de 'máxima qualidade' = estilo pro_clean, render final sem --draft, densidade alta do manual de direção.",
+   "origem": "usuario",
+   "data": "2026-10-23"
+  },
+  {
+   "id": "D04",
+   "escopo": "global",
+   "decisao": "Trocar o fundo é permitido em anúncio quando fizer sentido (trechos de 3-8 s); não em depoimento nem quando o fundo é prova.",
+   "origem": "usuario",
+   "data": "2026-10-23"
+  },
+  {
+   "id": "D05",
+   "escopo": "global",
+   "decisao": "Nunca inventar números, prazos, nomes de clientes, depoimentos ou vendas. Só o que foi dito ou fornecido.",
+   "origem": "usuario",
+   "data": "2026-10-22"
+  },
+  {
+   "id": "D06",
+   "escopo": "global",
+   "decisao": "Sem logos de marcas de terceiros; usar ícones genéricos, salvo arquivo e autorização do usuário.",
+   "origem": "usuario",
+   "data": "2026-10-22"
+  },
+  {
+   "id": "D07",
+   "escopo": "global",
+   "decisao": "Um CTA visual por vez (nada de CTA duplicado); os últimos 3 s têm o CTA mais forte.",
+   "origem": "usuario",
+   "data": "2026-10-23"
+  },
+  {
+   "id": "D08",
+   "escopo": "global",
+   "decisao": "Toda animação tem som próprio (design de som automático); efeitos abaixo da voz, -14 LUFS.",
+   "origem": "usuario",
+   "data": "2026-10-23"
+  },
+  {
+   "id": "D09",
+   "escopo": "global",
+   "decisao": "Nível dos concorrentes (Edit Pro, ME.IA): densidade de criativo de tráfego (algo muda a cada 2-3 s), um herói por momento, linguagem visual única.",
+   "origem": "usuario",
+   "data": "2026-10-23"
+  },
+  {
+   "id": "D10",
+   "escopo": "global",
+   "decisao": "Português do Brasil em todo texto de tela, com acentos corretos; legenda diz exatamente o que foi falado.",
+   "origem": "usuario",
+   "data": "2026-10-22"
+  },
+  {
+   "id": "D11",
+   "escopo": "global",
+   "decisao": "Jeito aprovado pelo usuário para todo vídeo: receita 'premium' (revelação 2.5D no gancho, impacto na frase forte, direção premium, trilha sem direitos, correção de imagem, estabilização, legenda 84 px). Toques sob medida (ex.: ícones 3D do que é falado) entram por cima, sem tirar a base.",
+   "origem": "usuario",
+   "data": "2026-10-26"
+  }
+ ]
+}

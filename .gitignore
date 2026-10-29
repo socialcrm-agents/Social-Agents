@@ -37,3 +37,6 @@ coverage/
 # Cache
 .cache/
 .turbo/
+
+# Python
+__pycache__/

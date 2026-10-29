@@ -1,0 +1,74 @@
+/* Base das composições: fundo transparente, fontes da skill, sem rolagem. */
+@font-face { font-family: 'Anton'; src: url('/fonts/Anton-Regular.ttf'); font-display: block; }
+@font-face { font-family: 'Poppins'; font-weight: 700; src: url('/fonts/Poppins-Bold.ttf'); font-display: block; }
+@font-face { font-family: 'Poppins'; font-weight: 800; src: url('/fonts/Poppins-ExtraBold.ttf'); font-display: block; }
+@font-face { font-family: 'Poppins'; font-weight: 900; src: url('/fonts/Poppins-Black.ttf'); font-display: block; }
+@font-face { font-family: 'DM Serif Display'; src: url('/fonts/DMSerifDisplay-Regular.ttf'); font-display: block; }
+@font-face { font-family: 'Caveat'; src: url('/fonts/Caveat-Variable.ttf'); font-weight: 400 700; font-display: block; }
+@font-face { font-family: 'DM Serif Display'; font-style: italic; src: url('/fonts/DMSerifDisplay-Italic.ttf'); font-display: block; }
+html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+body { width: var(--w, 1080px); height: var(--h, 1920px); position: relative; font-family: 'Poppins', sans-serif; color: #fff; }
+* { box-sizing: border-box; }
+.abs { position: absolute; }
+.glass { background: rgba(255,255,255,.10); border: 2px solid rgba(255,255,255,.35); border-radius: 28px;
+         box-shadow: 0 30px 80px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.4); backdrop-filter: blur(6px); }
+.icon svg { width: 100%; height: 100%; stroke: currentColor; }
+
+/* ===================================================================================================================
+   Design system premium (compartilhado por todos os blocos 2D).
+   Cores: --accent / --accent2 (os templates sobrescrevem com params.accent). Fundo do vídeo fica atrás: sem
+   backdrop-filter (não há nada atrás na página); o "vidro" é simulado com gradiente + borda + reflexo.
+   =================================================================================================================== */
+:root {
+  --accent: #8B5CF6; --accent2: #EC4899; --ink: #14102B; --ink2: #5B5675; --paper: #FFFFFF; --paper2: #F4F1FF;
+  --r-xl: 40px; --r-lg: 30px; --r-md: 20px; --r-pill: 999px;
+  --sh-card: 0 1px 2px rgba(10,6,30,.10), 0 10px 24px rgba(10,6,30,.16), 0 34px 80px rgba(10,6,30,.30);
+  --sh-float: 0 2px 6px rgba(10,6,30,.18), 0 24px 60px rgba(10,6,30,.38), 0 60px 120px rgba(10,6,30,.28);
+  --sh-text: 0 2px 3px rgba(0,0,0,.28), 0 10px 30px rgba(0,0,0,.38);
+}
+/* tipografia: escala com salto real */
+.t-display { font-weight: 900; font-size: 128px; line-height: .92; letter-spacing: -3px; }
+.t-h1 { font-weight: 900; font-size: 92px; line-height: .98; letter-spacing: -2px; }
+.t-h2 { font-weight: 800; font-size: 60px; line-height: 1.04; letter-spacing: -1px; }
+.t-h3 { font-weight: 800; font-size: 44px; line-height: 1.12; letter-spacing: -.5px; }
+.t-body { font-weight: 700; font-size: 36px; line-height: 1.25; }
+.t-label { font-weight: 800; font-size: 24px; letter-spacing: .2em; text-transform: uppercase; }
+.t-shadow { text-shadow: var(--sh-text); }
+
+/* cartão claro: papel com leve gradiente, borda luminosa e sombra em camadas */
+.ds-card { position: absolute; border-radius: var(--r-lg); color: var(--ink);
+  background: linear-gradient(180deg, #FFFFFF 0%, #F7F5FF 100%);
+  border: 1.5px solid rgba(255,255,255,.9);
+  box-shadow: var(--sh-card), inset 0 1px 0 #fff, inset 0 -2px 0 rgba(20,10,60,.05); }
+/* cartão escuro: vidro fumê com brilho no topo */
+.ds-card.ds-dark { color: #fff;
+  background: linear-gradient(165deg, rgba(40,32,70,.94) 0%, rgba(16,12,32,.94) 60%, rgba(10,8,22,.96) 100%);
+  border: 1.5px solid rgba(255,255,255,.14);
+  box-shadow: var(--sh-float), inset 0 1px 0 rgba(255,255,255,.18); }
+/* vidro claro sobre vídeo (simulado) */
+.ds-card.ds-glassy { color: #fff;
+  background: linear-gradient(160deg, rgba(255,255,255,.30) 0%, rgba(255,255,255,.12) 45%, rgba(255,255,255,.08) 100%);
+  border: 1.5px solid rgba(255,255,255,.45);
+  box-shadow: var(--sh-float), inset 0 1px 0 rgba(255,255,255,.6); }
+/* contorno em degradê (use num wrapper com padding: 2px) */
+.ds-grad-border { border-radius: var(--r-lg); padding: 2px; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+.ds-glow { box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--accent) 70%, transparent),
+                    0 0 34px color-mix(in srgb, var(--accent) 55%, transparent), var(--sh-float); }
+/* pílula/chip */
+.ds-chip { display: inline-flex; align-items: center; gap: 12px; padding: 10px 22px; border-radius: var(--r-pill);
+  font-weight: 800; font-size: 24px; letter-spacing: .16em; text-transform: uppercase; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.35); }
+/* texto em degradê com brilho passando (motion.shimmer posiciona o brilho) */
+.ds-grad-text { color: transparent; -webkit-background-clip: text; background-clip: text;
+  background-image: linear-gradient(180deg, #FFFFFF 10%, var(--accent) 110%); }
+.ds-shine { color: transparent; -webkit-background-clip: text; background-clip: text; background-size: 260% 100%;
+  background-image: linear-gradient(100deg, var(--c1, #fff) 0%, var(--c1, #fff) 40%, #FFFFFF 50%, var(--c2, #fff) 60%, var(--c2, #fff) 100%); }
+/* reflexo que passa em cima de um cartão (div absoluto dentro do card, motion.shimmer move) */
+.ds-sheen { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; mix-blend-mode: soft-light;
+  background-image: linear-gradient(100deg, transparent 35%, rgba(255,255,255,.75) 50%, transparent 65%);
+  background-size: 260% 100%; }
+.ds-ico-badge { display: grid; place-items: center; border-radius: 22px; color: #fff;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 45%, transparent), inset 0 1px 0 rgba(255,255,255,.4); }
+.ds-ico-badge svg { width: 58%; height: 58%; stroke: currentColor; stroke-width: 2.4; }

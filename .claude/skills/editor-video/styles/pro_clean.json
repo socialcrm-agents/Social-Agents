@@ -1,0 +1,75 @@
+{
+  "name": "pro_clean",
+  "label": "Pro Clean",
+  "description": "Nível anúncio premium de infoproduto: corte seco, zoom sutil, legenda limpa em caixa baixa com sombra suave montando palavra a palavra na altura do peito, palavra gigante em degradê atrás da cabeça, cards de pergunta e janelas de player, sons discretos.",
+  "cuts": {
+    "max_gap": 0.16,
+    "pad_in": 0.04,
+    "pad_out": 0.07,
+    "min_pause_keep": 0.0
+  },
+  "zoom": {
+    "mode": "alternate",
+    "base": 1.0,
+    "push": 0.0,
+    "punch": 1.1,
+    "punch_every": 3
+  },
+  "grade": "eq=contrast=1.06:saturation=1.06:brightness=0.0,unsharp=5:5:0.4",
+  "captions": {
+    "words_per_page": 3,
+    "max_chars": 20,
+    "case": "keep",
+    "font": "Poppins",
+    "bold": 1,
+    "size": 76,
+    "color": "#FFFFFF",
+    "outline": 0,
+    "outline_color": "#000000",
+    "shadow": 4,
+    "box": false,
+    "emph_font": "Poppins",
+    "emph_italic": false,
+    "emph_size": 92,
+    "emph_color": "#C9B2FF",
+    "highlight": "none",
+    "y": 1150,
+    "animation": "acumula",
+    "emph_case": "upper",
+    "emph_linha": true
+  },
+  "behind": {
+    "enabled": true,
+    "font": "Poppins",
+    "italic": false,
+    "size": 300,
+    "color": "#E9DDFF",
+    "alpha": "00",
+    "max": 3,
+    "case": "upper"
+  },
+  "broll": {
+    "mode": "full",
+    "max_dur": 2.2,
+    "min_gap": 3.5
+  },
+  "graphics": {
+    "lower_third": false,
+    "chapter_numbers": false,
+    "hook_banner": false,
+    "progress_bar": false,
+    "cta": true,
+    "accent": "#B794FF",
+    "panel": "#000000",
+    "text": "#FFFFFF",
+    "icons": false
+  },
+  "sfx": {
+    "whoosh": 0.35,
+    "pop": 0.25,
+    "riser": 0.0
+  },
+  "audio": {
+    "lufs": -14
+  }
+}

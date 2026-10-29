@@ -1,0 +1,11 @@
+{
+  "_doc": "Gatilhos da marca (somados aos padrões de triggers/padrao.json). Exemplo: uma frase-assinatura do cliente vira carimbo com impacto.",
+  "regras": [
+    {
+      "nome": "Frase-assinatura (exemplo)",
+      "quando": {"frase": ["troque por uma frase que o cliente sempre fala"]},
+      "efeito": {"template": "carimbo", "dur": 1.5, "params": {"text": "{frase}", "size": 110, "y": 0.24, "color": "#FFD21F"}},
+      "som": "boom", "fx": "tremida"
+    }
+  ]
+}

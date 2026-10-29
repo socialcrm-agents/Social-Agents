@@ -1,0 +1,54 @@
+{
+ "pedido": "plano aprovado do Creative Studio",
+ "operacoes": [
+  {
+   "comando": [
+    "--motion",
+    "{\"template\": \"objeto3d\", \"at\": \"olhadinha, um chiclete\", \"until\": \"um chiclete\", \"layer\": \"front\", \"id\": \"m8\", \"params\": {\"text\": \"MENTOS\", \"color\": \"#B794FF\", \"follow\": \"hand\", \"size\": 0.8}}"
+   ],
+   "motivo": "art-director c3: Buraco de 11,98 a 13,26 s sem herói em 'dá uma olhadinha, um chiclete' = gatilho produto na mão (receita Produto: objeto3d seguindo a mão); troca a cada 2-3 s (D09)."
+  },
+  {
+   "comando": [
+    "--patch-remove",
+    "g_cta"
+   ],
+   "motivo": "art-director c4: card CTA em cima de GOSTOSO (m5): dois heróis; o botao_cta m7 já é o CTA forte dos últimos 3 s (D07)",
+   "alvo_id": "g_cta"
+  }
+ ],
+ "dry_run": {
+  "resumo": "Resumo: plano 0 HIT/6 MISS | mascara 0 HIT/6 MISS | motion 0 HIT/7 MISS | trecho 0 HIT/5 MISS | audio 0 HIT/1 MISS",
+  "miss": [
+   "plano:sc1_0",
+   "plano:sc1_2710",
+   "plano:sc1_5430",
+   "plano:sc1_8230",
+   "plano:sc1_11270",
+   "plano:sc1_14150",
+   "mascara:sc1_0",
+   "mascara:sc1_2710",
+   "mascara:sc1_5430",
+   "mascara:sc1_8230",
+   "mascara:sc1_11270",
+   "mascara:sc1_14150",
+   "motion:m1:manchete",
+   "motion:m2:maos",
+   "motion:m3:infografico",
+   "motion:m4:carimbo",
+   "motion:m5:palavra",
+   "motion:m6:checklist",
+   "motion:m7:botao_cta",
+   "trecho:000.0-004.0",
+   "trecho:004.0-008.0",
+   "trecho:008.0-012.0",
+   "trecho:012.0-016.0",
+   "trecho:016.0-017.4"
+  ],
+  "hit": 0
+ },
+ "preset": "draft",
+ "rollback_para": null,
+ "conflita_com_aprovadas": [],
+ "observacoes": "NAO APLICADO (parei na previa): m8 SUMIU do dry-run (motion 7 MISS, sem m8). Causa: 'until' resolve para a 1a palavra do trecho ('um', fim 12,86 s) -> m8 = 12,30-13,06 s = 0,76 s < 1,0 s e resolve_overlaps (plan.py) descarta sem aviso. Aplicar agora tiraria g_cta sem colocar m8. Duas correcoes que passam no dry-run (falta reaprovar): (a) manter at='olhadinha, um chiclete' e trocar until para 'chiclete muito' -> m8 em 12,3-13,5 s (entra ~0,2 s em m5 GOSTOSO, que esta na camada behind); (b) at='dá uma olhadinha, um' com until 'chiclete muito' -> 12,0-13,5 s. Comecando em 12,3 s e impossivel terminar ate 13,26 s com o minimo de 1 s. Gap: plan.py deveria avisar quando descarta um motion curto, e o verificador deveria checar duracao >= 1 s. MISS geral = primeiro render sem cache. g_cta: --patch-remove resolve. Timeline e plan.py nao alterados."
+}

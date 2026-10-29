@@ -1,0 +1,47 @@
+{
+  "_doc": "Gatilhos da marca @omarcelprado (somados aos padrões). Famílias de gancho que vendem viram carimbo com impacto.",
+  "regras": [
+    {
+      "nome": "Minha aposta",
+      "quando": {"frase": ["minha aposta"]},
+      "efeito": {"template": "carimbo", "dur": 1.5, "params": {"text": "MINHA APOSTA", "size": 120, "y": 0.24, "color": "#FFD21F"}},
+      "som": "boom", "fx": "tremida", "estilos": ["reels_viral", "anuncio_conversao"]
+    },
+    {
+      "nome": "Para de...",
+      "quando": {"frase": ["para de", "pare de"]},
+      "efeito": {"template": "carimbo", "dur": 1.5, "params": {"text": "PARA DE {resto}", "size": 96, "y": 0.24, "color": "#E63B2E"}},
+      "som": "boom", "fx": "tremida", "intervalo_min": 6
+    },
+    {
+      "nome": "Papinho de guru",
+      "quando": {"frase": ["papinho de guru", "papinho"]},
+      "efeito": {"template": "carimbo", "dur": 1.6, "params": {"text": "PAPINHO DE GURU", "size": 100, "y": 0.24, "color": "#E63B2E", "rot": 6}},
+      "som": "glitch", "fx": "glitch"
+    },
+    {
+      "nome": "Ninguém te conta",
+      "quando": {"frase": ["ninguém te conta", "ninguém fala", "ninguém está falando"]},
+      "efeito": {"template": "notificacao", "dur": 2.4, "params": {"app": "Segredo · agora", "title": "Ninguém te conta isso", "text": "{resto}", "icon": "lock", "badge": ""}},
+      "som": "ding"
+    },
+    {
+      "nome": "Autoridade 50 milhões",
+      "quando": {"frase": ["50 milhões", "cinquenta milhões"]},
+      "efeito": {"template": "infografico", "dur": 2.6, "params": {"y": 320, "stats": [{"value": 50, "prefix": "+R$ ", "suffix": " mi", "label": "gerados no digital", "icon": "trending-up", "at": 0.05}]}},
+      "som": "venda"
+    },
+    {
+      "nome": "14 para 220 pessoas",
+      "quando": {"frase": ["220 pessoas", "duzentas e vinte pessoas"]},
+      "efeito": {"template": "infografico", "dur": 2.6, "params": {"y": 320, "stats": [{"value": 220, "suffix": " pessoas", "label": "operação que comecei com 14", "icon": "users", "at": 0.05}]}},
+      "som": "venda"
+    },
+    {
+      "nome": "Garantia e pagamento único",
+      "quando": {"frase": ["14 dias de garantia", "catorze dias de garantia", "pagamento único"]},
+      "efeito": {"template": "icone", "dur": 1.8, "params": {"icon": "shield-check", "label": "14 dias de garantia", "color": "#FFD21F", "y": 470, "at": 0}},
+      "som": "ding", "intervalo_min": 10
+    }
+  ]
+}

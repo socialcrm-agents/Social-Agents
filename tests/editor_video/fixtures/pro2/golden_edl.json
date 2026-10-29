@@ -1,0 +1,96 @@
+{
+ "dropped": [
+  43,
+  44,
+  45,
+  46
+ ],
+ "edit_duration": 14.91,
+ "raw_duration": 17.37,
+ "segments": [
+  {
+   "clip": "c1",
+   "in": 1.24,
+   "out": 8.87,
+   "text": "Gente, eu tô aqui com esse chiclete da Mentos, dá uma olhadinha aqui como ele é. Esse chiclete está à venda por apenas",
+   "words": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22
+   ]
+  },
+  {
+   "clip": "c1",
+   "in": 8.92,
+   "out": 10.37,
+   "text": "15 reais.",
+   "words": [
+    23,
+    24
+   ]
+  },
+  {
+   "clip": "c1",
+   "in": 10.44,
+   "out": 12.01,
+   "text": "Na promoção, 15 reais,",
+   "words": [
+    25,
+    26,
+    27,
+    28
+   ]
+  },
+  {
+   "clip": "c1",
+   "in": 12.3,
+   "out": 13.99,
+   "text": "dá uma olhadinha, um chiclete muito gostoso.",
+   "words": [
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35
+   ]
+  },
+  {
+   "clip": "c1",
+   "in": 14.2,
+   "out": 16.77,
+   "text": "Ele tem dois sabores, menta e toutifrut,",
+   "words": [
+    36,
+    37,
+    38,
+    39,
+    40,
+    41,
+    42
+   ]
+  }
+ ],
+ "style": "pro_clean"
+}

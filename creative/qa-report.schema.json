@@ -1,0 +1,103 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "creative/qa-report.schema.json",
+ "title": "Relatório de QA",
+ "type": "object",
+ "required": [
+  "versao",
+  "aprovado",
+  "checks"
+ ],
+ "additionalProperties": false,
+ "properties": {
+  "versao": {
+   "type": "integer",
+   "minimum": 1
+  },
+  "arquivo": {
+   "type": "string"
+  },
+  "aprovado": {
+   "type": "boolean"
+  },
+  "metricas": {
+   "type": "object",
+   "properties": {
+    "duracao_s": {
+     "type": "number"
+    },
+    "lufs": {
+     "type": [
+      "number",
+      "string"
+     ]
+    },
+    "quadros": {
+     "type": "integer"
+    },
+    "miss": {
+     "type": "integer"
+    },
+    "render_s": {
+     "type": "number"
+    }
+   }
+  },
+  "checks": {
+   "type": "array",
+   "minItems": 1,
+   "items": {
+    "type": "object",
+    "required": [
+     "area",
+     "item",
+     "status"
+    ],
+    "additionalProperties": false,
+    "properties": {
+     "area": {
+      "enum": [
+       "visual",
+       "tecnico",
+       "comercial",
+       "sincronismo",
+       "politicas"
+      ]
+     },
+     "item": {
+      "type": "string"
+     },
+     "status": {
+      "enum": [
+       "ok",
+       "alerta",
+       "falha"
+      ]
+     },
+     "tempo": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "evidencia": {
+      "type": "string"
+     },
+     "alvo_id": {
+      "type": "string"
+     },
+     "correcao": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      },
+      "description": "comando sugerido (edit.py ...)"
+     }
+    }
+   }
+  },
+  "observacoes": {
+   "type": "string"
+  }
+ }
+}

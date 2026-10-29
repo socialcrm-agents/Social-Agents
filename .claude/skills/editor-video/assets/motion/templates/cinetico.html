@@ -1,0 +1,92 @@
+<!doctype html>
+<!-- CINÉTICO (layer: front): tipografia cinética com Anime.js (MIT) — a frase entra letra por letra com
+     coreografia de After Effects e sai limpa. Estilos:
+       sobe     letras sobem com mola e rotação leve, em cascata do centro para fora (padrão)
+       onda     entram e ficam ondulando como uma bandeira
+       explode  saem do centro girando e assentam com elástico
+       maquina  máquina de escrever com cursor piscando
+     params: text, estilo, cor (preenchimento, default #FFFFFF), cor2 (palavra em destaque, default #FFD400),
+             destaque (palavra que ganha cor2), y (0..1 do centro, default 0.36), tamanho (px máx., default 170),
+             fonte "Anton" | "Poppins" (default Anton) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #frase { position: absolute; left: 6%; right: 6%; text-align: center; line-height: 1.02; text-transform: uppercase;
+           will-change: transform; }
+  #frase span { display: inline-block; will-change: transform, opacity, filter;
+                -webkit-text-stroke: 8px rgba(8, 6, 20, .95); paint-order: stroke fill;
+                text-shadow: 0 10px 0 rgba(0,0,0,.28), 0 18px 32px rgba(0,0,0,.45); }
+  #cursor { display: inline-block; width: .08em; height: .9em; margin-left: .06em; vertical-align: -.08em;
+            background: currentColor; }
+</style></head>
+<body><div id="frase"></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+import { createTimeline, stagger } from '/vendor/animejs/anime.esm.min.js';
+
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const estilo = p.estilo || 'sobe';
+const familia = p.fonte === 'Poppins' ? "'Poppins'" : "'Anton'", peso = p.fonte === 'Poppins' ? 900 : 400;
+const frase = document.getElementById('frase');
+const texto = String(p.text || '').toUpperCase();
+const destaque = String(p.destaque || '').toUpperCase();
+
+motion.waitFor(document.fonts.load(`${peso} 100px ${familia}`).catch(() => {}).then(monta));
+
+function monta() {
+  frase.style.fontFamily = familia;
+  frase.style.fontWeight = peso;
+  frase.style.color = p.cor || '#FFFFFF';
+  // tamanho: o maior que cabe em 2 linhas na largura útil
+  let fs = Math.min(p.tamanho || 170, 230);
+  frase.textContent = texto;
+  frase.style.fontSize = fs + 'px';
+  while (fs > 50 && (frase.scrollHeight > fs * 3.3 || frase.scrollWidth > frase.clientWidth + 2)) { fs -= 4; frase.style.fontSize = fs + "px"; }
+  frase.style.top = `${(p.y ?? 0.36) * H - frase.scrollHeight / 2}px`;
+  // letras (palavra de destaque pinta com cor2)
+  const palavras = texto.split(/\s+/);
+  frase.textContent = '';
+  const letras = [];
+  palavras.forEach((pal, wi) => {
+    const box = document.createElement('span');
+    box.style.whiteSpace = 'nowrap';
+    box.style.textShadow = 'none';
+    box.style.webkitTextStroke = '0';
+    for (const ch of pal) {
+      const s = document.createElement('span');
+      s.textContent = ch;
+      if (destaque && pal.replace(/[^\p{L}\p{N}]/gu, '') === destaque.replace(/[^\p{L}\p{N}]/gu, '')) s.style.color = p.cor2 || '#FFD400';
+      box.appendChild(s);
+      letras.push(s);
+    }
+    frase.appendChild(box);
+    if (wi < palavras.length - 1) frase.appendChild(document.createTextNode(' '));
+  });
+  const n = letras.length, dur = Math.max(D, 0.8) * 1000;
+  const saida = Math.max(dur - 380, dur * 0.7);
+  const tl = createTimeline({ autoplay: false, defaults: { duration: 700 } });
+
+  if (estilo === 'onda') {
+    tl.add(letras, { y: [90, 0], opacity: [0, 1], scale: [0.6, 1], ease: 'outBack(1.7)', duration: 520,
+                     delay: stagger(26) }, 0)
+      .add(letras, { y: [0, -16, 0, 10, 0], ease: 'inOutSine', duration: 1400, delay: stagger(60),
+                     loop: Math.ceil(dur / 1400) }, 520);
+  } else if (estilo === 'explode') {
+    tl.add(letras, { scale: [0, 1], rotate: (_, i) => [((i * 97) % 120) - 60, 0], opacity: [0, 1],
+                     x: (_, i) => [((i * 53) % 300) - 150, 0], y: (_, i) => [((i * 71) % 260) - 130, 0],
+                     ease: 'outElastic(1, .55)', duration: 1000, delay: stagger(22, { from: 'center' }) }, 0);
+  } else if (estilo === 'maquina') {
+    const cur = document.createElement('span');
+    cur.id = 'cursor';
+    frase.appendChild(cur);
+    letras.forEach((l) => { l.style.opacity = 0; });
+    tl.add(letras, { opacity: [0, 1], duration: 1, delay: stagger(Math.min(70, 1600 / Math.max(n, 1))) }, 0)
+      .add(cur, { opacity: [1, 0, 1], duration: 900, ease: 'steps(2)', loop: Math.ceil(dur / 900) }, 0);
+  } else {   // sobe
+    tl.add(letras, { y: [110, 0], rotate: [12, 0], opacity: [0, 1], filter: ['blur(10px)', 'blur(0px)'],
+                     ease: 'outBack(1.4)', duration: 620, delay: stagger(28, { from: 'center' }) }, 0);
+  }
+  // saída limpa (todas as letras juntas, um pouco para cima)
+  tl.add(frase, { y: [0, -30], opacity: [1, 0], scale: [1, 0.96], ease: 'inQuad', duration: Math.max(dur - 45 - saida, 120) }, saida);   // some 1 quadro antes do fim
+  motion.anime(tl, 0);
+}
+</script></body></html>

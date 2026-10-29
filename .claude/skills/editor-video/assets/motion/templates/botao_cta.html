@@ -1,0 +1,44 @@
+<!doctype html>
+<!-- BOTÃO "SAIBA MAIS" COM CURSOR CLICANDO (layer: front): botão estilo anúncio entra com mola, respira com um
+     brilho passando, o cursor chega e clica (botão afunda, onda de clique, flash). params: text ("Saiba Mais"),
+     sub (linha menor opcional), accent, color (texto), click_at (s), y (px do centro; default 0,68*H), icone (Lucide, opcional) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css"><link rel="stylesheet" href="/lib/scene.css">
+<style>
+  #b { position: absolute; left: 50%; padding: 32px 84px 36px; white-space: nowrap; border-radius: 999px; font-weight: 900;
+       font-size: 60px; letter-spacing: -.5px; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
+  #row { display: flex; align-items: center; gap: 18px; position: relative; }
+  #ic { width: 58px; height: 58px; } #ic svg { width: 100%; height: 100%; stroke: currentColor; stroke-width: 2.6; }
+  #sub { font-size: 28px; font-weight: 700; opacity: .85; margin-top: 2px; position: relative; letter-spacing: .02em; }
+  #halo { position: absolute; left: 50%; border-radius: 999px; pointer-events: none; }
+</style></head>
+<body><div id="halo"></div><div id="b"><div class="ds-sheen" id="sheen"></div><div id="row"><div id="ic"></div><div id="txt"></div></div><div id="sub"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+import { cursor } from '/lib/fx.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const accent = p.accent || '#1877F2';
+const b = document.getElementById('b'), halo = document.getElementById('halo'), sheen = document.getElementById('sheen');
+b.style.background = `linear-gradient(180deg, color-mix(in srgb, ${accent} 78%, #fff) 0%, ${accent} 55%, color-mix(in srgb, ${accent} 80%, #000) 100%)`;
+b.style.color = p.color || '#fff';
+b.style.boxShadow = `0 26px 60px color-mix(in srgb, ${accent} 45%, rgba(0,0,0,.4)), inset 0 2px 0 rgba(255,255,255,.45), inset 0 -8px 0 rgba(0,0,0,.18)`;
+halo.style.background = `radial-gradient(closest-side, color-mix(in srgb, ${accent} 60%, transparent), transparent)`;
+document.getElementById('txt').textContent = p.text || 'Saiba Mais';
+const sub = document.getElementById('sub'); sub.textContent = p.sub || ''; if (!p.sub) sub.style.display = 'none';
+const ic = document.getElementById('ic');
+if (p.icone) motion.waitFor(motion.icon(p.icone).then((s) => { ic.innerHTML = s; })); else ic.style.display = 'none';
+const cy = p.y ?? H * 0.68, clickAt = p.click_at ?? Math.min(1.4, D - 0.6);
+const cur = cursor(document.body);
+motion.onFrame((t) => {
+  b.style.top = cy + 'px'; b.style.marginLeft = -b.offsetWidth / 2 + 'px'; b.style.marginTop = -b.offsetHeight / 2 + 'px';
+  const press = t >= clickAt && t < clickAt + 0.3 ? 1 - 0.08 * Math.sin(motion.clamp((t - clickAt) / 0.3) * Math.PI) : 1;
+  const breath = 1 + 0.018 * Math.sin(t * 4.2) * motion.clamp(t - 0.6);
+  motion.appear(b, t, 0, { from: 'scale', scale0: 0.4, dur: 0.6, bounce: 0.4, t1: D, extra: `scale(${press * breath})` });
+  motion.shimmer(sheen, t, 1.8, 0.5);
+  const hk = motion.prog(t, clickAt, 0.6, 'outCubic');
+  const hw = b.offsetWidth * (1.1 + 0.5 * hk), hh = b.offsetHeight * (1.3 + 0.9 * hk);
+  Object.assign(halo.style, { top: (cy - hh / 2) + 'px', width: hw + 'px', height: hh + 'px', marginLeft: (-hw / 2) + 'px',
+    opacity: t >= clickAt ? (1 - hk) * (1 - motion.exitK(t, D)) : 0.35 * motion.clamp(t / 0.6) });
+  const r = b.getBoundingClientRect();
+  cur(t, [{ at: clickAt - 0.9, x: W * 0.85, y: cy + 380 }, { at: clickAt, x: r.left + r.width * 0.64, y: r.top + r.height * 0.62, click: true }]);
+});
+</script></body></html>

@@ -1,0 +1,147 @@
+{
+ "style": "pro_clean",
+ "format": "9:16",
+ "brand": null,
+ "clips": [
+  {
+   "id": "c1",
+   "path": "CLIP_PLACEHOLDER/mentos_bruto.MOV",
+   "duration": 17.37,
+   "has_audio": true,
+   "width": 360,
+   "height": 480,
+   "fps": 29.991
+  }
+ ],
+ "broll": [],
+ "version": 0,
+ "overrides": {
+  "word_fixes": {
+   "toutifrut": "tutti-frutti"
+  },
+  "cuts": [],
+  "restores": [],
+  "behind_add": [],
+  "behind_remove": [],
+  "emphasis_add": [],
+  "broll_at": [],
+  "broll_remove": [],
+  "caption": {},
+  "zoom": {},
+  "hook": null,
+  "cta": "TOQUE NO CARRINHO",
+  "behind_enabled": null,
+  "notes": [
+   {
+    "when": "2026-10-23T04:11:15",
+    "note": "teste do manual de direção",
+    "ops": [
+     "corrigir 'toutifrut' -> 'tutti-frutti'",
+     "cta: TOQUE NO CARRINHO",
+     "motion manchete em 'Gente, eu tô aqui'",
+     "motion maos em 'dá uma olhadinha aqui'",
+     "motion infografico em 'à venda por apenas'",
+     "motion carimbo em 'Na promoção'",
+     "motion palavra em 'muito gostoso'",
+     "motion checklist em 'Ele tem dois sabores'",
+     "motion botao_cta em 'e é isso aí'",
+     "efeito tremida em 'gostoso'"
+    ],
+    "for_version": 2
+   }
+  ],
+  "sem_cortes": true,
+  "motion": [
+   {
+    "template": "manchete",
+    "at": 0,
+    "dur": 2.6,
+    "params": {
+     "rotulo": "ACHADINHO",
+     "linhas": [
+      "CHICLETE",
+      "MENTOS UP2U"
+     ],
+     "destaque": [
+      "UP2U"
+     ]
+    }
+   },
+   {
+    "template": "maos",
+    "at": "dá uma olhadinha aqui",
+    "dur": 2.0,
+    "params": {
+     "etiqueta": "MENTOS",
+     "topo": false
+    }
+   },
+   {
+    "template": "infografico",
+    "at": "15 reais",
+    "dur": 2.4,
+    "params": {
+     "stats": [
+      {
+       "value": 15,
+       "prefix": "R$ ",
+       "label": "por apenas",
+       "icon": "tag",
+       "at": 0.1
+      }
+     ]
+    }
+   },
+   {
+    "template": "carimbo",
+    "at": "Na promoção",
+    "dur": 1.6,
+    "params": {
+     "text": "PROMOÇÃO",
+     "rot": -8
+    }
+   },
+   {
+    "template": "palavra",
+    "at": "muito gostoso",
+    "dur": 1.6,
+    "params": {
+     "text": "GOSTOSO."
+    }
+   },
+   {
+    "template": "checklist",
+    "at": "Ele tem dois sabores",
+    "until": "toutifrut",
+    "params": {
+     "title": "2 sabores",
+     "items": [
+      {
+       "text": "Menta",
+       "at": "menta"
+      },
+      {
+       "text": "Tutti-frutti",
+       "at": "toutifrut"
+      }
+     ]
+    }
+   },
+   {
+    "template": "botao_cta",
+    "at": "e é isso aí",
+    "dur": 1.8,
+    "params": {
+     "text": "TOQUE NO CARRINHO",
+     "click_at": "isso"
+    }
+   }
+  ],
+  "fx_requests": [
+   {
+    "type": "tremida",
+    "at": "gostoso"
+   }
+  ]
+ }
+}

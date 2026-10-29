@@ -1,0 +1,126 @@
+{
+  "slug": "metodo-sono-leve",
+  "etapa": "pagina",
+  "criado_em": "2026-10-22",
+  "produto": {
+    "nome": "Método Sono Leve",
+    "formato": "curso online",
+    "entrega": "Área de membros com 6 módulos curtos em vídeo (assista no celular), acesso imediato após a compra e por 1 ano",
+    "preco": 197,
+    "preco_ancora": 497,
+    "parcelas": 12,
+    "valor_parcela": 20.37,
+    "moeda": "BRL",
+    "checkout_url": "https://pay.exemplo.com/sono-leve",
+    "garantia_dias": 7,
+    "garantia_texto": "Assista às aulas, aplique a rotina por 7 dias. Se você não sentir as noites mais tranquilas, mande uma mensagem e devolvemos 100% do valor. Sem perguntas e sem burocracia."
+  },
+  "publico": {
+    "quem": "Mães de primeira viagem com bebês de 4 a 18 meses, 26 a 38 anos, que voltaram ou vão voltar a trabalhar e acordam de 4 a 6 vezes por noite",
+    "consciencia": "problema",
+    "dores": [
+      "Acordar 5 vezes por noite e ir trabalhar no dia seguinte sem conseguir pensar",
+      "Ninar por 40 minutos e o bebê acordar assim que encosta no berço",
+      "Culpa de perder a paciência às 3 da manhã",
+      "Brigas com o marido por causa do cansaço"
+    ],
+    "desejos": [
+      "Dormir 6 horas seguidas de novo",
+      "Colocar o bebê no berço acordado e ele dormir sozinho",
+      "Ter as noites de volta sem deixar o bebê chorando sozinho"
+    ],
+    "objecoes": [
+      "Meu bebê é diferente, nada funciona com ele",
+      "Não quero deixar meu filho chorando",
+      "Não tenho tempo para fazer curso",
+      "Já li tudo na internet e não adiantou"
+    ],
+    "medos": [
+      "Traumatizar o bebê",
+      "Ser julgada por outras mães",
+      "Gastar dinheiro com mais uma coisa que não funciona"
+    ],
+    "palavras": ["despertar noturno", "mamar para dormir", "colo para dormir", "salto de desenvolvimento", "regressão do sono", "exausta"]
+  },
+  "oferta": {
+    "promessa": "Seu bebê dormindo a noite inteira em até 21 dias, sem deixar ele chorando sozinho",
+    "prazo_resultado": "primeiras mudanças em 3 a 5 noites; noites inteiras em até 21 dias",
+    "big_idea": "O bebê não acorda por fome nem por manha: ele acorda porque aprendeu a dormir de um jeito que só funciona no seu colo",
+    "mecanismo_problema": {
+      "nome": "A Ponte do Colo",
+      "explicacao": "Quando o bebê só adormece no colo ou mamando, cada despertar natural entre um ciclo de sono e outro (a cada 40–60 minutos) vira um alarme: ele procura a ponte que o levou a dormir e não encontra"
+    },
+    "mecanismo_solucao": {
+      "nome": "Rotina dos 3 Sinais",
+      "explicacao": "Uma sequência de três sinais (luz, som e toque) repetida na mesma ordem que vira a nova ponte do sono — uma ponte que o bebê consegue atravessar sozinho, com a mãe por perto"
+    },
+    "stack": [
+      {"item": "Módulo 1 — Entendendo o sono do seu bebê", "descricao": "Ciclos de sono por idade e a tabela de janelas de sono", "valor": 97},
+      {"item": "Módulo 2 — O quarto que faz dormir", "descricao": "Luz, temperatura e ruído branco ajustados em 1 tarde", "valor": 67},
+      {"item": "Módulo 3 — A Rotina dos 3 Sinais", "descricao": "O passo a passo noite por noite, com vídeos de mães aplicando", "valor": 197},
+      {"item": "Módulo 4 — Desmame do colo sem choro sozinho", "descricao": "A transição em 4 etapas, no ritmo do seu bebê", "valor": 147},
+      {"item": "Módulo 5 — Sonecas do dia", "descricao": "Por que soneca ruim estraga a noite, e como corrigir", "valor": 67},
+      {"item": "Módulo 6 — Saltos, dentes e viagens", "descricao": "O que fazer quando a rotina sai do eixo", "valor": 67}
+    ],
+    "bonus": [
+      {"nome": "Planner das 21 noites (PDF para imprimir)", "descricao": "Anote cada noite e veja a evolução", "valor": 47},
+      {"nome": "Grupo de apoio no WhatsApp por 60 dias", "descricao": "Tire dúvidas com a equipe e com outras mães", "valor": 197},
+      {"nome": "Aula: o pai no plano", "descricao": "Como dividir as noites sem briga", "valor": 47}
+    ],
+    "escassez": "[HIPÓTESE] Bônus do grupo de apoio só para quem entrar nesta turma — vagas abertas até domingo",
+    "order_bump": {"nome": "Kit de ruído branco (12 faixas) + playlist de sonecas", "preco": 27},
+    "upsell": {"nome": "Consultoria individual de 30 minutos", "preco": 297}
+  },
+  "autor": {
+    "nome": "Carla Mendes",
+    "credencial": "Consultora do sono infantil · 1.200 famílias atendidas",
+    "historia": "Mãe do Theo e da Lia. Passei 11 meses acordando de hora em hora até entender por que nada funcionava. Desde 2021 ajudo famílias a terem as noites de volta, com respeito ao tempo de cada bebê.",
+    "foto": ""
+  },
+  "provas": [
+    {"tipo": "depoimento", "texto": "Na quarta noite a Alice dormiu das 20h às 4h. Eu chorei de alegria. Hoje ela dorme a noite toda e eu voltei a ser gente.", "nome": "Juliana, mãe da Alice (9 meses)", "imagem": ""},
+    {"tipo": "depoimento", "texto": "Eu tinha certeza de que meu filho era diferente. Ele acordava 6 vezes. Em duas semanas passou para uma, e sem eu deixar ele chorando.", "nome": "Renata, mãe do Bento (14 meses)", "imagem": ""},
+    {"tipo": "depoimento", "texto": "O módulo do pai salvou meu casamento, sério. A gente parou de brigar às 3 da manhã.", "nome": "Patrícia, mãe do Davi (6 meses)", "imagem": ""},
+    {"tipo": "número", "texto": "[HIPÓTESE] 87% das mães relatam menos despertares já na primeira semana (pesquisa com 312 alunas)", "nome": "Pesquisa interna", "imagem": ""}
+  ],
+  "faq": [
+    {"p": "A partir de que idade funciona?", "r": "O método foi feito para bebês de 4 a 18 meses. Antes de 4 meses, o Módulo 1 mostra o que já dá para fazer sem pressa."},
+    {"p": "Vou ter que deixar meu bebê chorando?", "r": "Não. O método não usa a técnica de deixar chorar sozinho. Você fica perto o tempo todo e vai se afastando aos poucos, no ritmo do bebê."},
+    {"p": "Quanto tempo por dia preciso?", "r": "As aulas têm de 5 a 12 minutos. A aplicação acontece na rotina que você já faz: banho, mamada e hora de dormir."},
+    {"p": "E se não funcionar com o meu bebê?", "r": "Você tem 7 dias de garantia. Se não sentir diferença, devolvemos 100% do valor."},
+    {"p": "Como recebo o acesso?", "r": "Logo após a confirmação do pagamento chega um e-mail com login e senha. No Pix e no cartão é na hora."},
+    {"p": "Isso substitui o pediatra?", "r": "Não. O curso é sobre rotina e hábitos de sono. Qualquer questão de saúde deve ser conversada com o pediatra do seu bebê."}
+  ],
+  "vsl": {
+    "duracao_min": 10,
+    "delay_oferta_s": 388,
+    "embed": "",
+    "status": "roteiro"
+  },
+  "pagina": {
+    "headline": "Seu bebê dormindo a noite inteira em até 21 dias, *sem deixar ele chorando sozinho*",
+    "subheadline": "Assista ao vídeo e descubra a Ponte do Colo: o motivo de o seu bebê acordar de hora em hora, mesmo depois de mamar bem.",
+    "aviso_play": "Clique no play e assista com o som ligado",
+    "chamada_botao": "QUERO MINHAS NOITES DE VOLTA",
+    "bullets": [
+      "A tabela de janelas de sono para a idade exata do seu bebê",
+      "A Rotina dos 3 Sinais, noite por noite, com vídeos de mães aplicando",
+      "Como tirar o bebê do colo para dormir sem deixar ele chorando sozinho",
+      "O que fazer em saltos de desenvolvimento, dentes e viagens",
+      "[HIPÓTESE] Um plano para o pai participar das noites"
+    ],
+    "para_quem": [
+      "Seu bebê tem entre 4 e 18 meses",
+      "Ele só dorme no colo ou mamando",
+      "Você quer noites inteiras sem deixar ele chorar sozinho"
+    ],
+    "nao_para_quem": [
+      "Você procura uma fórmula mágica para hoje à noite",
+      "Seu bebê tem alguma questão de saúde ainda sem acompanhamento do pediatra"
+    ],
+    "rodape": "Método Sono Leve · Carla Mendes Consultoria LTDA · CNPJ 00.000.000/0001-00 · contato@exemplo.com"
+  },
+  "marca": {"cor": "#8B7CF6", "cor2": "#34D399", "fundo": "#0E0D1A", "texto": "#F6F4FF", "fonte": "system"},
+  "trafego": {"canal": "Meta", "verba_dia": 80},
+  "lancamento": {"inicio": "2026-11-03", "horas_por_dia": 2}
+}

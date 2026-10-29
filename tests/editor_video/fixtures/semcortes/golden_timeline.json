@@ -1,0 +1,768 @@
+{
+ "audio": {
+  "lufs": -14
+ },
+ "behind": [],
+ "behind_cfg": {
+  "alpha": "00",
+  "case": "upper",
+  "color": "#E9DDFF",
+  "enabled": true,
+  "font": "Poppins",
+  "italic": false,
+  "max": 3,
+  "size": 300
+ },
+ "brand": null,
+ "broll": [],
+ "captions": {
+  "cfg": {
+   "animation": "acumula",
+   "bold": 1,
+   "box": false,
+   "case": "keep",
+   "color": "#FFFFFF",
+   "emph_case": "upper",
+   "emph_color": "#C9B2FF",
+   "emph_font": "Poppins",
+   "emph_italic": false,
+   "emph_linha": true,
+   "emph_size": 92,
+   "font": "Poppins",
+   "highlight": "none",
+   "max_chars": 20,
+   "outline": 0,
+   "outline_color": "#000000",
+   "shadow": 4,
+   "size": 76,
+   "words_per_page": 3,
+   "y": 1150
+  },
+  "pages": [
+   {
+    "t0": 1.28,
+    "t1": 2.16,
+    "words": [
+     0,
+     1,
+     2
+    ]
+   },
+   {
+    "t0": 2.16,
+    "t1": 2.71,
+    "words": [
+     3,
+     4,
+     5
+    ]
+   },
+   {
+    "t0": 2.71,
+    "t1": 4.63,
+    "words": [
+     6,
+     7,
+     8
+    ]
+   },
+   {
+    "t0": 4.63,
+    "t1": 5.443,
+    "words": [
+     9,
+     10,
+     11
+    ]
+   },
+   {
+    "t0": 5.443,
+    "t1": 6.083,
+    "words": [
+     12,
+     13,
+     14
+    ]
+   },
+   {
+    "t0": 6.083,
+    "t1": 6.563,
+    "words": [
+     15
+    ]
+   },
+   {
+    "t0": 6.563,
+    "t1": 7.683,
+    "words": [
+     16,
+     17,
+     18
+    ]
+   },
+   {
+    "t0": 7.683,
+    "t1": 8.483,
+    "words": [
+     19,
+     20,
+     21
+    ]
+   },
+   {
+    "t0": 8.483,
+    "t1": 10.483,
+    "words": [
+     22,
+     23,
+     24
+    ]
+   },
+   {
+    "t0": 10.483,
+    "t1": 11.597,
+    "words": [
+     25,
+     26,
+     27
+    ]
+   },
+   {
+    "t0": 11.597,
+    "t1": 12.397,
+    "words": [
+     28,
+     29,
+     30
+    ]
+   },
+   {
+    "t0": 12.397,
+    "t1": 12.877,
+    "words": [
+     31,
+     32
+    ]
+   },
+   {
+    "t0": 12.877,
+    "t1": 13.517,
+    "words": [
+     33,
+     34
+    ]
+   },
+   {
+    "t0": 13.517,
+    "t1": 14.143,
+    "words": [
+     35
+    ]
+   },
+   {
+    "t0": 14.143,
+    "t1": 14.703,
+    "words": [
+     36,
+     37,
+     38
+    ]
+   },
+   {
+    "t0": 14.703,
+    "t1": 15.903,
+    "words": [
+     39,
+     40,
+     41
+    ]
+   }
+  ]
+ },
+ "duration": 17.367,
+ "format": "9:16",
+ "fps": 30,
+ "fx": [
+  {
+   "t": 13.517,
+   "type": "tremida"
+  }
+ ],
+ "grade": "eq=contrast=1.06:saturation=1.06:brightness=0.0,unsharp=5:5:0.4",
+ "graphics": [
+  {
+   "t0": 14.167,
+   "t1": 15.867,
+   "text": "TOQUE NO CARRINHO",
+   "type": "cta"
+  }
+ ],
+ "graphics_cfg": {
+  "accent": "#B794FF",
+  "chapter_numbers": false,
+  "cta": true,
+  "hook_banner": false,
+  "icons": false,
+  "lower_third": false,
+  "panel": "#000000",
+  "progress_bar": false,
+  "text": "#FFFFFF"
+ },
+ "h": 1920,
+ "motion": [
+  {
+   "layer": "front",
+   "params": {
+    "destaque": [
+     "UP2U"
+    ],
+    "linhas": [
+     "CHICLETE",
+     "MENTOS UP2U"
+    ],
+    "rotulo": "ACHADINHO"
+   },
+   "t0": 0.0,
+   "t1": 2.6,
+   "template": "manchete",
+   "zona": "topo"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "etiqueta": "MENTOS",
+    "topo": false
+   },
+   "t0": 4.53,
+   "t1": 6.53,
+   "template": "maos",
+   "zona": "barra"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "stats": [
+     {
+      "at": 0.1,
+      "icon": "tag",
+      "label": "por apenas",
+      "prefix": "R$ ",
+      "value": 15
+     }
+    ]
+   },
+   "t0": 8.863,
+   "t1": 10.383,
+   "template": "infografico",
+   "zona": "topo"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "rot": -8,
+    "text": "PROMOÇÃO",
+    "y": 0.2
+   },
+   "t0": 10.383,
+   "t1": 11.983,
+   "template": "carimbo",
+   "zona": "topo"
+  },
+  {
+   "layer": "behind",
+   "params": {
+    "text": "GOSTOSO."
+   },
+   "t0": 13.257,
+   "t1": 14.857,
+   "template": "palavra"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "items": [
+     {
+      "at": 0.406,
+      "text": "Menta"
+     },
+     {
+      "at": 1.046,
+      "text": "Tutti-frutti"
+     }
+    ],
+    "title": "2 sabores"
+   },
+   "t0": 14.857,
+   "t1": 16.883,
+   "template": "checklist",
+   "zona": "topo"
+  },
+  {
+   "layer": "front",
+   "params": {
+    "click_at": 1.076,
+    "text": "TOQUE NO CARRINHO"
+   },
+   "t0": 15.867,
+   "t1": 17.367,
+   "template": "botao_cta"
+  }
+ ],
+ "music": null,
+ "revisao": {
+  "patches_aplicados": 0,
+  "zoom_sig": "bb9080463be2e308"
+ },
+ "sfx": [
+  {
+   "gain": 0.3,
+   "t": 0,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.4,
+   "t": 0.05,
+   "type": "pop"
+  },
+  {
+   "gain": 0.3,
+   "t": 4.45,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.3,
+   "t": 4.63,
+   "type": "tick"
+  },
+  {
+   "gain": 0.25,
+   "t": 4.88,
+   "type": "tick"
+  },
+  {
+   "gain": 0.3,
+   "t": 8.783,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.35,
+   "t": 8.963,
+   "type": "tick"
+  },
+  {
+   "gain": 0.25,
+   "t": 9.863,
+   "type": "ding"
+  },
+  {
+   "gain": 0.3,
+   "t": 10.303,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.4,
+   "t": 10.433,
+   "type": "boom"
+  },
+  {
+   "gain": 0.3,
+   "t": 13.177,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.45,
+   "t": 13.307,
+   "type": "boom"
+  },
+  {
+   "gain": 0.3,
+   "t": 14.777,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.3,
+   "t": 15.263,
+   "type": "ding"
+  },
+  {
+   "gain": 0.3,
+   "t": 15.267,
+   "type": "riser"
+  },
+  {
+   "gain": 0.3,
+   "t": 15.787,
+   "type": "whoosh"
+  },
+  {
+   "gain": 0.3,
+   "t": 15.903,
+   "type": "ding"
+  },
+  {
+   "gain": 0.55,
+   "t": 16.943,
+   "type": "click"
+  }
+ ],
+ "shots": [
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 0.0,
+   "out": 2.71,
+   "speed": 1.0,
+   "t0": 0.0,
+   "t1": 2.7,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 2.71,
+   "out": 5.43,
+   "speed": 1.0,
+   "t0": 2.7,
+   "t1": 5.433,
+   "zoom0": 1.1,
+   "zoom1": 1.13
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 5.43,
+   "out": 8.23,
+   "speed": 1.0,
+   "t0": 5.433,
+   "t1": 8.233,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 8.23,
+   "out": 11.27,
+   "speed": 1.0,
+   "t0": 8.233,
+   "t1": 11.267,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 11.27,
+   "out": 14.15,
+   "speed": 1.0,
+   "t0": 11.267,
+   "t1": 14.133,
+   "zoom0": 1.1,
+   "zoom1": 1.13
+  },
+  {
+   "clip": "c1",
+   "cx": 0.5,
+   "cy": 0.42,
+   "in": 14.15,
+   "out": 17.37,
+   "speed": 1.0,
+   "t0": 14.133,
+   "t1": 17.367,
+   "zoom0": 1.0,
+   "zoom1": 1.0
+  }
+ ],
+ "style": "pro_clean",
+ "w": 1080,
+ "words": [
+  {
+   "emph": false,
+   "t0": 1.28,
+   "t1": 1.82,
+   "w": "Gente,"
+  },
+  {
+   "emph": false,
+   "t0": 1.84,
+   "t1": 1.98,
+   "w": "eu"
+  },
+  {
+   "emph": false,
+   "t0": 2.0,
+   "t1": 2.14,
+   "w": "tô"
+  },
+  {
+   "emph": false,
+   "t0": 2.16,
+   "t1": 2.38,
+   "w": "aqui"
+  },
+  {
+   "emph": false,
+   "t0": 2.4,
+   "t1": 2.54,
+   "w": "com"
+  },
+  {
+   "emph": false,
+   "t0": 2.56,
+   "t1": 2.7,
+   "w": "esse"
+  },
+  {
+   "emph": false,
+   "t0": 2.71,
+   "t1": 3.51,
+   "w": "chiclete"
+  },
+  {
+   "emph": false,
+   "t0": 3.59,
+   "t1": 3.81,
+   "w": "da"
+  },
+  {
+   "emph": false,
+   "t0": 3.83,
+   "t1": 4.61,
+   "w": "Mentos,"
+  },
+  {
+   "emph": false,
+   "t0": 4.63,
+   "t1": 4.85,
+   "w": "dá"
+  },
+  {
+   "emph": false,
+   "t0": 4.87,
+   "t1": 4.93,
+   "w": "uma"
+  },
+  {
+   "emph": false,
+   "t0": 4.95,
+   "t1": 5.41,
+   "w": "olhadinha"
+  },
+  {
+   "emph": false,
+   "t0": 5.443,
+   "t1": 5.663,
+   "w": "aqui"
+  },
+  {
+   "emph": false,
+   "t0": 5.683,
+   "t1": 5.903,
+   "w": "como"
+  },
+  {
+   "emph": false,
+   "t0": 5.923,
+   "t1": 6.063,
+   "w": "ele"
+  },
+  {
+   "emph": false,
+   "t0": 6.083,
+   "t1": 6.543,
+   "w": "é."
+  },
+  {
+   "emph": false,
+   "t0": 6.563,
+   "t1": 6.783,
+   "w": "Esse"
+  },
+  {
+   "emph": false,
+   "t0": 6.803,
+   "t1": 7.503,
+   "w": "chiclete"
+  },
+  {
+   "emph": false,
+   "t0": 7.523,
+   "t1": 7.663,
+   "w": "está"
+  },
+  {
+   "emph": false,
+   "t0": 7.683,
+   "t1": 7.823,
+   "w": "à"
+  },
+  {
+   "emph": true,
+   "t0": 7.843,
+   "t1": 8.223,
+   "w": "venda"
+  },
+  {
+   "emph": false,
+   "t0": 8.243,
+   "t1": 8.463,
+   "w": "por"
+  },
+  {
+   "emph": false,
+   "t0": 8.483,
+   "t1": 8.803,
+   "w": "apenas"
+  },
+  {
+   "emph": false,
+   "t0": 8.963,
+   "t1": 9.583,
+   "w": "15"
+  },
+  {
+   "emph": false,
+   "t0": 9.603,
+   "t1": 10.303,
+   "w": "reais."
+  },
+  {
+   "emph": false,
+   "t0": 10.483,
+   "t1": 10.623,
+   "w": "Na"
+  },
+  {
+   "emph": false,
+   "t0": 10.643,
+   "t1": 11.263,
+   "w": "promoção,"
+  },
+  {
+   "emph": false,
+   "t0": 11.277,
+   "t1": 11.577,
+   "w": "15"
+  },
+  {
+   "emph": true,
+   "t0": 11.597,
+   "t1": 11.977,
+   "w": "reais,"
+  },
+  {
+   "emph": false,
+   "t0": 12.077,
+   "t1": 12.217,
+   "w": "dá"
+  },
+  {
+   "emph": false,
+   "t0": 12.237,
+   "t1": 12.377,
+   "w": "uma"
+  },
+  {
+   "emph": false,
+   "t0": 12.397,
+   "t1": 12.777,
+   "w": "olhadinha,"
+  },
+  {
+   "emph": false,
+   "t0": 12.797,
+   "t1": 12.857,
+   "w": "um"
+  },
+  {
+   "emph": false,
+   "t0": 12.877,
+   "t1": 13.337,
+   "w": "chiclete"
+  },
+  {
+   "emph": false,
+   "t0": 13.357,
+   "t1": 13.497,
+   "w": "muito"
+  },
+  {
+   "emph": false,
+   "t0": 13.517,
+   "t1": 14.133,
+   "w": "gostoso."
+  },
+  {
+   "emph": false,
+   "t0": 14.143,
+   "t1": 14.283,
+   "w": "Ele"
+  },
+  {
+   "emph": false,
+   "t0": 14.303,
+   "t1": 14.443,
+   "w": "tem"
+  },
+  {
+   "emph": false,
+   "t0": 14.463,
+   "t1": 14.683,
+   "w": "dois"
+  },
+  {
+   "emph": false,
+   "t0": 14.703,
+   "t1": 15.243,
+   "w": "sabores,"
+  },
+  {
+   "emph": false,
+   "t0": 15.263,
+   "t1": 15.723,
+   "w": "menta"
+  },
+  {
+   "emph": false,
+   "t0": 15.743,
+   "t1": 15.883,
+   "w": "e"
+  },
+  {
+   "emph": false,
+   "t0": 15.903,
+   "t1": 16.683,
+   "w": "tutti-frutti,"
+  },
+  {
+   "emph": false,
+   "t0": 16.703,
+   "t1": 16.843,
+   "w": "e"
+  },
+  {
+   "emph": false,
+   "t0": 16.863,
+   "t1": 16.923,
+   "w": "é"
+  },
+  {
+   "emph": false,
+   "t0": 16.943,
+   "t1": 17.083,
+   "w": "isso"
+  },
+  {
+   "emph": false,
+   "t0": 17.103,
+   "t1": 17.333,
+   "w": "aí."
+  }
+ ]
+}

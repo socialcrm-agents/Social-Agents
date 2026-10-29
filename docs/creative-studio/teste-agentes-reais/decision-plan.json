@@ -1,0 +1,90 @@
+{
+ "versao": 1,
+ "tipo": "produto",
+ "estilo": "pro_clean",
+ "mapa": [
+  {
+   "cena": "c1",
+   "t0": 1.28,
+   "t1": 6.54,
+   "fala": "Gente, eu tô aqui com esse chiclete da Mentos, dá uma olhadinha aqui como ele é.",
+   "funcao": "gancho",
+   "elemento": {
+    "tipo": "motion",
+    "template": "manchete",
+    "id": "m1"
+   },
+   "responsavel": "diretor"
+  },
+  {
+   "cena": "c2",
+   "t0": 6.56,
+   "t1": 10.3,
+   "fala": "Esse chiclete está à venda por apenas 15 reais.",
+   "funcao": "respiro",
+   "elemento": {
+    "tipo": "motion",
+    "template": "infografico",
+    "id": "m3"
+   },
+   "responsavel": "diretor"
+  },
+  {
+   "cena": "c3",
+   "t0": 10.48,
+   "t1": 14.13,
+   "fala": "Na promoção, 15 reais, dá uma olhadinha, um chiclete muito gostoso.",
+   "funcao": "respiro",
+   "elemento": {
+    "tipo": "motion",
+    "template": "carimbo",
+    "id": "m4"
+   },
+   "responsavel": "diretor"
+  },
+  {
+   "cena": "c4",
+   "t0": 14.14,
+   "t1": 17.33,
+   "fala": "Ele tem dois sabores, menta e tutti-frutti, e é isso aí.",
+   "funcao": "respiro",
+   "elemento": {
+    "tipo": "motion",
+    "template": "palavra",
+    "id": "m5"
+   },
+   "responsavel": "diretor"
+  }
+ ],
+ "convocados": [
+  {
+   "agente": "art-director",
+   "motivo": "linguagem visual das cenas",
+   "cenas": [
+    "c3",
+    "c4"
+   ]
+  },
+  {
+   "agente": "senior-editor",
+   "motivo": "aplicar o plano aprovado com edit.py e medir com dry-run",
+   "cenas": [
+    "todas"
+   ]
+  }
+ ],
+ "decisoes_respeitadas": [
+  "D01",
+  "D02",
+  "D03",
+  "D04",
+  "D05",
+  "D06",
+  "D07",
+  "D08",
+  "D09",
+  "D10"
+ ],
+ "gaps": [],
+ "aprovado": true
+}

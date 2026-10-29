@@ -1,0 +1,70 @@
+<!doctype html>
+<!-- MOLDURA 3D + EXPLICAÇÃO ANIMADA (layer: full, needs_video: true)
+     A pessoa sai da tela cheia para uma moldura inclinada em 3D num lado; no outro lado uma explicação
+     se monta item por item, no tempo da fala. No fim volta para a tela cheia.
+     params: title, items: [{text, icon (Lucide), at (s)}], side: "direita"|"esquerda", accent, bg ("escuro"|"claro"),
+             intro (bool, default true), outro (bool, default true) -->
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="/lib/base.css">
+<style>
+  #bg { inset: 0; background: radial-gradient(120% 80% at 30% 20%, #23262f 0%, #0b0c10 70%); }
+  #bg.claro { background: radial-gradient(120% 80% at 30% 20%, #ffffff 0%, #e9ecf2 70%); }
+  #grid { inset: 0; opacity: .18; background-image: linear-gradient(rgba(255,255,255,.12) 2px, transparent 2px),
+          linear-gradient(90deg, rgba(255,255,255,.12) 2px, transparent 2px); background-size: 90px 90px; }
+  #stage { inset: 0; perspective: 1800px; }
+  #frame { overflow: hidden; transform-origin: center; background: #000; }
+  #shadow { background: radial-gradient(closest-side, rgba(0,0,0,.65), rgba(0,0,0,0)); }
+  #frame img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #panel { display: flex; flex-direction: column; gap: 34px; }
+  #title { font-family: 'DM Serif Display'; font-style: italic; font-size: 84px; line-height: 1.02; }
+  .item { display: flex; align-items: center; gap: 22px; font-weight: 800; font-size: 52px; line-height: 1.1; }
+  .dot { flex: 0 0 auto; width: 100px; height: 100px; border-radius: 26px; display: grid; place-items: center; color: #111; }
+  .dot .icon { width: 52px; height: 52px; }
+</style></head>
+<body>
+<div id="bg" class="abs"></div><div id="grid" class="abs"></div>
+<div id="stage" class="abs"><div id="shadow" class="abs"></div><div id="frame" class="abs"><img id="plate"></div></div>
+<div id="panel" class="abs"><div id="title"></div></div>
+<script type="module">
+import motion from '/lib/runtime.js';
+const p = motion.params, W = motion.w, H = motion.h, D = motion.duration;
+const accent = p.accent || '#FFE600';
+const right = (p.side || 'direita') !== 'esquerda';
+if (p.bg === 'claro') { document.getElementById('bg').classList.add('claro'); document.body.style.color = '#111'; }
+const frame = document.getElementById('frame'), img = document.getElementById('plate');
+const panel = document.getElementById('panel'), title = document.getElementById('title');
+title.textContent = p.title || '';
+const items = (p.items || []).map((it, i) => {
+  const el = document.createElement('div'); el.className = 'item';
+  el.innerHTML = `<div class="dot" style="background:${accent}"><div class="icon"></div></div><div>${it.text}</div>`;
+  panel.appendChild(el);
+  motion.waitFor(motion.icon(it.icon || 'check').then((svg) => { el.querySelector('.icon').innerHTML = svg; }));
+  return { el, at: it.at ?? (0.9 + i * 0.8) };
+});
+// geometria da moldura (quadro final) e do painel
+const fw = Math.round(W * 0.47), fh = Math.round(H * 0.56);
+const fx = right ? W - fw - W * 0.05 : W * 0.05, fy = (H - fh) / 2 + H * 0.03;
+panel.style.cssText += `left:${right ? W * 0.04 : W * 0.53}px;top:${H * 0.24}px;width:${W * 0.43}px`;
+const intro = p.intro !== false, outro = p.outro !== false;
+
+motion.onFrame(async (t) => {
+  await motion.setFrame(img, 'plate', t);
+  const kin = intro ? motion.prog(t, 0.05, 0.7, 'inOutCubic') : 1;
+  const kout = outro ? motion.prog(t, D - 0.7, 0.65, 'inOutCubic') : 0;
+  const k = kin * (1 - kout);                       // 0 = tela cheia, 1 = moldura
+  const x = motion.lerp(0, fx, k), y = motion.lerp(0, fy, k);
+  const w = motion.lerp(W, fw, k), h = motion.lerp(H, fh, k);
+  frame.style.left = x + 'px'; frame.style.top = y + 'px'; frame.style.width = w + 'px'; frame.style.height = h + 'px';
+  frame.style.borderRadius = 38 * k + 'px';
+  frame.style.border = `${Math.round(10 * k)}px solid rgba(255,255,255,${0.9 * k})`;
+  const sh = document.getElementById('shadow');   // sombra barata (gradiente) em vez de box-shadow com blur
+  sh.style.cssText = `left:${x - 60}px;top:${y + 70}px;width:${w + 120}px;height:${h + 60}px;opacity:${k}`;
+  frame.style.transform = `rotateY(${(right ? -14 : 14) * k}deg) rotateX(${3 * k}deg)`;
+  const pk = motion.inOut(t, 0.45, D - 0.55, 0.5, 0.35);
+  title.style.opacity = pk; title.style.transform = `translateY(${(1 - pk) * 40}px)`;
+  for (const it of items) {
+    const a = motion.inOut(t, it.at, D - 0.5, 0.45, 0.3, 'outBack');
+    it.el.style.opacity = Math.min(1, a * 1.4);
+    it.el.style.transform = `translateX(${(1 - a) * (right ? -70 : 70)}px) scale(${0.85 + 0.15 * a})`;
+  }
+});
+</script></body></html>
