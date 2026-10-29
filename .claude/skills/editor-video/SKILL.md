@@ -100,6 +100,10 @@ no formato da seção 4 dele (momento, o que aparece, como fazemos, custo). Use 
 imagem de fundo ou cenário (Canva `generate-image` 9:16 ou Hugging Face), maquete 3D para imóvel, `cena3d` para
 produto/objeto, tipografia cinética no gancho. Pedidos ditos no vídeo ("muda o fundo", "imagina…") valem como
 ordem. Se a pessoa disse "faz tudo"/"capricha", execute direto; senão espere o "sim" e execute.
+**Objetos 3D: qualquer um.** Rode `scripts/objetos.py achar "<transcrição>"` em todo vídeo: cada objeto citado
+é candidato a entrar em 3D (`objeto_cinema`) no segundo da palavra. Objeto falado ou pedido que não está na
+biblioteca: modele e salve (`references/motion.md`, "Objetos 3D sob demanda") e confira com `objetos.py previa`.
+Nunca responda que "não temos esse objeto".
 
 Leia `transcript.txt` inteiro. Depois (pule no modo sem cortes):
 ```bash

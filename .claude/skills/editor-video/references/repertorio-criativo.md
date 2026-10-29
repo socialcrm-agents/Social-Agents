@@ -27,6 +27,8 @@ muda na tela. Ousadia sem ruído: no máximo 1 efeito "herói" por frase.
 | **comentar, chamada final** | Caixa de comentário digitando a palavra-chave; tela final | `comentario`, `final`, `botao_cta` | CTA do estilo |
 | **gancho (0-3 s)** | Frase do gancho em **tipografia cinética** ou a revelação 2.5D | `cinetico` (estilo `explode`/`sobe`), `revelacao@auto` | `pergunta` |
 
+| **qualquer objeto concreto** (sofá, lápis, chave, troféu, celular, carro, café…) | O **objeto em 3D** entra no segundo da palavra (monta peça por peça, cai, gira) | `objeto_cinema` (biblioteca; se não existir, modele e salve — `references/motion.md`, "Objetos 3D sob demanda") | `produto3d` com `icone` |
+
 ## 2. Pedidos que a pessoa faz falando (valem como ordem)
 
 Se na fala ou no pedido aparece:
@@ -35,6 +37,7 @@ Se na fala ou no pedido aparece:
 - "olha isso", "veja": zoom de impacto e foco no que é mostrado.
 - "mudança de tela", "agora": `--fx whip` ou `passa_mao` nessa frase.
 - "lista", "primeiro… segundo…": `empilha`.
+- "coloca um sofá girando", "quero um lápis em 3D", qualquer objeto pedido: `objeto_cinema` (crie na biblioteca se faltar).
 
 Execute esses pedidos e conte no resumo o que foi feito.
 
@@ -43,7 +46,7 @@ Execute esses pedidos e conte no resumo o que foi feito.
 | Não fazemos | Alternativa |
 |---|---|
 | Trocar a roupa da pessoa no vídeo | Trocar o fundo, ou um card com a roupa nova (imagem gerada) |
-| Objetos se desfazendo em partículas | `cena3d` com explodir (por enquanto) |
+| Objetos se desfazendo em partículas | `objeto_cinema` com `explodir` ou o `cerebro` (pontos que se formam) |
 | Vídeo gerado por IA do zero | Hugging Face Wan 2.2 (foto → vídeo) quando for liberado |
 
 ## 4. Formato da proposta (sempre assim, curta)

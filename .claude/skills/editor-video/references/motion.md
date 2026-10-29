@@ -143,6 +143,7 @@ Clipes ficam em cache (`work/motion/clip_<hash>.mov`): só renderizam de novo se
 | `cinetico` | front (zona topo) | Tipografia cinética com Anime.js: a frase entra letra por letra (`sobe` = mola em cascata do centro, `onda` = fica ondulando, `explode` = sai do centro girando com elástico, `maquina` = máquina de escrever com cursor), palavra de destaque em outra cor, saída limpa | `text`, `estilo`, `destaque`, `cor`, `cor2`, `y`, `tamanho`, `fonte` |
 | `cena3d` | front ou full (webgl) | **Modelo 3D completo** (.glb/.gltf do Sketchfab, Poly Pizza, Blender ou o produto do cliente) com as animações dele tocando, luz de estúdio, sombra no chão e câmera de cinema (`orbita`, `dolly`, `voo`, `frente`); `explodir: true` faz a **vista explodida** (o modelo se separa em blocos e remonta, estilo vídeo de produto da Apple). Demo: `/modelos/LittlestTokyo.glb` (CC-BY 4.0, Glen Fox — dar crédito) | `modelo`, `camera`, `explodir`, `explodir_at`, `explodir_dist`, `animacao`, `velocidade`, `fundo` (`transparente`/`estudio`/`#hex`), `y`, `tamanho`, `rotacao`, `sombra`, `exposicao` |
 | `maquete` | full (webgl) | **Maquete 3D de imóvel**: a planta vira maquete de arquitetura que se monta (piso → paredes subindo → móveis caindo), depois a câmera passeia cômodo a cômodo no tempo da fala com a etiqueta "QUARTO · 12 m²"; título com a metragem total | `comodos` [{nome, tipo (quarto/suite/sala/cozinha/banheiro/varanda/area/garagem), w, d, x, z (metros), at (s ou palavra), cor}], `titulo`, `total_m2`, `monta_ate`, `fundo`, `acento`, `y`, `tamanho` |
+| `objeto_cinema` | front (webgl) | **Qualquer objeto em 3D de verdade** (sofá, lápis, troféu, moedas empilhando, cérebro holográfico, casa se montando…): vem da biblioteca `assets/motion/objetos/` (que cresce: objeto que não existe, a IA modela com o kit e salva), com luz de estúdio, reflexo, sombra no chão, brilho, entrada animada e vista explodida | `objeto` (nome ou sinônimo), `at`, `x`, `y`, `size`, `cor`, `entrada` (monta/cai/gira/voa/surge), `explodir`, `angulo`, `giro` |
 | `lottie` | front | Toca uma animação Lottie (JSON do After Effects/LottieFiles: setas, checks, likes, confete, "toque aqui") no tempo exato, com pop de entrada e saída | `src` (.json local), `x`, `y`, `tamanho`, `loop`, `velocidade`, `sombra` |
 
 `cena3d` é pesado (~2 s por quadro em CPU, 1080×1920): use 2-4 s num momento de impacto (abertura, revelação
@@ -200,3 +201,21 @@ Notas:
 - `tomadas` fica no alto do quadro. Se o estilo tiver CTA no topo, convém marcá-lo com `"zona": "topo"` em plan.py para o planejador não sobrepor os dois.
 
 Regras de espaço: elementos de zona `topo` (pergunta, player, etiqueta, manchete, proibido, tomadas, palavra sem espaço) fazem a cena recuar quando a cabeça está alta; `barra` (hud, maos) só manda o CTA para baixo. Texto grande pedido tira as palavras automáticas atrás da pessoa do mesmo instante.
+
+
+## Objetos 3D sob demanda (`objeto_cinema` + biblioteca)
+
+**Regra: qualquer objeto concreto que a pessoa falar ou pedir pode virar 3D.** Nunca diga "não temos esse objeto".
+1. `python3 scripts/objetos.py achar "<transcrição>"` → objetos da biblioteca citados na fala (com a palavra exata,
+   que vira o `at`). `objetos.py listar` mostra tudo.
+2. **Não existe?** Modele: `objetos.py novo <nome> [sinônimos…]` cria o arquivo; preencha `criar(T, k)` com o kit
+   (`lib/objetos.js`: caixas arredondadas, torno, tubo, extrusão; ouro, metal, vidro, madeira, tecido, plástico,
+   emissivo). Regras de qualidade: proporções reais, 4-12 peças (cada `g.add` é uma peça que voa na montagem),
+   cantos arredondados, 2-3 materiais com contraste, um detalhe que identifica o objeto na hora (a ponta do lápis,
+   a alça do troféu). Opcional: `export function animar(g, k, s, t)` para movimento contínuo.
+3. **Confira sempre:** `objetos.py previa <nome> --saida x.png` (4 quadros) e OLHE. Ajuste até parecer o objeto
+   a 1 metro de distância. O arquivo fica na biblioteca para os próximos vídeos.
+4. Use: `--motion '{"template":"objeto_cinema","at":"sofá","dur":2.5,"params":{"objeto":"sofá","x":0.72,"y":0.3}}'`
+   (lado oposto ao rosto; `entrada` "monta" para coisas com peças, "cai" para pesadas, "voa"/"gira" para pequenas).
+Com o Hugging Face liberado, um objeto muito complexo (carro, animal, pessoa) pode vir de texto/foto → .glb
+(TRELLIS/Hunyuan3D) e entrar pelo `cena3d`.

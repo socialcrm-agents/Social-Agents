@@ -69,6 +69,7 @@ MOTION_DEFAULTS = {
     "produto3d": {"layer": "front"},
     "cinetico": {"layer": "front", "zona": "topo"}, "lottie": {"layer": "front"},
     "cena3d": {"layer": "front", "webgl": True}, "maquete": {"layer": "full", "webgl": True},
+    "objeto_cinema": {"layer": "front", "webgl": True},
 }
 DEFAULT_CTA = {"reels_viral": "SEGUE PRA VER MAIS", "anuncio_conversao": "CLIQUE EM SAIBA MAIS", "editorial_premium": "Link na bio",
                "pro_clean": "SEGUE PRA VER MAIS"}
