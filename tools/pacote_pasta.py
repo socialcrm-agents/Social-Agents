@@ -58,7 +58,35 @@ def pdf_do_guia() -> Path:
     return pdf
 
 
-def montar(nome: str, edicao: str, skills: list[str], pdf: Path) -> Path:
+LINKS_MARCEL = """# Referências do Marcel (salvas no estudo de concorrentes de 21/10/2026). Uma por linha.
+# Anúncios ativos na Biblioteca do Meta (vencedores do nicho: IA / produto digital / low ticket)
+https://www.facebook.com/ads/library?id=28809007902098349
+https://www.facebook.com/ads/library?id=1403726504451903
+https://www.facebook.com/ads/library?id=1125677553475553
+https://www.facebook.com/ads/library?id=1064867766159113
+https://www.facebook.com/ads/library?id=2341443599927654
+https://www.facebook.com/ads/library?id=1673266880671689
+https://www.facebook.com/ads/library?id=1754679719183436
+https://www.facebook.com/ads/library?id=1777790956563782
+https://www.facebook.com/ads/library?id=4172381279564971
+https://www.facebook.com/ads/library?id=1030634889953871
+https://www.facebook.com/ads/library?id=1128290499683052
+# Reels
+https://www.instagram.com/reel/DDpJOuuxlyB/
+https://www.instagram.com/reel/DeR2NLEAwuk/
+https://www.instagram.com/reel/DehSHm1xREA/
+# Perfis para acompanhar: @marinalcampos @opedroguimaraes @vinipossebon_oficial
+"""
+
+GUIA_MARCEL = """# Guia de estilo — Marcel Prado (@omarcelprado)
+
+Ponto de partida: a marca em `.claude/skills/editor-video/brands/omarcelprado/` (cores, fontes, CTAs, tom e o que
+evitar). Edite sempre com `--brand omarcelprado`. Ao estudar as referências de `2-REFERENCIAS/`, complete este guia
+com o que for diferente do que já está na marca (ritmo, efeitos preferidos, música) e mantenha a marca como base.
+"""
+
+
+def montar(nome: str, edicao: str, skills: list[str], pdf: Path, marcel: bool = False) -> Path:
     out = REPO / "dist" / f"Edicao-de-Videos-{nome}-{dt.date.today().isoformat()}.zip"
     with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as z:
         def texto(nome: str, conteudo: str) -> None:
@@ -68,7 +96,13 @@ def montar(nome: str, edicao: str, skills: list[str], pdf: Path) -> Path:
             z.writestr(info, conteudo)
         for pasta, txt in PASTAS.items():
             texto(f"{RAIZ}/{pasta}/LEIA-ME.txt", txt)
-        texto(f"{RAIZ}/2-REFERENCIAS/links.txt", "")
+        texto(f"{RAIZ}/2-REFERENCIAS/links.txt", LINKS_MARCEL if marcel else "")
+        if marcel:
+            texto(f"{RAIZ}/GUIA-DE-ESTILO.md", GUIA_MARCEL)
+            marca = SKILLS / "editor-video" / "brands" / "omarcelprado"
+            for f in sorted(marca.rglob("*")):
+                if f.is_file():
+                    z.write(f, f"{RAIZ}/.claude/skills/editor-video/brands/omarcelprado/{f.relative_to(marca).as_posix()}")
         z.write(KIT / f"CLAUDE-{edicao}.md", f"{RAIZ}/CLAUDE.md")
         z.write(KIT / "COMECE-AQUI.md", f"{RAIZ}/COMECE-AQUI.md")
         z.write(pdf, f"{RAIZ}/COMECE-AQUI.pdf")
@@ -101,6 +135,9 @@ def main() -> None:
     pdf = pdf_do_guia()
     montar("EditorViral", "viral", ["editor-viral"], pdf)
     montar("PRO", "pro", ["editor-video", "creative-studio"], pdf)
+    if "--marcel" in sys.argv:   # uso pessoal: com a marca e as referências (nunca vender este)
+        montar("MARCEL-uso-pessoal", "pro", ["editor-video", "creative-studio", "anuncio-produto", "vsl-oferta"], pdf,
+               marcel=True)
 
 
 if __name__ == "__main__":

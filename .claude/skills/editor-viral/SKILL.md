@@ -27,6 +27,17 @@ Se a pessoa ainda não disse, faça **só estas 3 perguntas, numa mensagem só**
 Guarde as respostas e use em todos os vídeos da conversa. Se ela já anexou um vídeo, edite primeiro e pergunte
 depois — o primeiro resultado rápido é o que encanta.
 
+## 1b. Estilo e storyboard (o que faz o cliente sentir que é "do jeito dele")
+
+- **"Aprende meu estilo"** (ou anexou vídeos de referência): rode `folha REF` e `transcrever REF` em cada
+  referência, olhe as folhas e escreva `GUIA-DE-ESTILO.txt` (máx. 20 linhas, inspirado e não copiado) terminando
+  com os valores do plano (`legenda.*`, emoji sim/não, `zoom.forca`, `corte.max_pausa`, `trilha.clima`). Entregue o
+  arquivo e diga para anexá-lo junto com o vídeo nas próximas conversas. Links não abrem: peça o vídeo como arquivo.
+- **"Meu estilo é simples"** / "edito bem básico": só cortes, legenda branca limpa, `"emoji": ""` em todos os
+  destaques, `trilha: null`, `zoom.forca` 1.04. Nunca peça instruções mais específicas: escolha, mostre e pergunte.
+- **Storyboard antes de renderizar** (pule se ela disse "faz direto"): tabela curta tempo → o que acontece +
+  duração antes → depois, e "Posso fazer assim?".
+
 ## 2. Editar ("edita esse vídeo")
 
 1. **Transcrever:** `python3 "$EV" transcrever VIDEO` (vídeo acima de 40 s: some `--fundo` e acompanhe com
