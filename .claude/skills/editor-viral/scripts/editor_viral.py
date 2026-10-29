@@ -596,6 +596,9 @@ def legenda_ass(palavras: list[dict], plano: dict, dur: float, destaques: dict) 
         cur.append(w)
     if cur:
         paginas.append(cur)
+    por_i = {p["i"]: p for p in palavras}
+    # quanto tempo cada palavra gigante fica na tela: a legenda comum espera ela sair (nunca as duas juntas)
+    gigantes = [(por_i[i]["t0"] - 0.04, max(por_i[i]["t1"] + 0.55, por_i[i]["t0"] + 1.1)) for i in destaques if i in por_i]
     for k, pg in enumerate(paginas):
         fim_pg = min(paginas[k + 1][0]["t0"] if k + 1 < len(paginas) else pg[-1]["t1"] + 0.4, pg[-1]["t1"] + 0.6)
         if any(w["i"] in destaques for w in pg):
@@ -603,6 +606,12 @@ def legenda_ass(palavras: list[dict], plano: dict, dur: float, destaques: dict) 
         for j, w in enumerate(pg):
             t0 = w["t0"] if j else pg[0]["t0"]
             t1 = pg[j + 1]["t0"] if j + 1 < len(pg) else fim_pg
+            for a, b in gigantes:
+                if a < t1 and t0 < b:
+                    t0 = max(t0, b) if a <= t0 else t0
+                    t1 = min(t1, a) if a > t0 else t1
+            if t1 - t0 < 0.04:
+                continue
             partes = []
             for m, o in enumerate(pg):
                 s = txt(o["w"].strip(".,"))
@@ -613,7 +622,7 @@ def legenda_ass(palavras: list[dict], plano: dict, dur: float, destaques: dict) 
         w = next((p for p in palavras if p["i"] == i), None)
         if not w:
             continue
-        t1 = max(w["t1"] + 0.55, w["t0"] + 1.1)
+        t1 = next(b for a, b in gigantes if abs(a - (w["t0"] - 0.04)) < 1e-6)
         c = _ass_cor(d.get("cor") or lg.get("cor_destaque", "#FFD400"))
         L.append(f"Dialogue: 1,{_ts(w['t0'] - 0.04)},{_ts(t1)},Big,,0,0,0,,{{\\pos({W // 2},{int(H * 0.72)})"
                  rf"\c{c}\fscx40\fscy40\t(0,140,\fscx118\fscy118)\t(140,240,\fscx100\fscy100)\fad(0,120)}}"
