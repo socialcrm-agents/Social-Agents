@@ -15,7 +15,7 @@ export default function criar(T, k) {
   const fil = k.malha(k.tubo(esp, 0.005, 240), k.emissivo('#ffb347', 0)); g.add(fil);
   for (const x of [-0.09, 0.09]) g.add(k.malha(k.cilindro(0.004, 0.004, 0.27, 6), k.metal('#9aa0a8', 0.4), [x, -0.035, 0]));
   const luz = new T.PointLight('#ffd27a', 0, 6); luz.position.y = 0.1; g.add(luz);
-  const h = k.halo(k.cor, 2.6); h.position.y = 0.1; g.add(h);
+  const h = k.halo(k.cor, 1.7); h.position.y = 0.1; g.add(h);
   g.userData.animar = (s, t) => {
     const q = k.spring(s, 0, { dur: 0.6, bounce: 0.35 });
     g.position.y = k.lerp(1.2, 0, q); g.rotation.z = (1 - q) * 0.4;

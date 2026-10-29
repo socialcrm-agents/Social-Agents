@@ -18,7 +18,7 @@ export default function criar(T, k) {
   const geo = new T.BufferGeometry(); geo.setAttribute('position', new T.BufferAttribute(pos, 3));
   // a caixa tem que existir antes da animação (o template mede o objeto para normalizar)
   alvo.forEach((v, i) => { pos[i * 3] = v.x; pos[i * 3 + 1] = v.y; pos[i * 3 + 2] = v.z; });
-  const pontos = new T.Points(geo, new T.PointsMaterial({ color: k.cor, size: 0.03, map: k.texturaHalo, transparent: true,
+  const pontos = new T.Points(geo, new T.PointsMaterial({ color: k.cor, size: 7, sizeAttenuation: false, map: k.texturaHalo, transparent: true,
     depthWrite: false, toneMapped: false })); g.add(pontos);
   const anel = k.malha(k.anel(0.62, 0.006, 120), new T.MeshBasicMaterial({ color: k.cor, transparent: true, opacity: 0, toneMapped: false }),
     [0, 0, 0], [Math.PI / 2, 0, 0]); g.add(anel);
